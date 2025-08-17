@@ -1,0 +1,113 @@
+/* ===== Auth Container (applies everywhere) ===== */
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: #f8f9fa;
+  padding: 1rem;
+}
+
+.auth-box {
+  background: #fff;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+  width: 100%;
+  max-width: 550px; /* ✅ prevents squeezing on large screens */
+  text-align: center;
+}
+
+/* ===== Titles ===== */
+.auth-title {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.auth-sub {
+  margin-bottom: 1.5rem;
+  color: #666;
+}
+
+/* ===== Buttons ===== */
+.auth-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Specific button colors */
+.login-btn {
+  background: #007bff;
+  color: #fff;
+}
+.login-btn:hover {
+  background: #0056b3;
+}
+
+.register-btn {
+  background: #28a745;
+  color: #fff;
+}
+.register-btn:hover {
+  background: #1e7e34;
+}
+
+.reset-btn {
+  background: #ffc107;
+  color: #333;
+}
+.reset-btn:hover {
+  background: #e0a800;
+}
+
+/* ===== Inputs (login & forget password) ===== */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.auth-form input {
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  width: 100%;
+}
+
+.auth-form input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 4px rgba(0,123,255,0.3);
+}
+
+/* ===== Responsive tweaks ===== */
+@media (max-width: 768px) {
+  .auth-box {
+    padding: 1.5rem;
+    max-width: 90%;
+  }
+
+  .auth-title {
+    font-size: 1.6rem;
+  }
+}

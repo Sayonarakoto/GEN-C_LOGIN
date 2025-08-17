@@ -111,3 +111,17 @@
     font-size: 1.6rem;
   }
 }
+/* for foget passsword */
+.error-msg {
+  color: #d9534f;
+  font-size: 14px;
+  margin: -10px 0 10px;
+  text-align: center;
+}
+
+.success-msg {
+  color: #28a745;
+  font-size: 14px;
+  margin: -10px 0 10px;
+  text-align: center;
+}

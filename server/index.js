@@ -1,19 +1,25 @@
-const express=require('express')
-const mongoose=require('mongoose')
-const cors= require('cors')
-const studentModel=require('./models/student')
-const app= express()
-app.use(express.json())
-app.use(cors())
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
 
-mongoose.connect("mongodb://localhost:27017/?directConnection=true");
+const authRoutes = require('./auth');   // import auth routes
 
-app.post('/signin',(req, res)=>{
-     studentModel.create(req.body)
-     .then(student => res.json(student))
-     .catch(err => res.json(err))
-})
+const app = express();
 
-app.listen(3001, ()=>{
-    console.log("server is runing")
-})
+// middlewares
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cors());
+
+// DB connection
+mongoose.connect("mongodb://localhost:27017/paperlessCampus")
+  .then(() => console.log("✅ MongoDB connected"))
+  .catch(err => console.error("❌ DB connection error:", err));
+
+// routes
+app.use('/auth', authRoutes);  // all auth endpoints prefixed with /auth
+
+// start server
+app.listen(3001, () => {
+  console.log("🚀 Server is running on port 3001");
+});

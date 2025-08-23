@@ -1,24 +1,31 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { useState } from 'react';
-import './Frontpage.css'
-import axios from 'axios'
+import './Frontpage.css';
+import axios from 'axios';
+
 function Signup() {
-    const [uid, setuid] = useState()
-    const [password, setpass] = useState()
-    const handleSubmit = (e) => {
-        e.preventDefault()
-        axios.post('http://localhost:3001/signin', { uid, password })
-            .then(result => console.log(result))
-            .catch(err => console.log(err))
-    }
-    return (
-        
+  const [uid, setuid] = useState("");
+  const [password, setpass] = useState("");
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    axios.post('http://localhost:3001/auth/signin', { uid, password })
+      .then(result => {
+        console.log(result.data);
+        alert(result.data.message);
+      })
+      .catch(err => {
+        console.error(err);
+        alert("❌ Signup failed");
+      });
+  };
+
+  return (
     <div className="auth-container">
       <div className="auth-box">
-        <h1 className="auth-title">Login</h1>
-        <p className="auth-sub">Enter your credentials to continue</p>
+        <h1 className="auth-title">Sign Up</h1>
+        <p className="auth-sub">Create your account to continue</p>
 
         <form onSubmit={handleSubmit} className="auth-form">
           <input
@@ -38,7 +45,7 @@ function Signup() {
           />
 
           <button type="submit" className="btn login-btn">
-            Login
+            Sign Up
           </button>
         </form>
 

@@ -1,32 +1,28 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Typography, message } from 'antd';
-import { EyeOutlined, EyeInvisibleOutlined, MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import { Form, Input, Button, Typography, message, Spin } from 'antd';
+import { EyeOutlined, EyeInvisibleOutlined, MailOutlined, LockOutlined } from '@ant-design/icons';
+// Ant Design CSS is not imported here to avoid compilation errors.
+// All styles are applied using inline styles to maintain the look.
 
 const { Title, Text, Link } = Typography;
 
-const Signin = () => {
+const App = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  // Handles the form submission using the provided API logic
+  // Handles the form submission
   const onFinish = async (values) => {
     setLoading(true);
-    console.log('Submitting with User ID:', values.studentId, 'and Password:', values.password);
+    console.log('Form values:', values);
 
     try {
-      const response = await axios.post('http://localhost:3001/auth/signin', {
-        studentId: values.studentId,
-        password: values.password
-      });
-
-      console.log('Response data:', response.data);
-      message.success(response.data.message || 'Sign in successful!');
-
+      // Simulate an API call for sign-in
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      message.success('Sign in successful!');
+      console.log('Sign in successful!');
     } catch (error) {
-      console.error('Sign in failed:', error);
-      // Use Ant Design's message component instead of alert()
       message.error('Sign in failed. Please check your credentials.');
+      console.error('Sign in failed:', error);
     } finally {
       setLoading(false);
     }
@@ -80,15 +76,15 @@ const Signin = () => {
           onFinishFailed={onFinishFailed}
           layout="vertical"
         >
-          {/* User ID Input Field (updated from Email) */}
+          {/* Email Input Field */}
           <Form.Item
-            label={<span style={{ color: '#a0a0a0' }}>User ID</span>}
-            name="studentId"
-            rules={[{ required: true, message: 'Please input your User ID!' }]}
+            label={<span style={{ color: '#a0a0a0' }}>Email address</span>}
+            name="email"
+            rules={[{ required: true, message: 'Please input your Email!' }]}
           >
             <Input
-              prefix={<UserOutlined style={{ color: '#a0a0a0' }} />}
-              placeholder="User ID"
+              prefix={<MailOutlined style={{ color: '#a0a0a0' }} />}
+              placeholder="hello@gmail.com"
               style={{ borderRadius: '8px', padding: '10px 14px' }}
             />
           </Form.Item>
@@ -139,4 +135,4 @@ const Signin = () => {
   );
 };
 
-export default Signin;
+export default App;

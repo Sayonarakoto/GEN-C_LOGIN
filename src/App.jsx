@@ -4,12 +4,15 @@ import Signup from './Pages/Signup';
 import Forgetpass from './Pages/Forgetpass';
 import Frontpage from './Pages/Frontpage';
 import Dashboard from './Dashbaords/Dashboard';
+import FacultyDashboard from './Dashbaords/FacultyDashboard';
+import StudentEntryForm from './faculty/StudentEntryForm';
 
 function App() {
   return (
     <Router>
       <Routes>
-        <Route path='/dashboard' element={<Dashboard/>}/>
+        <Route path='/faculty' element={<FacultyDashboard/>}/>
+        <Route path='/StudentForm' element={<StudentEntryForm/>}/>
         <Route path="/home" element={<Frontpage />} />
         <Route path="/signin" element={<Signup />} />
         <Route path="/forget" element={<Forgetpass />} />

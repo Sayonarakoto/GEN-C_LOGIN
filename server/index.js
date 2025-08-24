@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 
 const authRoutes = require('./routes/auth');   // import auth routes
-
+const StudentRoutes=require('./routes/Student')
 const app = express();
 
 // middlewares
@@ -18,7 +18,7 @@ mongoose.connect("mongodb://localhost:27017/paperlessCampus")
 
 // routes
 app.use('/auth', authRoutes);  // all auth endpoints start with /auth
-
+app.use('/Student',StudentRoutes)
 // start server
 app.listen(3001, () => {
   console.log("🚀 Server is running on http://localhost:3001");

@@ -15,7 +15,7 @@ function Frontpage() {
             </button>
           </Link>
 
-          <Link to="/signin?role=faculty">
+          <Link to="/faculty">
             <button className="btn login-btn">
               <i className="bx bxs-user-badge"></i> Faculty Login
             </button>
@@ -29,7 +29,7 @@ function Frontpage() {
         </div>
 
         <p className="auth-sub">New here?</p>
-        <Link to="/signup">
+        <Link to="/regsister">
           <button className="btn register-btn">Register</button>
         </Link>
       </div>

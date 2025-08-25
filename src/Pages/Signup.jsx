@@ -2,13 +2,15 @@ import React, { useState } from 'react';
 import { Form, Input, Button, Typography, message } from 'antd';
 import { EyeOutlined, EyeInvisibleOutlined, MailOutlined, LockOutlined, UserOutlined } from '@ant-design/icons';
 import axios from 'axios';
-
+import StudentDashboard from '../Dashbaords/StudentDashboard'
+import EmailInput from './EmailInput';
+import { useNavigate } from 'react-router-dom';
 const { Title, Text, Link } = Typography;
 
 const Signin = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-
+  const navigate = useNavigate();
   // Handles the form submission using the provided API logic
   const onFinish = async (values) => {
     setLoading(true);
@@ -20,8 +22,10 @@ const Signin = () => {
         password: values.password
       });
 
-      console.log('Response data:', response.data);
-      message.success(response.data.message || 'Sign in successful!');
+    message.success(response.data.message || 'Sign in successful!');
+    setTimeout(() => {
+      navigate('/student'); // 👈 This loads your student dashboard route
+    }, 1000);
 
     } catch (error) {
       console.error('Sign in failed:', error);
@@ -110,7 +114,7 @@ const Signin = () => {
           </Form.Item>
 
           <div style={{ textAlign: 'right', marginBottom: '24px' }}>
-            <Link href="#" style={{ color: '#1890ff', fontSize: '12px' }}>
+            <Link href="/sent-rest" style={{ color: '#1890ff', fontSize: '12px' }}>
               Forgot password?
             </Link>
           </div>

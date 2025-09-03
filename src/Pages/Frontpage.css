@@ -125,3 +125,18 @@
   margin: -10px 0 10px;
   text-align: center;
 }
+
+/* Base red background */
+.auth-form .ant-btn {
+  background-color: red !important;
+  border-color: red !important;
+  color: white !important;
+}
+
+/* Olive background on hover */
+.auth-form .ant-btn:hover,
+.auth-form .ant-btn:focus {
+  background-color: olive !important;
+  border-color: olive !important;
+  color: white !important;
+}

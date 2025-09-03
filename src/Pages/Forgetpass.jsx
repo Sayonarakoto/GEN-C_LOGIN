@@ -1,13 +1,32 @@
-import React from "react";
-import { useState } from "react";
-import "./Frontpage.css"
+import React, { useState, useEffect } from "react";
+import "./Frontpage.css";
+import axios from "axios";
+
 function Forgetpass() {
+  // State variables
+  const [email, setEmail] = useState("");
+  const [token, setToken] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const handleSubmit = (e) => {
+  // Use a useEffect hook to get the email and token from the URL
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const emailFromUrl = queryParams.get("email");
+    const tokenFromUrl = queryParams.get("token");
+
+    if (emailFromUrl && tokenFromUrl) {
+      setEmail(emailFromUrl);
+      setToken(tokenFromUrl);
+    } else {
+      // Handle the case where the link is invalid or missing info
+      setError("❌ Invalid or expired password reset link.");
+    }
+  }, []); // The empty array ensures this runs only once when the component mounts
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Basic validation
@@ -23,11 +42,33 @@ function Forgetpass() {
       return;
     }
 
-    // If valid
-    setError("");
-    setSuccess("✅ Password reset successful!");
-    setNewPassword("");
-    setConfirmPassword("");
+    // Check if email and token are present before making the request
+    if (!email || !token) {
+        setError("❌ Invalid or missing email/token.");
+        return;
+    }
+    
+    // If validation passes, make the API call
+    try {
+      const response = await axios.post('http://localhost:3001/auth/forget', {
+        email,
+        token,
+        newPassword
+      });
+
+      // Handle successful response
+      setError("");
+      setSuccess(response.data.message || "✅ Password reset successful!");
+      
+      // Clear the form fields
+      setNewPassword("");
+      setConfirmPassword("");
+      
+    } catch (err) {
+      // Handle error response
+      setError(err.response?.data?.message || "❌ Error resetting password.");
+      setSuccess("");
+    }
   };
 
   return (

@@ -114,7 +114,7 @@ const Signin = () => {
           </Form.Item>
 
           <div style={{ textAlign: 'right', marginBottom: '24px' }}>
-            <Link href="/sent-rest" style={{ color: '#1890ff', fontSize: '12px' }}>
+            <Link href="/sent-reset" style={{ color: '#1890ff', fontSize: '12px' }}>
               Forgot password?
             </Link>
           </div>

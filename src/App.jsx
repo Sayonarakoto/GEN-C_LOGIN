@@ -13,8 +13,8 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/sent-rest" element={<EmailInput/>} />
-        <Route path="/regsister" element={<Register/>} />
+        <Route path="/sent-reset" element={<EmailInput/>} />
+        <Route path="/register" element={<Register/>} />
         <Route path="/home" element={<Frontpage />} />
         <Route path="/signin" element={<Signup />} />
         <Route path="/forget" element={<Forgetpass />} />

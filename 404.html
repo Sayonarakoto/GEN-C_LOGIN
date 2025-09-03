@@ -3,9 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <title>Redirecting...</title>
-    <script>
-      // Redirect to index.html but preserve path
+    <script type="text/javascript">
+      // Save the full path the user tried to visit
       sessionStorage.redirect = location.href;
+
+      // Redirect to the React app entry point (index.html inside /GEN-C_LOGIN/)
       window.location.href = "/GEN-C_LOGIN/";
     </script>
   </head>

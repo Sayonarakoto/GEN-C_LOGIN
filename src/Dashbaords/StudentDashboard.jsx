@@ -8,7 +8,7 @@ import {
   HomeOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
-import './StudentDashboard.css';
+import './Dashboard.css';
 
 const { Sider, Content } = Layout;
 

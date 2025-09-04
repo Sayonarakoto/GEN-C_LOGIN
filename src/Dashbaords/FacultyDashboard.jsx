@@ -1,24 +1,36 @@
 import React, { useState } from "react";
-import { Layout, Menu } from "antd";
+import { Layout, Menu, message } from "antd";
 import {
   UserAddOutlined,
   HomeOutlined,
   FileDoneOutlined,
   LogoutOutlined,
-  ImportOutlined,
 } from "@ant-design/icons";
 import StudentEntryForm from "../faculty/StudentEntryForm";
-import { Link } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
+import "./Dashboard.css";
+
 const { Header, Sider, Content } = Layout;
 
 function FacultyDashboard() {
   const [selectedKey, setSelectedKey] = useState("home");
+  const navigate = useNavigate();
 
   const handleMenuClick = (e) => {
     setSelectedKey(e.key);
   };
 
-  // Page Switching Logic
+  const handleLogout = () => {
+    // Clear user data from local storage and session storage
+    localStorage.removeItem("facultyToken");
+    sessionStorage.removeItem("facultyToken");
+
+    message.success("You have been logged out.");
+
+    // Redirect the user to the signin page
+    navigate("/faculty-login");
+  };
+
   const renderContent = () => {
     switch (selectedKey) {
       case "studentEntry":
@@ -32,60 +44,46 @@ function FacultyDashboard() {
   };
 
   return (
-    <Layout style={{ minHeight: "100vh" }}>
+    <Layout className="faculty-dashboard">
       {/* Sidebar */}
       <Sider collapsible>
-        <div
-          className="logo"
-          style={{ color: "white", textAlign: "center", padding: "1rem" }}
-        >
-          Faculty Panel
+        <div className="dashboard-logo">Faculty Panel</div>
+
+        <div className="dashboard-sider">
+          <Menu
+            theme="dark"
+            mode="inline"
+            selectedKeys={[selectedKey]}
+            onClick={handleMenuClick}
+            className="dashboard-menu"
+          >
+            <Menu.Item key="home" icon={<HomeOutlined />}>
+              Home
+            </Menu.Item>
+            <Menu.Item key="studentEntry" icon={<UserAddOutlined />}>
+              Student Entry
+            </Menu.Item>
+            <Menu.Item key="approvals" icon={<FileDoneOutlined />}>
+              Approvals
+            </Menu.Item>
+
+            {/* Logout item at the end of the menu */}
+            <Menu.Item
+              key="logout"
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              className="dashboard-logout" // Add a class for styling
+            >
+              Logout
+            </Menu.Item>
+          </Menu>
         </div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          defaultSelectedKeys={["home"]}
-          selectedKeys={[selectedKey]}
-          onClick={handleMenuClick}
-        >
-          <Menu.Item key="home" icon={<HomeOutlined />}>
-            Home
-          </Menu.Item>
-          <Menu.Item key="studentEntry" icon={<UserAddOutlined />}>
-            Student Entry
-          </Menu.Item>
-          <Menu.Item key="approvals" icon={<FileDoneOutlined />}>
-            Approvals
-          </Menu.Item>
-          <Menu.Item key="logout" icon={<LogoutOutlined />}>
-            <Link to="/home">logout</Link>
-          </Menu.Item>
-        </Menu>
       </Sider>
 
       {/* Main Layout */}
       <Layout>
-        <Header
-          style={{
-            background: "#fff",
-            padding: 0,
-            textAlign: "right",
-            paddingRight: "2rem",
-          }}
-        >
-          Welcome, Faculty
-        </Header>
-
-        <Content
-          style={{
-            margin: "1rem",
-            background: "#fff",
-            padding: "2rem",
-            borderRadius: "8px",
-          }}
-        >
-          {renderContent()}
-        </Content>
+        <Header className="dashboard-header">Welcome, Faculty</Header>
+        <Content className="dashboard-content">{renderContent()}</Content>
       </Layout>
     </Layout>
   );

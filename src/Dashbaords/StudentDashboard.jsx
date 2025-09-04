@@ -1,45 +1,66 @@
 import React, { useState } from 'react';
-import { Menu, Layout } from 'antd';
-import { NavLink, Routes, Route } from 'react-router-dom';
+import { Menu, Layout, message } from 'antd';
+import { NavLink, useNavigate, Routes, Route } from 'react-router-dom';
 import {
   UserOutlined,
   FileTextOutlined,
   ProfileOutlined,
   HomeOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
-import './StudentDashboard.css'
-const { Sider, Content } = Layout;
+import './StudentDashboard.css';
 
-// import Overview from './StudentPages/Overview';
-// import GatePassRequest from './StudentPages/GatePassRequest';
-// import LateEntry from './StudentPages/LateEntry';
-// import Profile from './StudentPages/Profile';
+const { Sider, Content } = Layout;
 
 function StudentDashboard() {
   const [collapsed, setCollapsed] = useState(false);
+  const navigate = useNavigate();
 
   const onCollapse = (collapsed) => {
     setCollapsed(collapsed);
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('studentToken'); 
+    sessionStorage.removeItem('studentToken'); 
+    message.success('You have been logged out.');
+    navigate('/signin');
+  };
+
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider collapsible collapsed={collapsed} onCollapse={onCollapse}>
-        <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline">
-          <Menu.Item key="1" icon={<HomeOutlined />}>
-            <NavLink to="/student" end>Overview</NavLink>
-          </Menu.Item>
-          <Menu.Item key="2" icon={<FileTextOutlined />}>
-            <NavLink to="/student/gatepass">Gate Pass</NavLink>
-          </Menu.Item>
-          <Menu.Item key="3" icon={<ProfileOutlined />}>
-            <NavLink to="/student/lateentry">Late Entry</NavLink>
-          </Menu.Item>
-          <Menu.Item key="4" icon={<UserOutlined />}>
-            <NavLink to="/student/profile">Profile</NavLink>
-          </Menu.Item>
-        </Menu>
+        <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+          {/* 🔹 Top Navigation Menu */}
+          <Menu theme="dark" defaultSelectedKeys={['1']} mode="inline" style={{ flex: 1 }}>
+            <Menu.Item key="1" icon={<HomeOutlined />}>
+              <NavLink to="/student" end>Overview</NavLink>
+            </Menu.Item>
+            <Menu.Item key="2" icon={<FileTextOutlined />}>
+              <NavLink to="/student/gatepass">Gate Pass</NavLink>
+            </Menu.Item>
+            <Menu.Item key="3" icon={<ProfileOutlined />}>
+              <NavLink to="/student/lateentry">Late Entry</NavLink>
+            </Menu.Item>
+            <Menu.Item key="4" icon={<UserOutlined />}>
+              <NavLink to="/student/profile">Profile</NavLink>
+            </Menu.Item>
+          </Menu>
+
+          {/* 🚪 Logout Button at Bottom */}
+          <Menu theme="dark" mode="inline">
+            <Menu.Item
+              key="logout"
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+              style={{ color: '#ff4d4f', fontWeight: 500 }}
+            >
+              Logout
+            </Menu.Item>
+          </Menu>
+        </div>
       </Sider>
+
       <Layout>
         <Content style={{ margin: '16px' }}>
           {/* Uncomment once pages are implemented */}
@@ -58,4 +79,3 @@ function StudentDashboard() {
 }
 
 export default StudentDashboard;
-

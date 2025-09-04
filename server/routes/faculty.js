@@ -1,47 +1,101 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
-const Faculty = require('../models/Faculty'); // Adjust path as needed
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const Faculty = require('../models/Faculty');
+const { protectFacultyRoute } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Make sure this folder exists
+    const uploadDir = path.join(__dirname, '..', 'uploads'); // ✅ fix path
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname)); // unique filename
+    const allowedTypes = ['image/jpeg', 'image/png'];
+    if (!allowedTypes.includes(file.mimetype)) {
+      return cb(new Error('Only .jpg and .png files are allowed!'), false);
+    }
+    cb(null, Date.now() + path.extname(file.originalname));
   },
 });
-const upload = multer({ storage: storage });
 
-router.post('/register', upload.single('profilePhoto'), async (req, res) => {
+// File size limit
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
+
+// Multer error handler
+const handleMulterError = (err, req, res, next) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ message: 'File is too large. Max 5MB' });
+    }
+    return res.status(400).json({ message: err.message });
+  }
+  next(err);
+};
+
+// ===================== REGISTER =====================
+router.post('/register', upload.single('profilePhoto'), handleMulterError, async (req, res) => {
+  const { fullName, email, employeeId, department, designation, password } = req.body;
+
   try {
-    const { fullName, email, employeeId, department, designation } = req.body;
-    const profilePhoto = req.file ? req.file.filename : null;
+    let existing = await Faculty.findOne({ $or: [{ email }, { employeeId }] });
+    if (existing) {
+      return res.status(400).json({ message: 'Faculty already exists with this email or ID' });
+    }
 
-    const newFaculty = new Faculty({
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const faculty = new Faculty({
       fullName,
       email,
       employeeId,
       department,
       designation,
-      profilePhoto,
+      password: hashedPassword,
+      profilePhoto: req.file ? req.file.path : null
     });
 
-    await newFaculty.save();
-    res.status(201).json({ message: 'Registration successful!' });
+    await faculty.save();
+
+    // Generate token
+    const token = jwt.sign({ id: faculty._id, role: 'faculty' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+
+    res.status(201).json({
+      message: 'Faculty registered successfully',
+      token,
+      faculty: {
+        id: faculty._id,
+        fullName: faculty.fullName,
+        email: faculty.email,
+        employeeId: faculty.employeeId,
+        department: faculty.department,
+        designation: faculty.designation,
+        profilePhoto: faculty.profilePhoto
+      }
+    });
   } catch (err) {
-    console.error(err);
-    // Check for the specific duplicate key error code from MongoDB
-    if (err.code === 11000) {
-      // Find out which field caused the error
-      const key = Object.keys(err.keyPattern)[0];
-      const errorMessage = `Registration failed: A user with that ${key} already exists.`;
-      return res.status(409).json({ message: errorMessage, error: err.message });
-    }
-    res.status(500).json({ message: 'Registration failed', error: err.message });
+    console.error(err.message);
+    res.status(500).send('Server error');
+  }
+});
+// ===================== PROFILE (protected) =====================
+router.get('/profile', protectFacultyRoute, async (req, res) => {
+  try {
+    res.json({
+      success: true,
+      faculty: req.faculty
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching profile' });
   }
 });
 

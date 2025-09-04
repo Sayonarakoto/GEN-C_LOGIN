@@ -56,7 +56,7 @@ function Frontpage() {
               </Link>
 
               {/* Faculty */}
-              <Link to="/faculty-logs">
+              <Link to="/faculty-login">
                 <Button type="primary" block size="large">
                   Faculty Login
                 </Button>

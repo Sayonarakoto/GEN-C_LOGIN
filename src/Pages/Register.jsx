@@ -9,26 +9,50 @@ const Register = () => {
   const [loading, setLoading] = useState(false);
 
   const onFinish = async (values) => {
-    setLoading(true);
-
-    const formData = new FormData();
-    formData.append('fullName', values.fullName);
-    formData.append('email', values.email);
-    formData.append('employeeId', values.employeeId); // Faculty ID
-    formData.append('department', values.department);
-    formData.append('designation', values.designation);
-    if(values.profilePhoto && values.profilePhoto.file.originFileObj){
-      formData.append('profilePhoto', values.profilePhoto.file.originFileObj);
-    }
-
     try {
-      await axios.post('http://localhost:3001/api/register', formData, {
+      // Password match check
+      if (values.password !== values.confirmPassword) {
+        message.error("Passwords do not match!");
+        return;
+      }
+
+      setLoading(true);
+
+      const formData = new FormData();
+      formData.append('fullName', values.fullName);
+      formData.append('email', values.email);
+      formData.append('employeeId', values.employeeId);
+      formData.append('department', values.department);
+      formData.append('designation', values.designation);
+      formData.append('password', values.password);
+
+      // Check file size before upload
+      if (values.profilePhoto?.[0]?.originFileObj) {
+        const file = values.profilePhoto[0].originFileObj;
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+          throw new Error('Profile photo must be smaller than 5MB');
+        }
+        formData.append('profilePhoto', file);
+      }
+
+      const response = await axios.post('http://localhost:3001/api/register', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
-      message.success('Registration successful!');
+
+      if (response.data.success) {
+        message.success('Registration successful!');
+        // Optional: Clear form or redirect
+       // form.resetFields();
+      } else {
+        throw new Error(response.data.message || 'Registration failed');
+      }
     } catch (error) {
-      console.error(error);
-      message.error('Registration failed! Please try again.');
+      console.error('Registration error:', error);
+      const errorMessage = 
+        error.response?.data?.message || 
+        error.message || 
+        'Registration failed! Please try again.';
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -66,6 +90,22 @@ const Register = () => {
         </Form.Item>
 
         <Form.Item
+          name="password"
+          label="Password"
+          rules={[{ required: true, message: 'Password is required' }]}
+        >
+          <Input.Password placeholder="Password" />
+        </Form.Item>
+
+        <Form.Item
+          name="confirmPassword"
+          label="Confirm Password"
+          rules={[{ required: true, message: 'Please confirm the password' }]}
+        >
+          <Input.Password placeholder="Confirm Password" />
+        </Form.Item>
+
+        <Form.Item
           name="department"
           label="Department"
           rules={[{ required: true, message: 'Please select your department' }]}
@@ -73,11 +113,11 @@ const Register = () => {
           <Select placeholder="Select Department">
             <Option value="ct">CT</Option>
             <Option value="mech-a">Mechanical-A</Option>
-              <Option value="mech-b">Mechanical-B</Option>
+            <Option value="mech-b">Mechanical-B</Option>
             <Option value="eee">Electrical</Option>
             <Option value="ce">Civil</Option>
             <Option value="fs">FS</Option>
-            <Option value="auto">AUTO MOBLIE</Option>
+            <Option value="auto">AUTOMOBILE</Option>
           </Select>
         </Form.Item>
 
@@ -97,8 +137,29 @@ const Register = () => {
           label="Profile Photo"
           valuePropName="fileList"
           getValueFromEvent={e => e && e.fileList}
+          rules={[
+            {
+              validator: async (_, fileList) => {
+                if (fileList && fileList.length > 0) {
+                  const file = fileList[0].originFileObj;
+                  if (file.size > 5 * 1024 * 1024) {
+                    throw new Error('Image must be smaller than 5MB!');
+                  }
+                  if (!['image/jpeg', 'image/png'].includes(file.type)) {
+                    throw new Error('Only JPG/PNG files are allowed!');
+                  }
+                }
+                return Promise.resolve();
+              }
+            }
+          ]}
         >
-          <Upload beforeUpload={() => false} listType="picture">
+          <Upload 
+            beforeUpload={() => false}
+            listType="picture"
+            accept=".jpg,.jpeg,.png"
+            maxCount={1}
+          >
             <Button icon={<UploadOutlined />}>Upload Profile Photo</Button>
           </Upload>
         </Form.Item>

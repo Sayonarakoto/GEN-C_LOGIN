@@ -7,14 +7,14 @@ const authRoutes = require('./routes/auth');
 const StudentRoutes = require('./routes/Student');
 const FacultyRoutes= require('./routes/faculty')
 const mailRoutes = require("./utils/mailer"); // ❌ Problem: this is not a router, it’s just utils
-
+const path = require('path');
 const app = express();
 
 // middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
-
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 // DB connection
 mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/paperlessCampus")
   .then(() => console.log("✅ MongoDB connected"))

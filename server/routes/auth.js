@@ -1,15 +1,18 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const authController = require('../controllers/authController');
+const authController = require("../controllers/authController");
 
-// signup & login
-router.post('/signup', authController.signup);
-router.post("/signin", authController.signin);
-// password reset
-router.post('/send-reset', authController.forgotPassword);
-router.post('/forget', authController.refreshToken);
+// ---------------- Student Auth ----------------
+router.post("/signin", authController.studentLogin);
 
-// refresh token (optional)
-router.post('/refresh', authController.refreshToken);
+// ---------------- Faculty Auth ----------------
+router.post("/faculty-login", authController.facultyLogin);
+
+// ---------------- Token Handling ----------------
+router.post("/refresh", authController.refreshToken);
+
+// ---------------- Password Reset ----------------
+router.post("/send-reset", authController.forgotPassword);
+router.post("/forget", authController.resetPassword);
 
 module.exports = router;

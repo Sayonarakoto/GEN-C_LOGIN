@@ -5,6 +5,7 @@ const FacultySchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   employeeId: { type: String, required: true, unique: true },
   department: { type: String, required: true },
+  password:{type:String,required:true},
   designation: { type: String, required: true },
   profilePhoto: { type: String }, // Store image filename or URL if uploading file separately
 }, { timestamps: true });

@@ -178,4 +178,3 @@ MIT License © 2025
 
 ---
 
-👉 Do you want me to also include **step-by-step MongoDB setup** instructions (like creating `genclogin` DB and `faculties` collection) for first-time users, or just assume they know Mongo basics?

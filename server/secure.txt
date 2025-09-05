@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Passkey Submission</title>
+    <!-- Use Tailwind CSS for a clean, modern look -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom styles to ensure the container is centered and looks nice */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1f2937;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="max-w-md w-full p-8 bg-gray-800 rounded-xl shadow-lg border border-gray-700">
+        <h2 class="text-3xl font-bold text-center text-white mb-6">Enter Passkey</h2>
+
+        <!-- Passkey Submission Form -->
+        <form id="passkeyForm" class="space-y-6">
+            <div>
+                <label for="passkey" class="block text-sm font-medium text-gray-300 mb-2">Passkey:</label>
+                <input
+                    type="password"
+                    id="passkey"
+                    name="passkey"
+                    required
+                    class="block w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-white"
+                    placeholder="••••••••"
+                >
+            </div>
+
+            <button type="submit" class="w-full py-2 px-4 bg-blue-600 text-white font-semibold rounded-md shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-300 ease-in-out">
+                Submit Passkey
+            </button>
+        </form>
+
+        <!-- Container for debugging messages and results -->
+        <div id="debugOutput" class="mt-8 p-4 bg-gray-700 rounded-lg text-sm whitespace-pre-wrap font-mono">
+            <p>Submission results will appear here...</p>
+        </div>
+    </div>
+</body>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const passkeyForm = document.getElementById('passkeyForm');
+    const passkeyInput = document.getElementById('passkey');
+    const debugOutput = document.getElementById('debugOutput');
+
+    function updateDebugOutput(message) {
+      debugOutput.innerHTML = `<p>${message}</p>`;
+    }
+
+    passkeyForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const passkey = passkeyInput.value;
+
+      // Update URL to new backend endpoint with port 3001
+      const url = 'http://localhost:3001/api/security/submit-passkey';
+
+      const data = { passkey };
+      updateDebugOutput("Submitting passkey... please wait.");
+      console.log("Submitting request to:", url);
+      console.log("Request body:", data);
+
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(data)
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const resBody = await response.json();
+        console.log("Backend response (res.body):", resBody);
+        updateDebugOutput(`Success! Passkey submitted.\nBackend message: ${JSON.stringify(resBody, null, 2)}`);
+
+      } catch (error) {
+        console.error("Fetch error:", error);
+        updateDebugOutput(`Submission failed! Check the console for more details.\nError: ${error.message}`);
+      }
+    });
+  }); 
+</script> </html>

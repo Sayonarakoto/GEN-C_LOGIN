@@ -41,6 +41,11 @@ const Signin = () => {
     message.error('Please fill out all the required fields correctly.');
   };
 
+  // Handler for "Forgot password?" link
+  const handleForgotPasswordClick = () => {
+    navigate('/send-reset');
+  };
+
   return (
     <div
       style={{
@@ -48,7 +53,7 @@ const Signin = () => {
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100vh',
-        backgroundColor: '#F9FAFB', // Off White Background
+        backgroundColor: '#F9FAFB',
         padding: '24px',
       }}
     >
@@ -57,23 +62,16 @@ const Signin = () => {
           width: '100%',
           maxWidth: '400px',
           padding: '40px',
-          backgroundColor: '#FFFFFF', // White Login Box
+          backgroundColor: '#FFFFFF',
           borderRadius: '12px',
-          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.06)', // Soft subtle shadow
+          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.06)',
         }}
       >
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <Title level={2} style={{ color: '#111827', fontWeight: 600, margin: 0 }}>
             Sign in
           </Title>
-          <div style={{ marginTop: '8px' }}>
-            <Text style={{ color: '#6B7280' }}>
-              Don’t have an account?{' '}
-              <Link href="#" style={{ color: '#2563EB' }}>
-                Get started
-              </Link>
-            </Text>
-          </div>
+          
         </div>
 
         <Form
@@ -126,7 +124,7 @@ const Signin = () => {
           </Form.Item>
 
           <div style={{ textAlign: 'right', marginBottom: '20px' }}>
-            <Link href="/sent-reset" style={{ color: '#2563EB', fontSize: '13px' }}>
+            <Link onClick={handleForgotPasswordClick} style={{ color: '#2563EB', fontSize: '13px', cursor: 'pointer' }}>
               Forgot password?
             </Link>
           </div>
@@ -142,9 +140,9 @@ const Signin = () => {
                 height: '48px',
                 borderRadius: '8px',
                 fontWeight: 600,
-                backgroundColor: '#2563EB', // Royal Blue Button
+                backgroundColor: '#2563EB',
                 border: 'none',
-                color: '#FFFFFF', // White Text
+                color: '#FFFFFF',
               }}
             >
               Sign in

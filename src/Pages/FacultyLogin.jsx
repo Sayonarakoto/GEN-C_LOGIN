@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import { Form, Input, Button, Typography, message } from "antd";
 import { Container, Row, Col } from "react-bootstrap";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";  // ✅ add navigation
+import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./Frontpage.css";
 
-const { Title } = Typography;
+const { Title, Text, Link } = Typography;
 
 const cardStyle = {
   background: "#FFFFFF",
@@ -18,13 +18,13 @@ const cardStyle = {
 
 function FacultyLogin() {
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate(); // ✅ use react-router navigation
+  const navigate = useNavigate();
 
   const onFinish = async (values) => {
     setLoading(true);
     try {
       const res = await axios.post("http://localhost:3001/auth/faculty-login", {
-        employeeId: values.facultyId,  // 🔑 map correctly
+        facultyId: values.facultyId, // send facultyId to match backend
         password: values.password,
       });
 
@@ -33,9 +33,9 @@ function FacultyLogin() {
         localStorage.setItem("facultyData", JSON.stringify(res.data.faculty));
 
         message.success(res.data.message);
-
-        // ✅ safer redirect handled by React Router
         navigate("/faculty");
+      } else {
+        message.error(res.data.message || "Login failed");
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -43,6 +43,14 @@ function FacultyLogin() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleForgotPasswordClick = () => {
+    // This is the correct way to navigate to the "Forgot Password" page
+    navigate("/send-reset");
+  };
+  const handleGetStartedClick = () => {
+    navigate('/register');
   };
 
   return (
@@ -67,6 +75,14 @@ function FacultyLogin() {
               >
                 Faculty Login
               </Title>
+              <div style={{ marginTop: '8px' }}>
+                <Text style={{ color: '#6B7280' }}>
+                  Don’t have an account?{' '}
+                  <Link onClick={handleGetStartedClick} style={{ color: '#2563EB', cursor: 'pointer' }}>
+                    Get started
+                  </Link>
+                </Text>
+              </div>
               <Form layout="vertical" onFinish={onFinish} requiredMark={false}>
                 <Form.Item
                   label={<span style={{ color: "#263238" }}>Faculty ID</span>}
@@ -103,9 +119,17 @@ function FacultyLogin() {
               </Form>
 
               <div className="text-center mt-3">
-                <a href="#" style={{ color: "#005f73", fontWeight: 500 }}>
+                <Link
+                  onClick={handleForgotPasswordClick}
+                  style={{
+                    color: "#005f73",
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                  }}
+                >
                   Forgot Password?
-                </a>
+                </Link>
               </div>
             </div>
           </Col>

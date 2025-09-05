@@ -1,8 +1,3 @@
-Perfect 👍 Let’s extend the **README** to also list the **major dependencies** for both frontend & backend — so anyone cloning your repo knows exactly what tech stack they’re pulling.
-
-Here’s the updated version:
-
----
 
 # GEN-C\_LOGIN 🚀
 

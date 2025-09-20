@@ -1,56 +1,56 @@
 import React, { useState } from "react";
 import { Form, Input, Button, Typography, message } from "antd";
 import { Container, Row, Col } from "react-bootstrap";
-import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/auth-hooks";
+import client from '../api/client'; // Corrected import
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./Frontpage.css";
 
 const { Title, Text, Link } = Typography;
 
 const cardStyle = {
-  background: "#FFFFFF",
-  borderRadius: 16,
-  boxShadow: "0 6px 20px rgba(0, 0, 0, 0.1)",
+  maxWidth: "400px",
+  margin: "2rem auto",
   padding: "2rem",
-  border: "1px solid #E0E0E0",
+  boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+  borderRadius: "8px",
+  background: "#fff",
 };
 
 function FacultyLogin() {
-  const [loading, setLoading] = useState(false);
+  const [form] = Form.useForm();
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [loading, setLoading] = useState(false);
 
   const onFinish = async (values) => {
     setLoading(true);
     try {
-      const res = await axios.post("http://localhost:3001/auth/faculty-login", {
-        facultyId: values.facultyId, // send facultyId to match backend
+      const response = await client.post('/auth/faculty-login', {
+        employeeId: values.employeeId,
         password: values.password,
       });
-
-      if (res.data.success) {
-        localStorage.setItem("token", res.data.token);
-        localStorage.setItem("facultyData", JSON.stringify(res.data.faculty));
-
-        message.success(res.data.message);
-        navigate("/faculty");
+      if (response.data.success) {
+        message.success(response.data.message);
+        login(response.data.token); // Pass only the token to AuthContext's login
+        navigate('/faculty');
       } else {
-        message.error(res.data.message || "Login failed");
+        message.error(response.data.message);
       }
-    } catch (err) {
-      console.error("Login error:", err);
-      message.error(err.response?.data?.message || "Login failed. Please try again.");
+    } catch (error) {
+      console.error('Login error:', error);
+      message.error(error.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleForgotPasswordClick = () => {
-    // This is the correct way to navigate to the "Forgot Password" page
     navigate("/send-reset");
   };
   const handleGetStartedClick = () => {
-    navigate('/register');
+    navigate("/register");
   };
 
   return (
@@ -75,21 +75,32 @@ function FacultyLogin() {
               >
                 Faculty Login
               </Title>
-              <div style={{ marginTop: '8px' }}>
-                <Text style={{ color: '#6B7280' }}>
-                  Don’t have an account?{' '}
-                  <Link onClick={handleGetStartedClick} style={{ color: '#2563EB', cursor: 'pointer' }}>
+              <div style={{ marginTop: "8px" }}>
+                <Text style={{ color: "#6B7280" }}>
+                  Don’t have an account?{" "}
+                  <Link
+                    onClick={handleGetStartedClick}
+                    style={{ color: "#2563EB", cursor: "pointer" }}
+                  >
                     Get started
                   </Link>
                 </Text>
               </div>
-              <Form layout="vertical" onFinish={onFinish} requiredMark={false}>
+              <Form
+                form={form}
+                name="faculty_login"
+                onFinish={onFinish}
+                layout="vertical"
+                requiredMark={false}
+              >
                 <Form.Item
-                  label={<span style={{ color: "#263238" }}>Faculty ID</span>}
-                  name="facultyId"
-                  rules={[{ required: true, message: "Please enter your Faculty ID." }]}
+                  label={<span style={{ color: "#263238" }}>Employee ID</span>}
+                  name="employeeId"
+                  rules={[
+                    { required: true, message: "Please enter your Employee ID." },
+                  ]}
                 >
-                  <Input size="large" placeholder="Enter your Faculty ID" />
+                  <Input size="large" placeholder="Enter your Employee ID" />
                 </Form.Item>
 
                 <Form.Item
@@ -97,40 +108,42 @@ function FacultyLogin() {
                   name="password"
                   rules={[{ required: true, message: "Please enter your password." }]}
                 >
-                  <Input.Password size="large" placeholder="••••••••" />
+                  <Input.Password size="large" placeholder="Enter your password" />
                 </Form.Item>
 
-                <Button
-                  type="primary"
-                  htmlType="submit"
-                  block
-                  size="large"
-                  loading={loading}
-                  style={{
-                    borderRadius: 10,
-                    backgroundColor: "#008080",
-                    borderColor: "#005f73",
-                    color: "#ffffff",
-                    fontWeight: 600,
-                  }}
-                >
-                  Sign In
-                </Button>
-              </Form>
+                <Form.Item>
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    size="large"
+                    block
+                    loading={loading}
+                    style={{
+                      borderRadius: 10,
+                      backgroundColor: "#008080",
+                      borderColor: "#005f73",
+                      color: "#ffffff",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Login
+                  </Button>
+                </Form.Item>
 
-              <div className="text-center mt-3">
-                <Link
-                  onClick={handleForgotPasswordClick}
-                  style={{
-                    color: "#005f73",
-                    fontWeight: 500,
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                  }}
-                >
-                  Forgot Password?
-                </Link>
-              </div>
+                <div className="text-center mt-3">
+                  <Link
+                    onClick={handleForgotPasswordClick}
+                    style={{
+                      color: "#005f73",
+                      fontWeight: 500,
+                      cursor: "pointer",
+                      textDecoration: "underline",
+                    }}
+                  >
+                    Forgot Password?
+                  </Link>
+                </div>
+              </Form>
             </div>
           </Col>
         </Row>

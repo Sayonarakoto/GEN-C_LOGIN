@@ -1,90 +1,85 @@
 import React, { useState } from "react";
-import axios from "axios";
-import { Input, Button, Typography, Alert, Space } from "antd";
+import { Form, Input, Button, Typography, message } from "antd";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/auth-hooks";
+import client from '../api/client';
 import "bootstrap/dist/css/bootstrap.min.css";
+import "./Frontpage.css";
+import gencLogo from '../assets/genc-logo.png'; // Import the logo
 
 const { Title, Text } = Typography;
 
-function SecurityLogin() {
-  const [passkey, setPasskey] = useState("");
+const SecurityLogin = () => {
+  const [form] = Form.useForm();
+  const navigate = useNavigate();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(null); // success or error message
-  const [error, setError] = useState(null); // error state
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
-
-    if (!passkey) {
-      setError("Passkey cannot be empty.");
-      setMessage(null);
-      return;
-    }
-
+  const onFinish = async (values) => {
     setLoading(true);
-    setError(null);
-    setMessage(null);
-
     try {
-      const url = "http://localhost:3001/api/security/submit-passkey";
-      const response = await axios.post(url, { passkey });
-
-      setMessage("Success! Passkey submitted.");
-      setPasskey(""); // Reset input on success
-    } catch (err) {
-      setError(
-        err.response?.data?.error ||
-          `Submission failed! Server responded with status: ${err.response?.status || "Network Error"}`
-      );
+      const response = await client.post('/auth/security-login', {
+        passkey: values.passkey,
+      });
+      if (response.data.success) {
+        message.success(response.data.message);
+        login(response.data.token);
+        navigate("/security-dashboard");
+      } else {
+        message.error(response.data.message);
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      message.error(error.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="container d-flex justify-content-center align-items-center vh-100 bg-dark text-light">
-      <div className="card p-4 shadow-lg" style={{ maxWidth: "400px", width: "100%" }}>
-        <Title level={2} className="text-center mb-4" style={{ color: "white" }}>
-          Security Login
+    <div className="auth-container">
+      <div className="auth-box text-center">
+        <img src={gencLogo} alt="Genc Logo" style={{ width: '100px', marginBottom: '1rem' }} />
+        <Title level={2} className="auth-title">
+          Security Portal
         </Title>
+        <Text className="auth-sub">
+          Please enter the security passkey to proceed.
+        </Text>
 
-        <form onSubmit={handleSubmit} className="mb-3">
-          <label htmlFor="passkey" className="form-label text-light">
-            Passkey:
-          </label>
-          <Input.Password
-            id="passkey"
-            placeholder="Enter your passkey"
-            value={passkey}
-            onChange={(e) => setPasskey(e.target.value)}
-            size="large"
-            autoComplete="off"
-            className="mb-3"
-          />
-
-          <Button
-            type="primary"
-            htmlType="submit"
-            size="large"
-            block
-            loading={loading}
-            disabled={loading}
+        <Form
+          form={form}
+          name="security_login"
+          onFinish={onFinish}
+          layout="vertical"
+          className="auth-form"
+        >
+          <Form.Item
+            name="passkey"
+            rules={[{ required: true, message: "Please input the passkey!" }]}
           >
-            Login
-          </Button>
-        </form>
+            <Input.Password
+              size="large"
+              placeholder="Enter security passkey"
+            />
+          </Form.Item>
 
-        <Space direction="vertical" style={{ width: "100%" }}>
-          {error && <Alert message={error} type="error" showIcon />}
-          {message && <Alert message={message} type="success" showIcon />}
-          {!error && !message && (
-            <Text style={{ fontFamily: "monospace", fontSize: "0.9rem", color: "#aaa" }}>
-              Please enter your passkey to login.
-            </Text>
-          )}
-        </Space>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              size="large"
+              block
+              loading={loading}
+              className="login-btn"
+            >
+              Login
+            </Button>
+          </Form.Item>
+        </Form>
       </div>
     </div>
   );
-}
+};
 
 export default SecurityLogin;

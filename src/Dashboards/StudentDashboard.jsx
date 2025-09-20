@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Menu, Layout, message } from 'antd';
-import { NavLink, useNavigate, Routes, Route } from 'react-router-dom';
+import { NavLink, Routes, Route, useNavigate } from 'react-router-dom';
 import {
   UserOutlined,
   FileTextOutlined,
@@ -8,21 +8,23 @@ import {
   HomeOutlined,
   LogoutOutlined,
 } from '@ant-design/icons';
-import './Dashboard.css';
+import LateEntry from '../student/LateEntry';
+import { useAuth } from '../context/auth-hooks';
 
 const { Sider, Content } = Layout;
 
 function StudentDashboard() {
   const [collapsed, setCollapsed] = useState(false);
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
+  
 
   const onCollapse = (collapsed) => {
     setCollapsed(collapsed);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('studentToken'); 
-    sessionStorage.removeItem('studentToken'); 
+    logout();
     message.success('You have been logged out.');
     navigate('/signin');
   };
@@ -63,15 +65,14 @@ function StudentDashboard() {
 
       <Layout>
         <Content style={{ margin: '16px' }}>
+          <h2>Welcome{user?.name ? `, ${user.name}` : ''}!</h2>
           {/* Uncomment once pages are implemented */}
-          {/* 
           <Routes>
-            <Route path="/" element={<Overview />} />
-            <Route path="gatepass" element={<GatePassRequest />} />
+            <Route path="/" element={<div>Student Overview Content</div>} />
+            {/* <Route path="gatepass" element={<GatePassRequest />} /> */}
             <Route path="lateentry" element={<LateEntry />} />
-            <Route path="profile" element={<Profile />} />
-          </Routes> 
-          */}
+            {/* <Route path="profile" element={<Profile />} /> */}
+          </Routes>
         </Content>
       </Layout>
     </Layout>

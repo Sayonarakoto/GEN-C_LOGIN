@@ -1,181 +1,218 @@
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const crypto = require("crypto");
-const Student = require("../models/student");
-const Faculty = require("../models/Faculty");
-const PasswordResetToken = require("../models/PasswordResetToken");
-//const RefreshToken = require("../models/RefreshToken");
-const { sendResetEmail } = require("../utils/mailer"); // ✅ implement separately
+const { generateToken } = require('../config/jwt');
+const bcrypt = require('bcrypt');
+const Faculty = require('../models/Faculty');
+const Student = require('../models/student');
+const Security = require('../models/security');
 
-// JWT generator with fallback secret
-const generateToken = (payload, expiresIn = "1h") => {
-  const secret = process.env.JWT_SECRET || "dev-secret";
-  return jwt.sign(payload, secret, { expiresIn });
-};
-
-// ----------------- STUDENT LOGIN -----------------
+// ----------------- LOGIN -----------------
 exports.studentLogin = async (req, res) => {
   try {
     const { studentId, password } = req.body;
-
     const student = await Student.findOne({ studentId });
-    if (!student) return res.status(404).json({ message: "Student not found" });
+    
+    if (!student) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
 
     const isMatch = await bcrypt.compare(password, student.password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid password" });
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
 
-    const token = generateToken({ id: student._id, role: "student" });
+    const token = generateToken({
+      id: student._id,
+      role: 'student',
+      name: student.fullName
+    });
 
     res.json({
       success: true,
-      message: "Login successful",
       token,
-      student: {
-        studentId: student.studentId,
-        fullName: student.fullName,
-        department: student.department,
-        year: student.year,
-        email: student.email,
-      },
+      student: { ...student.toObject(), password: undefined }
     });
-  } catch (err) {
-    console.error("Student login error:", err);
-    res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    console.error('Student login error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during login'
+    });
   }
 };
 
-// ----------------- FACULTY LOGIN -----------------
 exports.facultyLogin = async (req, res) => {
   try {
-    console.log("📩 Incoming login request:", req.body);
-    const { employeeId, password } = req.body;
-
-    // 1. Find faculty
-    const faculty = await Faculty.findOne({ employeeId });
+    const { employeeId, facultyId, password } = req.body;
+    const id = employeeId || facultyId;
+    const faculty = await Faculty.findOne({ employeeId: id });
+    
     if (!faculty) {
       return res.status(401).json({
         success: false,
-        message: "Invalid Faculty ID or password",
+        message: 'Invalid credentials'
       });
     }
 
-    // 2. Compare password
-    const isValidPassword = await bcrypt.compare(password, faculty.password);
-    if (!isValidPassword) {
+    const isMatch = await bcrypt.compare(password, faculty.password);
+    if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: "Invalid Faculty ID or password",
+        message: 'Invalid credentials'
       });
     }
 
-    // 3. Prepare clean response (without password)
+    const token = generateToken({
+      id: faculty._id,
+      role: 'faculty',
+      name: faculty.fullName
+    });
+
     const facultyData = faculty.toObject();
     delete facultyData.password;
 
-    // ✅ No JWT for now — just return success + faculty data
     res.json({
       success: true,
       message: "Login successful",
+      token,
       faculty: facultyData,
     });
-  } catch (err) {
-    console.error("Faculty login error:", err);
+  } catch (error) {
+    console.error('Faculty login error:', error);
     res.status(500).json({
       success: false,
-      message: "Server error",
+      message: 'Server error during login'
     });
   }
 };
 
+exports.securityLogin = async (req, res) => {
+  try {
+    const { passkey } = req.body;
+    // If you have a single security doc:
+    const security = await Security.findOne();
+    if (!security) return res.status(401).json({ success: false, message: 'Security user not found' });
 
-// ----------------- FORGOT PASSWORD -----------------
+    const ok = await bcrypt.compare(passkey, security.passkey);
+    if (!ok) return res.status(401).json({ success: false, message: 'Invalid passkey' });
+
+    const token = generateToken({ id: security._id, role: 'security', name: 'Security' });
+    return res.json({ success: true, message: 'Login successful', token });
+  } catch (err) {
+    console.error('Security login error:', err);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
+// Token Refresh
+exports.refreshToken = async (req, res) => {
+  try {
+    // Implementation for token refresh
+    // ... add your token refresh logic here
+    res.status(501).json({ message: 'Token refresh not implemented' });
+  } catch (error) {
+    console.error('Token refresh error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during token refresh'
+    });
+  }
+};
+
+// Password Reset Request
 exports.forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
-    const student = await Student.findOne({ email });
-
-    // Always return success (avoid leaking valid emails)
-    res.json({ message: "If this account exists, a reset link has been sent." });
-
-    if (!student) return;
-
-    await PasswordResetToken.deleteMany({ userId: student._id });
-
-    const token = crypto.randomBytes(32).toString("hex");
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-
-    await PasswordResetToken.create({
-      userId: student._id,
-      tokenHash,
-      expiresAt: new Date(Date.now() + 3600000), // 1 hour
+    // Implementation for password reset request
+    // ... add your forgot password logic here
+    res.status(501).json({ message: 'Forgot password not implemented' });
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during password reset request'
     });
-
-    const resetUrl = `http://localhost:5173/forget?token=${token}`;
-    await sendResetEmail(student.email, resetUrl);
-  } catch (err) {
-    console.error("Forgot password error:", err);
   }
 };
 
-// ----------------- RESET PASSWORD -----------------
+// Password Reset
 exports.resetPassword = async (req, res) => {
   try {
-    const { token, password } = req.body;
-    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
-
-    const resetDoc = await PasswordResetToken.findOne({
-      tokenHash,
-      expiresAt: { $gt: new Date() },
+    // Implementation for password reset
+    // ... add your password reset logic here
+    res.status(501).json({ message: 'Password reset not implemented' });
+  } catch (error) {
+    console.error('Password reset error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error during password reset'
     });
-
-    if (!resetDoc) {
-      return res.status(400).json({ error: "Invalid or expired reset token" });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    await Student.findByIdAndUpdate(resetDoc.userId, { password: hashedPassword });
-
-    await PasswordResetToken.deleteMany({ userId: resetDoc.userId });
-
-    res.json({ message: "Password reset successful" });
-  } catch (err) {
-    console.error("Reset password error:", err);
-    res.status(500).json({ error: "Server error" });
   }
 };
 
-// ----------------- REFRESH TOKEN -----------------
-exports.refreshToken = async (req, res) => {
-  const { token } = req.body;
-  if (!token) return res.status(401).json({ error: "Refresh token is required." });
-
+exports.unifiedLogin = async (req, res) => {
   try {
-    const secret = process.env.JWT_SECRET || "dev-secret";
-    const payload = jwt.verify(token, secret);
+    const { role } = req.body;
+    if (!role) return res.status(400).json({ message: "Role is required" });
 
-    const refreshTokenDoc = await RefreshToken.findOne({
-      token,
-      expiresAt: { $gt: new Date() },
-    });
-    if (!refreshTokenDoc) {
-      return res.status(401).json({ error: "Invalid or expired refresh token" });
+    if (role === 'student') {
+      const { studentId, password } = req.body;
+      console.log('Attempting student login for studentId:', studentId);
+      const student = await Student.findOne({ studentId });
+      if (!student) {
+        console.log('Student not found for studentId:', studentId);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      console.log('Student found:', student.fullName);
+      const ok = await bcrypt.compare(password, student.password);
+      if (!ok) {
+        console.log('Password mismatch for studentId:', studentId);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      console.log('Student login successful for studentId:', studentId);
+      const token = generateToken({ id: student._id, role: 'student', name: student.fullName });
+      return res.json({ token, user: { id: student._id, role: 'student', studentId: student.studentId, fullName: student.fullName }});
     }
 
-    const newAccessToken = generateToken({ id: payload.id }, "15m");
+    if (role === 'faculty') {
+      const { employeeId, facultyId, password } = req.body;
+      const id = employeeId || facultyId;
+      console.log('Attempting faculty login for employeeId:', id);
+      const faculty = await Faculty.findOne({ employeeId: id });
+      if (!faculty) {
+        console.log('Faculty not found for employeeId:', id);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      console.log('Faculty found:', faculty.fullName);
+      const ok = await bcrypt.compare(password, faculty.password);
+      if (!ok) {
+        console.log('Password mismatch for employeeId:', id);
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      console.log('Faculty login successful for employeeId:', id);
+      const token = generateToken({ id: faculty._id, role: 'faculty', name: faculty.fullName });
+      console.log('Generated token for faculty:', token, typeof token);
+      const f = faculty.toObject(); delete f.password;
+      return res.json({ token, user: { id: faculty._id, role: 'faculty', ...f }});
+    }
 
-    // Invalidate old refresh
-    await RefreshToken.deleteOne({ token });
+    if (role === 'security') {
+      const { passkey } = req.body;
+      // Decide how security users are stored (single or multiple). Assuming one doc:
+      const security = await Security.findOne(); // or Security.findOne({ username }) if such field exists
+      if (!security) return res.status(401).json({ message: "Security user not found" });
+      const ok = await bcrypt.compare(passkey, security.passkey);
+      if (!ok) return res.status(401).json({ message: "Invalid passkey" });
+      const token = generateToken({ id: security._id, role: 'security' });
+      return res.json({ token, user: { id: security._id, role: 'security' }});
+    }
 
-    // Generate new refresh
-    const newRefreshToken = generateToken({ id: payload.id }, "7d");
-    await RefreshToken.create({
-      userId: payload.id,
-      token: newRefreshToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    });
-
-    res.json({ token: newAccessToken, refreshToken: newRefreshToken });
+    return res.status(400).json({ message: "Unsupported role" });
   } catch (err) {
-    res.status(401).json({ error: "Invalid or expired refresh token." });
+    console.error("Login error:", err);
+    res.status(500).json({ message: "Server error" });
   }
 };

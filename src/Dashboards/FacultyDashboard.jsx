@@ -5,15 +5,20 @@ import {
   HomeOutlined,
   FileDoneOutlined,
   LogoutOutlined,
+  ClockCircleOutlined, // Added for Late Entries
 } from "@ant-design/icons";
 import StudentEntryForm from "../faculty/StudentEntryForm";
-import { useNavigate } from "react-router-dom";
+import FacultyLateEntries from "../faculty/FacultyLateEntries"; // Import the new component
+import {  Routes, Route, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/auth-hooks";
 import "./Dashboard.css";
 
 const { Header, Sider, Content } = Layout;
 
 function FacultyDashboard() {
   const [selectedKey, setSelectedKey] = useState("home");
+  
+  const { logout, user } = useAuth(); // Destructure user from useAuth
   const navigate = useNavigate();
 
   const handleMenuClick = (e) => {
@@ -21,14 +26,9 @@ function FacultyDashboard() {
   };
 
   const handleLogout = () => {
-    // Clear user data from local storage and session storage
-    localStorage.removeItem("facultyToken");
-    sessionStorage.removeItem("facultyToken");
-
+    logout();
     message.success("You have been logged out.");
-
-    // Redirect the user to the signin page
-    navigate("/faculty-login");
+    navigate('/faculty-login');
   };
 
   const renderContent = () => {
@@ -37,9 +37,11 @@ function FacultyDashboard() {
         return <StudentEntryForm />;
       case "approvals":
         return <h2>Approvals Page (Coming Soon)</h2>;
+      case "lateEntries":
+        return <FacultyLateEntries />;
       case "home":
       default:
-        return <h2>Welcome to Faculty Dashboard</h2>;
+        return <h2>Welcome{user?.name ? `, ${user.name}` : ''}!</h2>; // Personalized greeting
     }
   };
 
@@ -56,27 +58,35 @@ function FacultyDashboard() {
             selectedKeys={[selectedKey]}
             onClick={handleMenuClick}
             className="dashboard-menu"
-          >
-            <Menu.Item key="home" icon={<HomeOutlined />}>
-              Home
-            </Menu.Item>
-            <Menu.Item key="studentEntry" icon={<UserAddOutlined />}>
-              Student Entry
-            </Menu.Item>
-            <Menu.Item key="approvals" icon={<FileDoneOutlined />}>
-              Approvals
-            </Menu.Item>
-
-            {/* Logout item at the end of the menu */}
-            <Menu.Item
-              key="logout"
-              icon={<LogoutOutlined />}
-              onClick={handleLogout}
-              className="dashboard-logout" // Add a class for styling
-            >
-              Logout
-            </Menu.Item>
-          </Menu>
+            items={[
+              {
+                key: 'home',
+                icon: <HomeOutlined />,
+                label: 'Home',
+              },
+              {
+                key: 'studentEntry',
+                icon: <UserAddOutlined />,
+                label: 'Student Entry',
+              },
+              {
+                key: 'approvals',
+                icon: <FileDoneOutlined />,
+                label: 'Approvals',
+              },
+              {
+                key: 'lateEntries',
+                icon: <ClockCircleOutlined />,
+                label: 'Late Entries',
+              },
+              {
+                key: 'logout',
+                icon: <LogoutOutlined />,
+                label: 'Logout',
+                onClick: handleLogout,
+                className: 'dashboard-logout',
+              },
+            ]}
         </div>
       </Sider>
 

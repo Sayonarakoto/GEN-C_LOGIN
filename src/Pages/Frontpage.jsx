@@ -63,7 +63,7 @@ function Frontpage() {
               </Link>
 
               {/* Security */}
-              <Link to="/signin?role=security">
+              <Link to="/security-login">
                 <Button type="primary" block size="large">
                   Security Staff Login
                 </Button>

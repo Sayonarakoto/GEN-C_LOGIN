@@ -23,7 +23,19 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+      'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]', caughtErrors: 'none' }], // Added caughtErrors: 'none'
+    },
+  },
+  {
+    files: ['server/**/*.{js,jsx}'], // Target files in the server directory
+    languageOptions: {
+      globals: {
+        ...globals.node, // Enable Node.js global variables
+      },
+    },
+    rules: {
+      'no-undef': 'off', // Temporarily turn off no-undef for server files if needed, or configure specific globals
+      'no-unused-vars': ['error', { argsIgnorePattern: 'next', caughtErrors: 'none' }], // Added caughtErrors: 'none'
     },
   },
 ])

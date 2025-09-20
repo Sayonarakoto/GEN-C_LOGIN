@@ -9,6 +9,7 @@ import {
   LogoutOutlined,
 } from '@ant-design/icons';
 import LateEntry from '../student/LateEntry';
+import StudentLateEntry from '../student/StudentLateEntry';
 import { useAuth } from '../context/auth-hooks';
 
 const { Sider, Content } = Layout;
@@ -70,7 +71,7 @@ function StudentDashboard() {
           <Routes>
             <Route path="/" element={<div>Student Overview Content</div>} />
             {/* <Route path="gatepass" element={<GatePassRequest />} /> */}
-            <Route path="lateentry" element={<LateEntry />} />
+            <Route path="lateentry" element={<StudentLateEntry />} />
             {/* <Route path="profile" element={<Profile />} /> */}
           </Routes>
         </Content>

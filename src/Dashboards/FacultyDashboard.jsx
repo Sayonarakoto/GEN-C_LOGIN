@@ -9,6 +9,7 @@ import {
 } from "@ant-design/icons";
 import StudentEntryForm from "../faculty/StudentEntryForm";
 import FacultyLateEntries from "../faculty/FacultyLateEntries"; // Import the new component
+import LateEntriesApprovals from "../faculty/LateEntriesApprovals"; // Import the new component
 import {  Routes, Route, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/auth-hooks";
 import "./Dashboard.css";
@@ -36,7 +37,7 @@ function FacultyDashboard() {
       case "studentEntry":
         return <StudentEntryForm />;
       case "approvals":
-        return <h2>Approvals Page (Coming Soon)</h2>;
+        return <LateEntriesApprovals />;
       case "lateEntries":
         return <FacultyLateEntries />;
       case "home":
@@ -87,6 +88,7 @@ function FacultyDashboard() {
                 className: 'dashboard-logout',
               },
             ]}
+          />
         </div>
       </Sider>
 

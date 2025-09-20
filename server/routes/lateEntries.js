@@ -1,11 +1,11 @@
 // server/routes/lateEntries.js
 const express = require('express');
 const router = express.Router();
-const { verifyJWT, checkRole } = require('../middleware/auth');
+const { requireAuth, requireRole } = require('../middleware/auth');
 const LateEntry = require('../models/LateEntry');
 const Student = require('../models/student');
 
-router.post('/', verifyJWT, checkRole('security'), async (req, res) => {
+router.post('/', requireAuth, requireRole('security'), async (req, res) => {
   try {
     const { studentId, reason, recordedAt, gate } = req.body;
     
@@ -35,12 +35,12 @@ router.post('/', verifyJWT, checkRole('security'), async (req, res) => {
   }
 });
 
-router.get('/mine', verifyJWT, checkRole('student'), async (req, res) => {
+router.get('/mine', requireAuth, requireRole('student'), async (req, res) => {
   const entries = await LateEntry.find({ student: req.user.id }).sort({ recordedAt: -1 });
   res.json({ success: true, entries });
 });
 
-router.get('/', verifyJWT, checkRole('faculty'), async (req, res) => {
+router.get('/', requireAuth, requireRole('faculty'), async (req, res) => {
   const { department, from, to, status, page = 1, limit = 20 } = req.query;
   const match = {};
   if (status) match.status = status;
@@ -62,7 +62,7 @@ router.get('/', verifyJWT, checkRole('faculty'), async (req, res) => {
   res.json({ success: true, entries: results });
 });
 
-router.patch('/:id/status', verifyJWT, checkRole('faculty'), async (req, res) => {
+router.patch('/:id/status', requireAuth, requireRole('faculty'), async (req, res) => {
   const { status, remarks } = req.body;
   const updated = await LateEntry.findByIdAndUpdate(req.params.id, { status, remarks }, { new: true });
   res.json({ success: true, lateEntry: updated });

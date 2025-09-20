@@ -4,22 +4,37 @@ const Student = require('../models/student');
 const Faculty = require('../models/Faculty');
 const Security = require('../models/security');
 
-exports.verifyJWT = (req, res, next) => {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ message: "No token provided" });
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; // { id, role }
-    next();
-  } catch (err) {
-    return res.status(401).json({ message: "Invalid or expired token" });
+exports.requireAuth = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  console.log('Auth Header:', authHeader);
+  console.log('Extracted Token:', token ? `${token.substring(0, 20)}...` : 'No token');
+
+  if (!token) {
+    console.log('No token provided');
+    return res.status(401).json({ message: 'Access token required' });
   }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+    if (err) {
+      console.log('Token verification failed:', err.message);
+      return res.status(403).json({ message: 'Invalid or expired token' });
+    }
+
+    console.log('Token verified successfully. User:', decoded);
+    req.user = decoded;
+    next();
+  });
 };
 
-exports.checkRole = (...allowed) => (req, res, next) => {
-  if (!req.user || !allowed.includes(req.user.role)) {
-    return res.status(403).json({ message: "Forbidden" });
+exports.requireRole = (...roles) => (req, res, next) => {
+  console.log(`Checking for role: ${roles}. User role is: ${req.user?.role}`);
+  if (!req.user || !roles.includes(req.user.role)) {
+    console.log('Role check failed.');
+    return res.status(403).json({ message: 'Forbidden' });
   }
+  console.log('Role check passed.');
   next();
 };
 

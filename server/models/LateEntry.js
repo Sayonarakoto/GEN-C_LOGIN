@@ -1,16 +1,16 @@
-// server/models/LateEntry.js
 const mongoose = require('mongoose');
 
-const lateEntrySchema = new mongoose.Schema({
+const LateEntrySchema = new mongoose.Schema({
   student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true, index: true },
-  recordedAt: { type: Date, required: true, default: Date.now, index: true },
   reason: { type: String, required: true, maxlength: 500 },
-  gate: { type: String }, // e.g., Main Gate, North Gate
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'Security', required: true },
-  status: { type: String, enum: ['recorded', 'acknowledged', 'reviewed'], default: 'recorded', index: true },
-  remarks: { type: String, maxlength: 500 },
+  entryTime: { type: Date, required: true, default: Date.now, index: true },
+  status: { type: String, enum: ['Pending', 'Approved', 'Declined'], default: 'Pending', index: true },
+  // Optional fields you may add later:
+  // gate: String,
+  // createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'SecurityUser' },
+  // department: String, // denormalized from student for faculty filtering
 }, { timestamps: true });
 
-lateEntrySchema.index({ student: 1, recordedAt: -1 });
+LateEntrySchema.index({ student: 1, entryTime: -1 });
 
-module.exports = mongoose.model('LateEntry', lateEntrySchema);
+module.exports = mongoose.model('LateEntry', LateEntrySchema);

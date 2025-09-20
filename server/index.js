@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const StudentRoutes = require('./routes/Student');
 const FacultyRoutes = require('./routes/faculty');
 const lateEntriesRouter = require('./routes/lateEntries');
+const latecomerRoutes = require('./routes/latecomers');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/auth', authRoutes);
 app.use('/student', StudentRoutes);
 app.use('/api/faculty', FacultyRoutes);
 app.use('/api/lateentries', lateEntriesRouter);
+app.use('/api/latecomers', latecomerRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

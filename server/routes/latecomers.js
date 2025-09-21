@@ -1,8 +1,11 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { body, param, validationResult } = require('express-validator');
 const LateEntry = require('../models/LateEntry');
 const Student = require('../models/student');
+const AuditLog = require('../models/AuditLog');
 
 // POST /api/latecomers
 // Body: { reason, entryTime? }
@@ -30,22 +33,11 @@ router.post('/', requireAuth, requireRole('student'), async (req, res) => {
 // Role: faculty
 router.get('/pending', requireAuth, requireRole('faculty'), async (req, res) => {
   try {
-    console.log('Fetching pending requests...');
-    console.log('Authenticated user:', req.user); // Log the authenticated user
-    
-    const results = await LateEntry.aggregate([
-      { $match: { status: 'Pending' } },
-      { $lookup: { from: 'students', localField: 'student', foreignField: '_id', as: 'student' } },
-      { $unwind: '$student' },
-      // Optionally filter by department:
-      // { $match: { 'student.department': req.faculty.department } },
-      { $sort: { entryTime: -1 } },
-    ]);
+    const results = await LateEntry.find({ status: 'Pending' })
+      .populate('student', 'name studentId photo')
+      .sort({ entryTime: -1 });
 
-    console.log('Found pending requests:', results.length);
-    console.log('Requests data:', results);
-    
-    res.status(200).json({ success: true, entries: results });
+    res.status(200).json(results);
   } catch (err) {
     console.error('Error fetching pending requests:', err);
     res.status(500).json({ message: 'Internal server error', error: err.message });
@@ -53,28 +45,88 @@ router.get('/pending', requireAuth, requireRole('faculty'), async (req, res) => 
 });
 
 // PUT /api/latecomers/:id/status
-// Body: { status: 'Approved' | 'Declined' }
+// Body: { status: 'Approved' | 'Declined', remarks?: string }
 // Role: faculty
-router.put('/:id/status', requireAuth, requireRole('faculty'), async (req, res) => {
-  try {
-    const { status } = req.body;
-    if (!['Approved', 'Declined'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status' });
+router.put(
+  '/:id/status',
+  requireAuth,
+  requireRole('faculty'),
+  [
+    param('id').isMongoId().withMessage('Invalid entry ID'),
+    body('status')
+      .isIn(['Approved', 'Declined'])
+      .withMessage('Status must be either Approved or Declined'),
+    body('remarks').optional().trim().escape(),
+    body('status').custom(async (value, { req }) => {
+      const entry = await LateEntry.findById(req.params.id);
+      if (entry && entry.status !== 'Pending') {
+        return Promise.reject('Entry has already been processed');
+      }
+    }),
+  ],
+  async (req, res, next) => {
+    console.log('--- Update Status Request Received ---');
+    console.log('Request Params:', req.params);
+    console.log('Request Body:', req.body);
+    console.log('Authenticated User:', req.user);
+    console.log('-------------------------------------');
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
 
-    const updated = await LateEntry.findByIdAndUpdate(
-      req.params.id,
-      { status },
-      { new: true }
-    );
+    try {
+      const { id } = req.params;
+      const { status, remarks } = req.body;
 
-    if (!updated) return res.status(404).json({ message: 'Late entry not found' });
-    res.json({ success: true, lateEntry: updated });
-  } catch (err) {
-    console.error('Update status error:', err);
-    res.status(500).json({ message: 'Server error' });
+      const entry = await LateEntry.findById(id);
+      if (!entry) {
+        return res.status(404).json({
+          success: false,
+          message: 'Late entry not found',
+          code: 'ENTRY_NOT_FOUND'
+        });
+      }
+
+      const updatedEntry = await LateEntry.findByIdAndUpdate(
+        id,
+        {
+          status,
+          remarks: remarks || '',
+          processedBy: req.user.id,
+          processedAt: new Date(),
+        },
+        { new: true }
+      );
+
+      await AuditLog.create([
+        {
+          action: 'UPDATE_LATE_ENTRY_STATUS',
+          entityType: 'LateEntry',
+          entityId: id,
+          userId: req.user.id,
+          changes: { status, remarks },
+        }
+      ]);
+
+      res.status(200).json({
+        success: true,
+        message: 'Entry updated successfully',
+        data: updatedEntry
+      });
+
+    } catch (error) {
+      console.error('Error updating late entry status:', {
+        error: error.message,
+        stack: error.stack,
+        entryId: req.params.id,
+        userId: req.user?.id
+      });
+      next(error);
+    }
   }
-});
+);
 
 // GET /api/latecomers/mine
 // Role: student
@@ -89,3 +141,4 @@ router.get('/mine', requireAuth, requireRole('student'), async (req, res) => {
 });
 
 module.exports = router;
+

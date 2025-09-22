@@ -6,6 +6,8 @@ const securitySchema = new mongoose.Schema({
     type: String,
     required: [true, 'Passkey is required'],
   },
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
 });
 // This pre-save hook will hash the passkey before it is saved to the database.
 // This is a crucial security practice to protect sensitive user data.

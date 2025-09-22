@@ -7,3 +7,11 @@
   max-width: 400px;
   margin: auto; /* Centers the card horizontally */
 }
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh; /* Take full viewport height */
+  width: 100%; /* Take full viewport width */
+}

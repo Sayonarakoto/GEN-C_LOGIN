@@ -58,7 +58,9 @@ function ResetPassword() { // Renamed from Forgetpass to ResetPassword
       setSuccess(response.data.message || "✅ Password reset successful!");
       message.success(response.data.message || "Password reset successful!"); // Antd message
       form.resetFields();
-      navigate('/student-login'); // Redirect to login page
+      setTimeout(() => {
+        navigate('/student-login'); // Redirect to login page after a delay
+      }, 3000); // 3-second delay
 
     } catch (err) {
       // Handle error response
@@ -76,6 +78,7 @@ function ResetPassword() { // Renamed from Forgetpass to ResetPassword
       <LoginCard>
         <Title level={1} style={{ textAlign: 'center', color: 'var(--text-dark)' }}>Reset Password</Title> {/* Changed title */}
         <Text style={{ textAlign: 'center', display: 'block', marginBottom: '24px', color: 'var(--text-light)' }}>Please enter your new password below.</Text>
+        <Text style={{ textAlign: 'center', display: 'block', marginBottom: '24px', color: 'var(--text-light)', fontSize: '0.85em' }}>Password must be at least 6 characters long.</Text>
 
         <Form form={form} onFinish={handleSubmit} layout="vertical">
           <Form.Item
@@ -95,15 +98,21 @@ function ResetPassword() { // Renamed from Forgetpass to ResetPassword
           {error && <p style={{ color: 'var(--error-red)' }}>{error}</p>}
           {success && <p style={{ color: 'var(--success-green)' }}>{success}</p>}
 
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              block
-              disabled={loading || !form.getFieldValue('newPassword') || !form.getFieldValue('confirmPassword')} // Disable during loading
-            >
-              {loading ? 'Resetting...' : 'Reset Password'} {/* Show loading text */}
-            </Button>
+          <Form.Item shouldUpdate>
+            {() => (
+              <Button
+                type="primary"
+                htmlType="submit"
+                block
+                disabled={
+                  loading ||
+                  !form.isFieldsTouched(['newPassword', 'confirmPassword'], true) ||
+                  !!form.getFieldsError().filter(({ errors }) => errors.length).length
+                }
+              >
+                {loading ? 'Resetting...' : 'Reset Password'}
+              </Button>
+            )}
           </Form.Item>
         </Form>
       </LoginCard>

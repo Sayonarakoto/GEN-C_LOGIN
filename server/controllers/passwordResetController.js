@@ -2,6 +2,8 @@ const crypto = require('crypto');
 // const nodemailer = require('nodemailer'); // Removed: Using mailer.js
 const bcrypt = require('bcrypt'); // For hashing new passwords
 const Student = require('../models/student'); // Our Student model
+const Faculty = require('../models/Faculty'); // Import Faculty model
+const Security = require('../models/security'); // Import Security model
 const { sendResetEmail } = require('../utils/mailer'); // Import sendResetEmail
 
 // Configure Nodemailer (removed from here, now in mailer.js)
@@ -17,29 +19,38 @@ const { sendResetEmail } = require('../utils/mailer'); // Import sendResetEmail
 // @desc    Request a password reset link
 // @access  Public
 const forgotPassword = async (req, res) => {
+  console.log('Forgot password request received.'); // Added log
   try {
     const { email } = req.body;
 
-    const student = await Student.findOne({ email });
-    if (!student) {
-      return res.status(404).json({ message: 'Student with that email does not exist.' });
+    let user = await Student.findOne({ email });
+    if (!user) {
+      user = await Faculty.findOne({ email });
+    }
+    if (!user) {
+      user = await Security.findOne({ email });
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: 'User with that email does not exist.' }); // Changed message
     }
 
     // Generate a reset token
     const resetToken = crypto.randomBytes(32).toString('hex');
     const passwordResetToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-    const passwordResetExpires = Date.now() + 3600000; // 1 hour
+    const resetPasswordExpire = Date.now() + 3600000; // 1 hour
 
-    // Update student with reset token and expiration
-    student.passwordResetToken = passwordResetToken;
-    student.passwordResetExpires = passwordResetExpires;
-    await student.save();
+    // Update user with reset token and expiration
+    user.resetPasswordToken = passwordResetToken;
+    user.resetPasswordExpire = resetPasswordExpire;
+    await user.save(); // Use user.save()
 
     // Create reset URL
-    const resetURL = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
+    const resetURL = `${process.env.FRONTEND_URL}/GEN-C_LOGIN/reset-password/${resetToken}`;
+    console.log('Generated reset URL:', resetURL);
 
     // Send email using the mailer utility
-    await sendResetEmail(student.email, resetURL);
+    await sendResetEmail(user.email, resetURL); // Use user.email
 
     res.status(200).json({ message: 'Password reset link sent to your email.' });
   } catch (error) {
@@ -58,24 +69,35 @@ const resetPassword = async (req, res) => {
 
     const passwordResetToken = crypto.createHash('sha256').update(token).digest('hex');
 
-    const student = await Student.findOne({
-      passwordResetToken,
-      passwordResetExpires: { $gt: Date.now() },
+    let user = await Student.findOne({
+      resetPasswordToken: passwordResetToken,
+      resetPasswordExpire: { $gt: Date.now() },
     });
+    if (!user) {
+      user = await Faculty.findOne({
+        resetPasswordToken: passwordResetToken,
+        resetPasswordExpire: { $gt: Date.now() },
+      });
+    }
+    if (!user) {
+      user = await Security.findOne({
+        resetPasswordToken: passwordResetToken,
+        resetPasswordExpire: { $gt: Date.now() },
+      });
+    }
 
-    if (!student) {
+    if (!user) {
       return res.status(400).json({ message: 'Password reset token is invalid or has expired.' });
     }
 
     // Hash the new password
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    // Update student's password and clear reset token fields
-    student.passwordHash = hashedPassword; // Update the hashed password field
-    student.tempPassword = undefined; // Clear the temporary password
-    student.passwordResetToken = undefined;
-    student.passwordResetExpires = undefined;
-    await student.save();
+    // Update user's password and clear reset token fields
+    user.password = hashedPassword; // Update the hashed password field
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save(); // Use user.save()
 
     res.status(200).json({ message: 'Password has been reset successfully.' });
   } catch (error) {

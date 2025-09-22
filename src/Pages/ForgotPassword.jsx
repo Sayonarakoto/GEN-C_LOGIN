@@ -9,6 +9,7 @@ const ForgotPassword = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [emailForResend, setEmailForResend] = useState(''); // New state
 
   const handleSubmit = async (values) => {
     if (!isValidEmail(values.email)) {
@@ -22,6 +23,7 @@ const ForgotPassword = () => {
         email: values.email,
       });
       setSubmitted(true);
+      setEmailForResend(values.email); // Store email for resend
       message.success("✅ A new password reset email has been sent!");
     } catch (err) {
       console.error(err);
@@ -30,6 +32,14 @@ const ForgotPassword = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResendEmail = async () => {
+    if (!emailForResend) {
+      message.error("Email is missing for resend.");
+      return;
+    }
+    await handleSubmit({ email: emailForResend }); // Use stored email
   };
 
   // Basic email regex
@@ -46,7 +56,7 @@ const ForgotPassword = () => {
         </Text>
 
         {!submitted ? (
-                    <Form form={form} onFinish={handleSubmit} layout="vertical">
+          <Form form={form} onFinish={handleSubmit} layout="vertical">
             <Form.Item
               name="email"
               rules={[
@@ -62,22 +72,28 @@ const ForgotPassword = () => {
               />
             </Form.Item>
 
-            <Form.Item>
-              <Button
-                type="primary"
-                htmlType="submit"
-                disabled={!form.getFieldValue('email') || !isValidEmail(form.getFieldValue('email')) || loading}
-                block
-                size="large"
-              >
-                {loading ? (
-                  <>
-                    <Spin size="small" style={{ marginRight: '8px' }} /> Sending...
-                  </>
-                ) : (
-                  "Send Reset Link"
-                )}
-              </Button>
+            <Form.Item shouldUpdate>
+              {() => (
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  disabled={
+                    loading ||
+                    !form.isFieldsTouched(['email'], true) ||
+                    !!form.getFieldsError().filter(({ errors }) => errors.length).length
+                  }
+                  block
+                  size="large"
+                >
+                  {loading ? (
+                    <>
+                      <Spin size="small" style={{ marginRight: '8px' }} /> Sending...
+                    </>
+                  ) : (
+                    "Send Reset Link"
+                  )}
+                </Button>
+              )}
             </Form.Item>
           </Form>
         ) : (
@@ -91,7 +107,7 @@ const ForgotPassword = () => {
             <Button
               style={{ marginTop: '24px' }}
               type="default"
-              onClick={() => handleSubmit(form.getFieldsValue())}
+              onClick={handleResendEmail} // Call new handler
               disabled={loading}
               block
               size="large"

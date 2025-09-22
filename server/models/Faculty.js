@@ -8,6 +8,8 @@ const FacultySchema = new mongoose.Schema({
   password:{type:String,required:true},
   designation: { type: String, required: true },
   profilePhoto: { type: String }, // Store image filename or URL if uploading file separately
+  resetPasswordToken: String,
+  resetPasswordExpire: Date,
 }, { timestamps: true });
 
 const Faculty = mongoose.model('Faculty', FacultySchema);

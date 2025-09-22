@@ -80,7 +80,7 @@ router.put(
       const { id } = req.params;
       const { status, remarks } = req.body;
 
-      const entry = await LateEntry.findById(id, { session: null });
+      const entry = await LateEntry.findById(id); // Removed session: null
       if (!entry) {
         return res.status(404).json({
           success: false,
@@ -94,10 +94,8 @@ router.put(
         {
           status,
           remarks: remarks || '',
-          processedBy: req.user.id,
-          processedAt: new Date(),
         },
-        { new: true, session: null }
+        { new: true } // Removed session: null and processedBy/processedAt
       );
 
       await AuditLog.create([
@@ -110,11 +108,7 @@ router.put(
         }
       ]);
 
-      res.status(200).json({
-        success: true,
-        message: 'Entry updated successfully',
-        data: updatedEntry
-      });
+      res.status(200).json({ success: true, message: 'Entry updated successfully', data: updatedEntry });
 
     } catch (error) {
       console.error('Error updating late entry status:', {
@@ -129,8 +123,8 @@ router.put(
 );
 
 // GET /api/latecomers/mine
-// Role: student
-router.get('/mine', requireAuth, requireRole('student'), async (req, res) => {
+// Role: student, faculty
+router.get('/mine', requireAuth, requireRole('student', 'faculty'), async (req, res) => {
   try {
     const entries = await LateEntry.find({ student: req.user.id }).sort({ entryTime: -1 });
     res.json({ success: true, entries });
@@ -141,4 +135,3 @@ router.get('/mine', requireAuth, requireRole('student'), async (req, res) => {
 });
 
 module.exports = router;
-

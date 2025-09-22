@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Layout, Menu, message, Card, Button } from "antd";
 import {
   HomeOutlined,
@@ -13,7 +13,7 @@ import ExcelUpload from "../components/ExcelUpload"; // Import the new ExcelUplo
 import StudentTable from "../components/StudentTable"; // Import the new StudentTable component
 import {  Routes, Route, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import axios from 'axios'; // Import axios for fetching students
+import api from '../api/client'; // Import api client
 import "./Dashboard.css";
 
 const { Header, Sider, Content } = Layout;
@@ -26,12 +26,11 @@ function FacultyDashboard() {
   const { logout, user } = useAuth(); // Destructure user from useAuth
   const navigate = useNavigate();
 
-  // Function to fetch all students
-  const fetchAllStudents = async () => {
+  // Function to fetch all students (wrapped in useCallback)
+  const fetchAllStudents = useCallback(async () => {
     setLoadingStudents(true);
     try {
-      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
-      const response = await axios.get(`${API_BASE_URL}/api/students`, {
+      const response = await api.get(`/api/students`, {
         headers: {
           Authorization: `Bearer ${user?.token}` // Add authentication if available
         }
@@ -43,14 +42,14 @@ function FacultyDashboard() {
     } finally {
       setLoadingStudents(false);
     }
-  };
+  }, [user]); // fetchAllStudents depends on 'user'
 
   // Fetch students when the component mounts or when the uploadStudents tab is selected
   useEffect(() => {
     if (selectedKey === 'uploadStudents') {
       fetchAllStudents();
     }
-  }, [selectedKey]);
+  }, [selectedKey, fetchAllStudents]); // Now fetchAllStudents is a dependency
 
   const handleMenuClick = (e) => {
     setSelectedKey(e.key);
@@ -131,7 +130,7 @@ function FacultyDashboard() {
               },
               {
                 key: 'uploadStudents', // New menu item
-                icon: <UploadOutlined />, // New icon
+                icon: <UploadOutlined />,
                 label: 'Upload Students',
               },
               {

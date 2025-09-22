@@ -156,7 +156,7 @@ exports.resetPassword = async (req, res) => {
 exports.unifiedLogin = async (req, res) => {
   try {
     const { role } = req.body;
-    if (!role) return res.status(400).json({ msg: "Role is required" });
+    if (!role) return res.status(400).json({ message: "Role is required" });
 
     if (role === 'student') {
       const { studentId, password } = req.body;
@@ -164,13 +164,13 @@ exports.unifiedLogin = async (req, res) => {
       const student = await Student.findOne({ studentId });
       if (!student) {
         console.log('Student not found for studentId:', studentId);
-        return res.status(401).json({ msg: "Invalid credentials" });
+        return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Student found:', student.fullName);
       const ok = await bcrypt.compare(password, student.password);
       if (!ok) {
         console.log('Password mismatch for studentId:', studentId);
-        return res.status(401).json({ msg: "Invalid credentials" });
+        return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Student login successful for studentId:', studentId);
       const token = generateToken({ id: student._id, role: 'student', name: student.fullName });
@@ -184,13 +184,13 @@ exports.unifiedLogin = async (req, res) => {
       const faculty = await Faculty.findOne({ employeeId: id });
       if (!faculty) {
         console.log('Faculty not found for employeeId:', id);
-        return res.status(401).json({ msg: "Invalid credentials" });
+        return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Faculty found:', faculty.fullName);
       const ok = await bcrypt.compare(password, faculty.password);
       if (!ok) {
         console.log('Password mismatch for employeeId:', id);
-        return res.status(401).json({ msg: "Invalid credentials" });
+        return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Faculty login successful for employeeId:', id);
       const token = generateToken({ id: faculty._id, role: 'faculty', name: faculty.fullName });
@@ -203,16 +203,16 @@ exports.unifiedLogin = async (req, res) => {
       const { passkey } = req.body;
       // Decide how security users are stored (single or multiple). Assuming one doc:
       const security = await Security.findOne(); // or Security.findOne({ username }) if such field exists
-      if (!security) return res.status(401).json({ msg: "Security user not found" });
+      if (!security) return res.status(401).json({ message: "Security user not found" });
       const ok = await bcrypt.compare(passkey, security.passkey);
-      if (!ok) return res.status(401).json({ msg: "Invalid passkey" });
+      if (!ok) return res.status(401).json({ message: "Invalid passkey" });
       const token = generateToken({ id: security._id, role: 'security' });
       return res.json({ token, user: { id: security._id, role: 'security' }});
     }
 
-    return res.status(400).json({ msg: "Unsupported role" });
+    return res.status(400).json({ message: "Unsupported role" });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ msg: "Server error" });
+    res.status(500).json({ message: "Server error" });
   }
 };

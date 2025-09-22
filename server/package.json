@@ -26,7 +26,7 @@
     "nodemailer": "^7.0.5",
     "nodemon": "^3.1.10",
     "require": "^0.4.4",
-    "xlsx": "^0.18.5"
+        "exceljs": "^4.4.0"
   },
   "devDependencies": {
     "jest": "^30.1.3",

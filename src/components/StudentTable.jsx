@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Table, Tag } from 'antd';
 
 const StudentTable = ({ students }) => {
@@ -37,12 +37,21 @@ const StudentTable = ({ students }) => {
     },
   ];
 
+  const dataSource = useMemo(
+    () =>
+      students.map((student, index) => ({
+        ...student,
+        key: student._id || `student-${index}`,
+      })),
+    [students]
+  );
+
   return (
     <Table
       columns={columns}
-      dataSource={students.map((student, index) => ({ ...student, key: student._id || index }))}
+      dataSource={dataSource}
       pagination={{ pageSize: 10 }} // Optional: Add pagination
-      rowKey="_id" // Assuming _id is unique for each student
+      rowKey="key" // Use the computed key property
     />
   );
 };

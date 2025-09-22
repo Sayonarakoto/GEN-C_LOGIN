@@ -32,9 +32,7 @@ function FacultyLogin() {
       login(token); // Call login from AuthContext with the token
 
       message.success('Login successful');
-      setTimeout(() => {
-        navigate('/faculty');
-      }, 5000); // 5-second delay
+      navigate('/faculty');
     } catch (error) {
       console.error('Login error:', error);
       setError(error.response?.data?.msg || 'Login failed. Please check your credentials.');

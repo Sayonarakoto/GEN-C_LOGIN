@@ -32,12 +32,12 @@ const ExcelUpload = ({ onUploadSuccess }) => {
       });
 
       // Check for success flag and errors array from backend
-      if (response.data.success && response.data.errors.length === 0) {
+      if (response.data.success && (!response.data.errors || response.data.errors.length === 0)) {
         setMessage('File processed successfully!');
         if (onUploadSuccess) {
           onUploadSuccess(response.data.uploaded); // Pass only uploaded students
         }
-      } else if (response.data.success && response.data.errors.length > 0) {
+      } else if (response.data.success && response.data.errors && response.data.errors.length > 0) {
         // Partial success with errors
         setMessage(`File processed with some errors: ${response.data.message}`);
         if (onUploadSuccess) {
@@ -50,7 +50,6 @@ const ExcelUpload = ({ onUploadSuccess }) => {
         console.error('Upload failed:', response.data.errors);
       }
       setSelectedFile(null); // Clear selected file
-
     } catch (error) {
       // This will now catch both Network Errors and the 400 Bad Request from backend
       const errorMessage = error.response?.data?.message || 'Upload failed due to a network error.';

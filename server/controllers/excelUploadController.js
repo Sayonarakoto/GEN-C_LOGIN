@@ -1,5 +1,5 @@
 const multer = require('multer');
-const XLSX = require('xlsx');
+const ExcelJS = require('exceljs');
 // const bcrypt = require('bcrypt'); // Removed: No longer hashing password here
 const Student = require('../models/student'); // Use the merged student model
 const fs = require('fs').promises; // For file deletion
@@ -38,9 +38,29 @@ const uploadStudents = async (req, res) => {
     }
     uploadedFilePath = req.file.path;
 
-    const workbook = XLSX.readFile(uploadedFilePath);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(sheet);
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.readFile(uploadedFilePath);
+    const worksheet = workbook.getWorksheet(1); // Get the first worksheet
+    const rows = [];
+    const headerRow = worksheet.getRow(1);
+    const headers = [];
+    headerRow.eachCell((cell, colNumber) => {
+        headers[colNumber] = cell.value;
+    });
+
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+        if (rowNumber === 1) { // Skip header row
+            return;
+        }
+        const rowData = {};
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            const header = headers[colNumber];
+            if (header) {
+                rowData[header] = cell.value; // Use cell.value directly
+            }
+        });
+        rows.push(rowData);
+    });
 
     const upsertPromises = rows.map(async (row) => {
       const studentId = row['Student ID'] ? String(row['Student ID']) : null;

@@ -34,7 +34,7 @@ export default defineConfig([
       },
     },
     rules: {
-      'no-undef': 'off', // Temporarily turn off no-undef for server files if needed, or configure specific globals
+      // Define specific globals if needed instead of disabling no-undef entirely
       'no-unused-vars': ['error', { argsIgnorePattern: 'next', caughtErrors: 'none' }], // Added caughtErrors: 'none'
     },
   },

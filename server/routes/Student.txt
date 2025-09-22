@@ -7,7 +7,7 @@ const bcrypt = require("bcrypt");
 router.post("/StudentForm", async (req, res) => {
   try {
     console.log("📩 /student/StudentForm hit");
-    console.log("Request body:", req.body);
+    console.log("Request body:", { studentId: req.body.studentId, fullName: req.body.fullName, email: req.body.email });
 
     const { studentId, fullName, email, department, year, password } = req.body;
 
@@ -29,7 +29,8 @@ router.post("/StudentForm", async (req, res) => {
     await newStudent.save();
     console.log("✅ Student saved:", newStudent);
 
-    res.status(201).json({ message: "Student added successfully", student: newStudent });
+    const { password: _, ...studentResponse } = newStudent.toObject();
+    res.status(201).json({ message: "Student added successfully", student: studentResponse });
   } catch (error) {
     console.error("❌ Error adding student:", error);
     res.status(500).json({ message: "Server error", error: error.message });

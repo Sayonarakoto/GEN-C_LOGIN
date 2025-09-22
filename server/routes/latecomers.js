@@ -80,7 +80,7 @@ router.put(
       const { id } = req.params;
       const { status, remarks } = req.body;
 
-      const entry = await LateEntry.findById(id);
+      const entry = await LateEntry.findById(id, { session: null });
       if (!entry) {
         return res.status(404).json({
           success: false,
@@ -97,7 +97,7 @@ router.put(
           processedBy: req.user.id,
           processedAt: new Date(),
         },
-        { new: true }
+        { new: true, session: null }
       );
 
       await AuditLog.create([

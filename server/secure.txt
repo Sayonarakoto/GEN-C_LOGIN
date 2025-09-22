@@ -65,7 +65,7 @@
       const passkey = passkeyInput.value;
 
       // Update URL to new backend endpoint with port 3001
-      const url = 'http://localhost:3001/api/security/submit-passkey';
+      const url = '/api/security/submit-passkey';
 
       const data = { passkey };
       updateDebugOutput("Submitting passkey... please wait.");

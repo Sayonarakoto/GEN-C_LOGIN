@@ -49,7 +49,7 @@ function Frontpage() {
             {/* Buttons */}
             <div className="d-grid gap-3">
               {/* Student */}
-              <Link to="/signin?role=student">
+              <Link to="/student-login?role=student">
                 <Button type="primary" block size="large">
                   Student Login
                 </Button>

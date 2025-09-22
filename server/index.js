@@ -5,10 +5,11 @@ const path = require('path');
 require("dotenv").config({ path: '../.env' });
 
 const authRoutes = require('./routes/auth');
-const StudentRoutes = require('./routes/Student');
 const FacultyRoutes = require('./routes/faculty');
 const lateEntriesRouter = require('./routes/lateEntries');
 const latecomerRoutes = require('./routes/latecomers');
+const { upload, uploadStudents, getAllStudents } = require('./controllers/excelUploadController'); // Import from new controller
+const { forgotPassword, resetPassword } = require('./controllers/passwordResetController'); // Import from new controller
 
 const app = express();
 
@@ -17,6 +18,14 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Serve static files from the React app
+app.use('/GEN-C_LOGIN/', express.static(path.join(__dirname, '..', 'dist')));
+
+// For any other requests, serve the index.html of the React app
+app.get('/GEN-C_LOGIN/*', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
+});
 
 // Add debugging middleware
 app.use((req, res, next) => {
@@ -29,9 +38,17 @@ mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/paperlessCa
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.error("❌ DB connection error:", err));
 
-// Routes
+// Routes for Excel Upload and Student Retrieval
+app.post('/api/upload', upload.single('file'), uploadStudents);
+const authMiddleware = require('./middleware/auth'); // Import your auth middleware
+app.post('/api/upload', authMiddleware, upload.single('file'), uploadStudents);
+app.get('/api/students', authMiddleware, getAllStudents);
+// Routes for Password Reset
+app.post('/api/forgot-password', forgotPassword);
+app.post('/api/reset-password/:token', resetPassword);
+
+// Other Routes
 app.use('/auth', authRoutes);
-app.use('/student', StudentRoutes);
 app.use('/api/faculty', FacultyRoutes);
 app.use('/api/lateentries', lateEntriesRouter);
 app.use('/api/latecomers', latecomerRoutes);
@@ -52,7 +69,6 @@ app.use((req, res) => {
     message: `Cannot ${req.method} ${req.path}`
   });
 });
-
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);

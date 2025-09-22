@@ -1,0 +1,37 @@
+:root {
+  --bg-dark: #1A1A1A;      /* Background: A deep charcoal gray */
+  --text-light: #F0F0F0;   /* Text: A soft white or light gray */
+  --primary-blue: #007bff; /* Accent: The GEN-C logo blue */
+  --success-green: #28a745; /* Status: Green for 'Approve' */
+  --error-red: #dc3545;     /* Status: Red for 'Deny' */
+  --pending-yellow: #ffc107; /* Status: Yellow for 'Pending' */
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.05); /* Very subtle semi-transparent white */
+  backdrop-filter: blur(10px);          /* Key property for the glass effect */
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Thin, light border */
+  border-radius: 12px;                  /* Soft rounded corners */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);  /* Subtle shadow for depth */
+  padding: 24px;                        /* Spacing inside the card */
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-light);
+  margin: 0;
+  padding: 0;
+  font-family: 'Poppins', sans-serif;
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+}
+
+.dashboard-layout {
+  min-height: 100vh;
+  background-color: var(--bg-dark);
+}

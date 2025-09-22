@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Typography, message } from 'antd';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/auth-hooks';
+import { Form, Input, Button, Typography, message, Alert } from 'antd';
+import { useNavigate, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import axios from 'axios'; // Import axios
+import LoginCard from '../components/common/LoginCard';
 
 const { Title } = Typography;
 
@@ -11,9 +12,11 @@ const StudentLogin = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const onFinish = async (values) => {
     setLoading(true);
+    setError(null); // Clear previous errors
     try {
       // Make axios post call directly
       const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, {
@@ -31,78 +34,59 @@ const StudentLogin = () => {
       login(token); // Call login from AuthContext with the token
 
       message.success('Login successful');
+      message.success('Login successful');
       navigate('/student');
     } catch (error) {
       console.error('Login error:', error);
-      message.error(error.response?.data?.message || 'Login failed');
+      setError(error.response?.data?.msg || 'Login failed');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        minHeight: '100vh',
-        backgroundColor: '#F9FAFB',
-        padding: '24px',
-      }}
-    >
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '400px',
-          padding: '40px',
-          backgroundColor: '#FFFFFF',
-          borderRadius: '12px',
-          boxShadow: '0 6px 20px rgba(0, 0, 0, 0.06)',
-        }}
-      >
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <Title level={2} style={{ color: '#111827', fontWeight: 600, margin: 0 }}>
-            Sign in
-          </Title>
-          
-        </div>
-
+    <div className="login-container">
+      <LoginCard>
+        <Title level={2} style={{ textAlign: 'center', marginBottom: '40px', color: 'var(--text-dark)' }}>Sign in</Title>
         <Form
           form={form}
           name="student_login"
           onFinish={onFinish}
           layout="vertical"
+          onValuesChange={() => setError(null)} // Clear error on form change
         >
+          {error && (
+            <Form.Item style={{ marginBottom: 24 }}>
+              <Alert
+                message="Login Failed"
+                description={error}
+                type="error"
+                showIcon
+              />
+            </Form.Item>
+          )}
           <Form.Item
-            label="Student ID"
             name="studentId"
             rules={[{ required: true, message: 'Please input your Student ID!' }]}
           >
-            <Input size="large" placeholder="Enter your Student ID" />
+            <Input placeholder="Student ID" />
           </Form.Item>
-
           <Form.Item
-            label="Password"
             name="password"
             rules={[{ required: true, message: 'Please input your password!' }]}
           >
-            <Input.Password size="large" placeholder="Enter your password" />
+            <Input.Password placeholder="Password" />
           </Form.Item>
-
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={loading}
-            >
+          <div className="links">
+            <Link to="/forgot-password" style={{ color: 'var(--text-light)' }}>Forgot Password</Link>
+          </div>
+          <Form.Item style={{ marginTop: '30px' }}>
+            <Button type="primary" htmlType="submit" loading={loading} style={{ width: '100%' }}>
               Login
             </Button>
           </Form.Item>
         </Form>
-      </div>
+      </LoginCard>
     </div>
   );
 };

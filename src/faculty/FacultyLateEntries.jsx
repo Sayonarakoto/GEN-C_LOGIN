@@ -128,7 +128,7 @@ const FacultyLateEntries = () => {
   ];
 
   return (
-    <div>
+    <div className="glass-container" style={{ padding: '24px' }}>
       <h1>Late Entries</h1>
       <Form form={form} layout="inline" onFinish={onFinish} style={{ marginBottom: '24px' }}>
         <Form.Item name="department">
@@ -158,6 +158,7 @@ const FacultyLateEntries = () => {
         columns={columns}
         loading={loading}
         rowKey="_id"
+        pagination={{ pageSize: 10 }}
       />
     </div>
   );

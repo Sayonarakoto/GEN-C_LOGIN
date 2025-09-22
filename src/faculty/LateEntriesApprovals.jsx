@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Button, Form } from 'react-bootstrap';
-import { Modal, Avatar, Input, Button as AntdButton } from 'antd';
+import { Layout, Card, Button as AntdButton, Form, Input, message, Avatar, Tag, Modal } from 'antd';
 import { EyeOutlined, CheckOutlined, CloseOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { updateLatecomerStatus } from '../api/latecomerService';
 import api from '../api/client';
-import './Dashboard.css'; // External CSS file for custom styles
+// import './Dashboard.css'; // External CSS file for custom styles - no longer needed
 
 const { TextArea } = Input;
+const { Content } = Layout;
 
 export default function LateEntriesApprovals() {
   const [showModal, setShowModal] = useState(false);
@@ -51,10 +51,11 @@ export default function LateEntriesApprovals() {
     console.log(`Attempting to ${status} entry with ID:`, id);
     try {
       await updateLatecomerStatus(id, status, '');
+      message.success('Status updated successfully');
       setRequests(requests.filter((req) => req._id !== id));
     } catch (error) {
       console.error('Failed to update status', error);
-      // Optionally show an error toast/message to the user
+      message.error(error.response?.data?.message || 'Failed to update status');
     }
   };
 
@@ -64,85 +65,54 @@ export default function LateEntriesApprovals() {
     setIsSaving(true);
     try {
       await updateLatecomerStatus(selected._id, status, remarks);
+      message.success('Status updated successfully');
       setRequests(requests.filter((req) => req._id !== selected._id));
       handleClose();
     } catch (error) {
       console.error('Failed to update status', error);
-      // Optionally show an error toast/message to the user
+      message.error(error.response?.data?.message || 'Failed to update status');
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <Container fluid className="dashboard-root">
-      <header className="dashboard-header">
-        <Row className="align-items-center p-3 shadow-sm bg-white">
-          <Col xs="auto">
-            <span className="icon-btn"><ArrowLeftOutlined /></span>
-          </Col>
-          <Col>
-            <h1 className="dashboard-title">Dashboard</h1>
-          </Col>
-          <Col xs="auto">
-            <span className="icon-btn"><EyeOutlined /></span>
-          </Col>
-        </Row>
-      </header>
-
-      <main className="dashboard-main py-4">
-        <h2 className="section-title mb-4">Pending Requests</h2>
-        {loading && <p>Loading...</p>}
-        {error && <p>Error: {error}</p>}
-        <div className="pending-list">
-          {requests.map((req) => (
-            <Card key={req._id} className="mb-4 shadow pending-card">
-              <Card.Body>
-                <Row className="align-items-center">
-                  <Col xs="auto">
-                    <Avatar src={req.student?.photo} size={56} />
-                  </Col>
-                  <Col>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <h5 className="mb-0">{req.student?.name}</h5>
-                      <span className="badge badge-warning">Pending</span>
-                    </div>
-                    <div className="text-muted small mb-1">ID: {req.student?.studentId}</div>
-                    <div className="mb-1"><strong>Reason:</strong> {req.reason}</div>
-                    <div className="small text-secondary">{new Date(req.createdAt).toLocaleString()}</div>
-                  </Col>
-                  <Col xs="auto">
-                    <Button variant="link" className="view-btn" onClick={() => handleView(req)}>
-                      <EyeOutlined />
-                    </Button>
-                  </Col>
-                </Row>
-                <Row className="mt-3 justify-content-between">
-                  <Col xs={6}>
-                    <Button variant="danger" className="w-100" onClick={() => handleQuickAction(req._id, 'Declined')}>
-                      <CloseOutlined /> Deny
-                    </Button>
-                  </Col>
-                  <Col xs={6}>
-                    <Button variant="success" className="w-100" onClick={() => handleQuickAction(req._id, 'Approved')}>
-                      <CheckOutlined /> Approve
-                    </Button>
-                  </Col>
-                </Row>
-              </Card.Body>
-            </Card>
-          ))}
-        </div>
-      </main>
+    <Content style={{ padding: '24px' }}>
+      <h2 style={{ marginBottom: '24px', color: 'var(--dark-gray)' }}>Pending Requests</h2>
+      {loading && <p>Loading...</p>}
+      {error && <p style={{ color: 'var(--error-red)' }}>Error: {error}</p>}
+      <div className="pending-list" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
+        {requests.map((req) => (
+          <Card key={req._id} className="glass-container" style={{ marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+              <Avatar src={req.student?.photo} size={56} style={{ marginRight: '16px' }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h5 style={{ margin: 0, color: 'var(--dark-gray)' }}>{req.student?.name}</h5>
+                  <Tag color="orange">Pending</Tag>
+                </div>
+                <div style={{ color: 'var(--dark-gray)', fontSize: '0.85em' }}>ID: {req.student?.studentId}</div>
+                <div style={{ color: 'var(--dark-gray)', marginBottom: '4px' }}><strong>Reason:</strong> {req.reason}</div>
+                <div style={{ color: 'var(--dark-gray)', fontSize: '0.75em' }}>{new Date(req.createdAt).toLocaleString()}</div>
+              </div>
+              <AntdButton type="link" icon={<EyeOutlined />} onClick={() => handleView(req)} />
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <AntdButton type="danger" icon={<CloseOutlined />} onClick={() => handleQuickAction(req._id, 'Declined')} style={{ flex: 1 }}>Deny</AntdButton>
+              <AntdButton type="primary" icon={<CheckOutlined />} onClick={() => handleQuickAction(req._id, 'Approved')} style={{ flex: 1 }}>Approve</AntdButton>
+            </div>
+          </Card>
+        ))}
+      </div>
 
       {/* Modal for detailed request */}
       <Modal
-        visible={showModal}
+        open={showModal}
         footer={null}
         onCancel={handleClose}
         centered
         title={
-          <div className="d-flex align-items-center">
+          <div style={{ display: 'flex', alignItems: 'center' }}>
             <AntdButton type="link" icon={<ArrowLeftOutlined />} onClick={handleClose} />
             <span style={{ flex: 1, textAlign: 'center' }}>Late Entry Request</span>
           </div>
@@ -151,29 +121,29 @@ export default function LateEntriesApprovals() {
       >
         {selected && (
           <div>
-            <section>
-              <h5 className="mb-3">Student Information</h5>
-              <div className="d-flex align-items-center mb-3">
-                <Avatar src={selected.student?.photo} size={64} />
-                <div className="ml-3">
-                  <strong>{selected.student?.name}</strong>
-                  <div className="text-muted">ID: {selected.student?.studentId}</div>
+            <section style={{ marginBottom: '24px' }}>
+              <h5 style={{ marginBottom: '16px', color: 'var(--dark-gray)' }}>Student Information</h5>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '16px' }}>
+                <Avatar src={selected.student?.photo} size={64} style={{ marginRight: '16px' }} />
+                <div>
+                  <strong style={{ color: 'var(--dark-gray)' }}>{selected.student?.name}</strong>
+                  <div style={{ color: 'var(--dark-gray)' }}>ID: {selected.student?.studentId}</div>
                 </div>
               </div>
             </section>
-            <section>
-              <h5 className="mb-3">Entry Details</h5>
-              <div className="mb-2 d-flex justify-content-between border-bottom pb-2">
-                <span className="text-muted">Date & Time</span>
-                <span>{new Date(selected.createdAt).toLocaleString()}</span>
+            <section style={{ marginBottom: '24px' }}>
+              <h5 style={{ marginBottom: '16px', color: 'var(--dark-gray)' }}>Entry Details</h5>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #eee', paddingBottom: '8px', marginBottom: '8px' }}>
+                <span style={{ color: 'var(--dark-gray)' }}>Date & Time</span>
+                <span style={{ color: 'var(--dark-gray)' }}>{new Date(selected.createdAt).toLocaleString()}</span>
               </div>
               <div>
-                <span className="text-muted">Reason</span>
-                <div>{selected.reason}</div>
+                <span style={{ color: 'var(--dark-gray)' }}>Reason</span>
+                <div style={{ color: 'var(--dark-gray)' }}>{selected.reason}</div>
               </div>
             </section>
-            <section className='mt-3'>
-              <h5 className="mb-3">Remarks</h5>
+            <section style={{ marginBottom: '24px' }}>
+              <h5 style={{ marginBottom: '16px', color: 'var(--dark-gray)' }}>Remarks</h5>
               <TextArea 
                 rows={4} 
                 value={remarks}
@@ -181,13 +151,14 @@ export default function LateEntriesApprovals() {
                 placeholder="Add remarks (optional)"
               />
             </section>
-            <div className="d-flex gap-3 pt-4">
-              <AntdButton type="primary" danger className="flex-fill" onClick={() => handleModalSave('Declined')} loading={isSaving}>Deny</AntdButton>
-              <AntdButton type="primary" className="flex-fill" onClick={() => handleModalSave('Approved')} loading={isSaving}>Approve</AntdButton>
+            <div style={{ display: 'flex', gap: '12px', paddingTop: '16px' }}>
+              <AntdButton type="danger" onClick={() => handleModalSave('Declined')} loading={isSaving} style={{ flex: 1 }}>Deny</AntdButton>
+              <AntdButton type="primary" onClick={() => handleModalSave('Approved')} loading={isSaving} style={{ flex: 1 }}>Approve</AntdButton>
             </div>
           </div>
         )}
       </Modal>
-    </Container>
+    </Content>
   );
 }
+

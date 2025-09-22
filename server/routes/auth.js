@@ -2,6 +2,7 @@ console.log('--- auth.js LOADED ---'); // Unique log
 const express = require("express");
 const router = express.Router();
 const authController = require('../controllers/authController');
+const { passwordResetLimiter } = require('../middleware/authMiddleware');
 
 // Add debug logging
 if (process.env.NODE_ENV === 'development') {
@@ -24,8 +25,8 @@ router.post('/security-login', authController.securityLogin);
 router.post("/refresh", authController.refreshToken);
 
 // ---------------- Password Reset ----------------
-router.post("/send-reset", authController.forgotPassword);
-router.post("/forget", authController.resetPassword);
+router.post("/forgot-password", passwordResetLimiter, authController.forgotPassword);
+router.post("/reset-password/:token", passwordResetLimiter, authController.resetPassword);
 
 // ---------------- Unified Login ----------------
 router.post("/login", authController.unifiedLogin);

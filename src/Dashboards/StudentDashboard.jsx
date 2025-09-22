@@ -10,7 +10,7 @@ import {
 } from '@ant-design/icons';
 import LateEntry from '../student/LateEntry';
 import StudentLateEntry from '../student/StudentLateEntry';
-import { useAuth } from '../context/auth-hooks';
+import { useAuth } from '../context/AuthContext';
 
 const { Sider, Content } = Layout;
 

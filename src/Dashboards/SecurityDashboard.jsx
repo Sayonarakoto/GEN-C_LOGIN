@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, message, List, Card, Typography, Row, Col, Spin, Layout, Menu } from 'antd';
 import { LogoutOutlined, QrcodeOutlined, FormOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/auth-hooks';
+import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 import './Dashboard.css';
 

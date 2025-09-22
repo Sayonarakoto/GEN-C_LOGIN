@@ -1,4 +1,11 @@
 const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
+
+exports.passwordResetLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // limit each IP to 5 requests per windowMs
+  message: 'Too many password reset attempts, please try again later'
+});
 
 exports.protect = async (req, res, next) => {
   try {
@@ -11,7 +18,7 @@ exports.protect = async (req, res, next) => {
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Not authorized to access this route'
+        message: 'Not authorized to access this route' 
       });
     }
 

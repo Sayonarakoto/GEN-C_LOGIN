@@ -1,30 +1,72 @@
-import React, { createContext, useState } from 'react';
-import { jwtDecode } from 'jwt-decode'; // Corrected import
-import { setAuthToken } from './auth-hooks'; // Import setAuthToken from auth-hooks
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import { jwtDecode } from 'jwt-decode';
 
 const AuthContext = createContext();
 
 const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null); // { id, role, name }
-  const [loading] = useState(false); // Initialize loading to false. setLoading will be reintroduced with new auth flow.
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [loading, setLoading] = useState(true);
 
-  const login = (token) => { // login now expects a token
-    setAuthToken(token); // Store token using the utility function
-    const decodedToken = jwtDecode(token); // Decode the token
-    setUser({ id: decodedToken.id, role: decodedToken.role, name: decodedToken.name }); // Set user data from decoded token
+  useEffect(() => {
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        const currentTime = Date.now() / 1000;
+
+        if (decoded.exp && decoded.exp > currentTime) {
+          if (decoded.id && decoded.role && decoded.name) {
+            setUser({ id: decoded.id, role: decoded.role, name: decoded.name });
+          } else {
+            // Token is invalid, clear it
+            localStorage.removeItem('token');
+            setToken(null);
+          }
+        } else {
+          // Token is expired, clear it
+          localStorage.removeItem('token');
+          setToken(null);
+        }
+      } catch (err) {
+        console.error('Token validation failed:', err);
+        localStorage.removeItem('token');
+        setToken(null);
+      }
+    }
+    setLoading(false);
+  }, [token]);
+
+  const login = (newToken) => {
+    try {
+      const decoded = jwtDecode(newToken);
+      if (!decoded.id || !decoded.role || !decoded.name || !decoded.exp) {
+        throw new Error('Invalid token: missing required fields');
+      }
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+      setUser({ id: decoded.id, role: decoded.role, name: decoded.name });
+    } catch (error) {
+      console.error('Login failed:', error);
+      localStorage.removeItem('token');
+      setToken(null);
+      setUser(null);
+      throw error;
+    }
   };
 
   const logout = () => {
-    setAuthToken(null); // Clear token using the utility function
     setUser(null);
+    setToken(null);
+    localStorage.removeItem('token');
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }} >
+    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
-export { AuthContext, AuthProvider };
+const useAuth = () => useContext(AuthContext);
 
+export { AuthContext, AuthProvider, useAuth };

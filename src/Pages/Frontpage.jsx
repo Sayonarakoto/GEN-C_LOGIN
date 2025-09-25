@@ -1,13 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 
-// Bootstrap + Ant Design
+// Bootstrap
 import "bootstrap/dist/css/bootstrap.min.css";
-import "antd/dist/reset.css";
-import { Button, Card } from "antd";
+import { Button, Card } from "react-bootstrap";
 
-// Import the logo
-import logo from "../assets/genc-logo.png"; // <-- place your image inside src/assets/
+import logo from '/images/genc-log.jpeg';
+
 
 function Frontpage() {
   return (
@@ -35,7 +34,7 @@ function Frontpage() {
               style={{
                 height: "220px",
                 backgroundImage:
-                  "linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuAxDNRZ7mgdp5NxN_4jW1HxHvjtVdQCkKOcbhVkMhOsXzkDvHz4xozDQg5zNvsPwoRk-yQCoodcGEfXGWqOqVwktw5aEAvgCEH3Mflrqhki1BnRPYyZPaRQv--_zEdIcOYUVFJYAMa42E-DeH-bj9f7C8ZPBYDTAnsw5o9gdhr_TEw4uR41ixJl_C4th4iwOzoWNIFz18d_XHp-u1PHqjOd4FpFZslNkH4zlX5OHf91Jv_uOgLVgdOke1Z9uopneREf3oAZKj0DJQ')",
+                  "linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuAxDNRZ7mgdp5NxN_4jW1HxHvjtVdQCkKOcbhVkMhOsXzkDvHz4xozDQg5zNvsPwoRk-yQCoodcGEfXGWqOqVwktw5aEAvgCEH3Mflrqhki1BnRPYyZPaRQv--_zEdIcOYUVFJYAMa42E-DeH3Mflrqhki1BnRPYyZPaRQv--_zEdIcOYUVFJYAMa42E-DeH-bj9f7C8ZPBYDTAnsw5o9gdhr_TEw4uR41ixJl_C4th4iwOzoWNIFz18d_XHp-u1PHqjOd4FpFZslNkH4zlX5OHf91Jv_uOgLVgdOke1Z9uopneREf3oAZKj0DJQ')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
               }}
@@ -50,28 +49,28 @@ function Frontpage() {
             <div className="d-grid gap-3">
               {/* Student */}
               <Link to="/student-login?role=student">
-                <Button type="primary" block size="large">
+                <Button variant="primary" size="lg" className="w-100">
                   Student Login
                 </Button>
               </Link>
 
               {/* Faculty */}
               <Link to="/faculty-login">
-                <Button type="primary" block size="large">
+                <Button variant="primary" size="lg" className="w-100">
                   Faculty Login
                 </Button>
               </Link>
 
               {/* Security */}
               <Link to="/security-login">
-                <Button type="primary" block size="large">
+                <Button variant="primary" size="lg" className="w-100">
                   Security Staff Login
                 </Button>
               </Link>
 
               {/* Register */}
               <Link to="/register">
-                <Button block size="large" className="bg-light text-dark fw-bold">
+                <Button size="lg" className="w-100 bg-light text-dark fw-bold">
                   Register
                 </Button>
               </Link>

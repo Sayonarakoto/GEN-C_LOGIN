@@ -31,7 +31,9 @@ app.use((req, res, next) => {
 });
 
 // DB connection
-mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/paperlessCampus")
+mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/paperlessCampus", {
+  connectTimeoutMS: 5000, // Give up initial connection after 5 seconds
+})
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.error("❌ DB connection error:", err));
 
@@ -77,6 +79,8 @@ app.use((req, res) => {
   });
 });
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
+
+server.timeout = 30000; // Set server timeout to 30 seconds

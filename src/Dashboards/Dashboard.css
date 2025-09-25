@@ -1,76 +1,159 @@
-/* Dashboard.css */
-
-.dashboard-layout {
-  height: 100vh;
-  background-color: var(--bg-dark); /* Set main background */
+/* General Ant Design Layout Overrides */
+.ant-layout {
+  background-color: var(--bg-primary); /* Default light grey background */
 }
 
-.ant-layout-sider-children {
-  display: flex;
-  flex-direction: column;
+/* Dark Theme Variables */
+body.dark {
+  --bg-primary: #0f172a; /* Dark background for layout */
+  --card-bg: #1e293b; /* Darker background for content boxes/cards */
+  --header-bg: rgba(15, 23, 42, 0.8); /* Semi-transparent dark header */
+  --text-primary: #cbd5e1; /* Light text color */
+  --text-secondary: #a0aec0; /* Slightly darker light text */
+  --border-color: #334155; /* Darker border color */
+  --card-shadow: rgba(0, 0, 0, 0.3); /* Darker shadow */
+  --warning-color: #ff9800; /* Orange for warnings */
+  --success-color: #4caf50; /* Green for success */
+  --error-color: #f44336; /* Red for errors */
+}
+
+/* Light Theme Variables (default) */
+body.light {
+  --bg-primary: #f0f2f5; /* Light background for layout */
+  --card-bg: #FFFFFF; /* White background for content boxes/cards */
+  --header-bg: #FFFFFF; /* White header */
+  --text-primary: #333333; /* Dark text color */
+  --text-secondary: #666666; /* Slightly lighter dark text */
+  --border-color: #e8e8e8; /* Light border color */
+  --card-shadow: rgba(0, 0, 0, 0.1); /* Light shadow */
+  --warning-color: #ff9800; /* Orange for warnings */
+  --success-color: #4caf50; /* Green for success */
+  --error-color: #f44336; /* Red for errors */
+}
+
+
+/* Main Layout for Dashboards */
+.dashboard-page-layout {
+  min-height: 100vh;
 }
 
 .dashboard-logo {
-  height: 64px;
+  height: 32px;
   margin: 16px;
-  background-color: rgba(255, 255, 255, 0.1); /* Semi-transparent background */
-  backdrop-filter: blur(5px); /* Subtle blur for glass effect */
-  border: 1px solid rgba(255, 255, 255, 0.2); /* Subtle border */
+  background: var(--card-bg);
+  color: var(--text-primary);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--text-light);
+  border-radius: 6px;
   font-weight: bold;
-  font-size: 1.2rem;
-  border-radius: 8px;
-}
-
-.dashboard-sider {
-  flex: 1; /* This makes the sider content expand */
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.dashboard-menu {
-  flex-grow: 1; /* Main menu takes all available space */
-}
-
-/* Specific style for the logout button */
-.dashboard-logout {
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  margin-top: auto; /* This pushes the logout menu to the bottom */
 }
 
 .dashboard-header {
-  background: rgba(255, 255, 255, 0.1); /* Semi-transparent header */
-  backdrop-filter: blur(5px); /* Subtle blur for glass effect */
-  padding: 0 16px;
+  background: var(--header-bg);
+  color: var(--text-primary);
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--text-light); /* Adjust text color */
+  justify-content: space-between;
 }
 
-.dashboard-content {
-  margin: 24px;
+.dashboard-content-area {
   padding: 24px;
-  background: rgba(255, 255, 255, 0.05); /* Glass effect background */
-  backdrop-filter: blur(10px); /* Glass effect */
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Glass effect border */
-  min-height: 360px;
+  margin: 0;
+}
+
+.dashboard-content-box {
+  background: var(--card-bg);
+  padding: 24px;
   border-radius: 8px;
+  box-shadow: 0 2px 8px var(--card-shadow);
 }
 
-/* Make sure the main content area has some top padding to clear the header */
-.ant-layout-content {
-  padding-top: 24px;
-}
-
-/* Responsive adjustments for smaller screens */
-@media (max-width: 768px) {
-  .dashboard-header {
-    font-size: 1.2rem;
+/* Responsive adjustments for mobile */
+@media (max-width: 767px) {
+  .dashboard-content-area {
+    padding: 16px;
   }
+
+  .dashboard-content-box {
+    padding: 16px;
+    box-shadow: none;
+    border-radius: 0;
+  }
+}
+
+/* Dark theme table styles */
+body.dark .ant-table {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+}
+
+body.dark .ant-table-thead > tr > th {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark .ant-table-tbody > tr > td {
+  background-color: var(--card-bg);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+body.dark .ant-table-tbody > tr.ant-table-row:hover > td {
+  background-color: var(--border-color); /* A slightly lighter dark for hover */
+}
+
+body.dark .ant-pagination-item a {
+  color: var(--text-primary);
+}
+
+body.dark .ant-pagination-item-active a {
+  color: #fff;
+}
+
+body.dark .ant-pagination-item-link {
+  color: var(--text-primary);
+}
+
+/* Security Dashboard specific styles */
+body.dark .log-row-even {
+  background-color: var(--card-bg);
+}
+
+body.dark .log-row-odd {
+  background-color: var(--border-color); /* A slightly different dark for alternating rows */
+}
+
+/* Font size variables */
+body {
+  --font-size-base: 1.2em;
+  --font-size-large: 1.5em;
+}
+
+/* Ensure larger font sizes for readability */
+.ant-typography,
+.ant-input,
+.ant-btn,
+.ant-table-thead > tr > th,
+.ant-table-tbody > tr > td,
+.ant-select-selector,
+.ant-picker {
+  font-size: var(--font-size-base); /* Minimum 16px assuming base font size is 1em = 16px */
+}
+
+.ant-card-head-title {
+  font-size: var(--font-size-large);
+}
+
+.ant-btn-lg {
+  font-size: var(--font-size-large);
+  height: 60px !important;
+}
+
+.ant-input-lg {
+  font-size: var(--font-size-large);
+  height: 60px !important;
 }

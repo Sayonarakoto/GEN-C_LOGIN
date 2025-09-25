@@ -1,27 +1,57 @@
 :root {
-  --bg-dark: #1A1A1A;      /* Background: A deep charcoal gray */
-  --text-light: #F0F0F0;   /* Text: A soft white or light gray */
+  /* Default (Dark) Theme Variables */
+  --bg-primary: #0f172a; /* Dark background for main areas */
+  --bg-secondary: #1e293b; /* Slightly lighter dark for cards/sections */
+  --text-primary: #cbd5e1; /* Light text on dark background */
+  --text-secondary: #94a3b8; /* Slightly darker light text */
+  --border-color: #334155; /* Border color for dark theme */
+  --header-bg: rgba(15, 23, 42, 0.8); /* Semi-transparent header */
+  --card-shadow: rgba(0, 0, 0, 0.2); /* Shadow for dark cards */
+
+  /* General Variables (theme-independent or overridden) */
   --primary-blue: #007bff; /* Accent: The GEN-C logo blue */
   --success-green: #28a745; /* Status: Green for 'Approve' */
   --error-red: #dc3545;     /* Status: Red for 'Deny' */
   --pending-yellow: #ffc107; /* Status: Yellow for 'Pending' */
 }
 
-.glass-card {
-  background: rgba(255, 255, 255, 0.05); /* Very subtle semi-transparent white */
-  backdrop-filter: blur(10px);          /* Key property for the glass effect */
-  border: 1px solid rgba(255, 255, 255, 0.1); /* Thin, light border */
-  border-radius: 12px;                  /* Soft rounded corners */
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);  /* Subtle shadow for depth */
-  padding: 24px;                        /* Spacing inside the card */
+body.light {
+  /* Light Theme Variables */
+  --bg-primary: #f0f2f5; /* Light background for main areas */
+  --bg-secondary: #ffffff; /* White for cards/sections */
+  --text-primary: #333333; /* Dark text on light background */
+  --text-secondary: #666666; /* Slightly lighter dark text */
+  --border-color: #e0e0e0; /* Border color for light theme */
+  --header-bg: rgba(255, 255, 255, 0.9); /* Semi-transparent header */
+  --card-shadow: rgba(0, 0, 0, 0.1); /* Shadow for light cards */
 }
 
 body {
-  background-color: var(--bg-dark);
-  color: var(--text-light);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   margin: 0;
   padding: 0;
   font-family: 'Poppins', sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition */
+}
+
+.glass-card {
+  background: var(--bg-secondary); /* Use theme background */
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px var(--card-shadow);
+  padding: 24px;
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.glass-container {
+  background: var(--bg-secondary); /* Use theme background */
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  border-radius: 15px;
+  box-shadow: 0 4px 6px var(--card-shadow);
+  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .login-container {
@@ -33,5 +63,12 @@ body {
 
 .dashboard-layout {
   min-height: 100vh;
-  background-color: var(--bg-dark);
+  background-color: var(--bg-primary);
+  transition: background-color 0.3s ease;
+}
+
+.student-entry-form {
+  max-width: 500px;
+  margin: 0 auto;
+  padding: 20px;
 }

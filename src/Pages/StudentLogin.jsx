@@ -1,44 +1,42 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Typography, message, Alert } from 'antd';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import axios from 'axios'; // Import axios
+import { useAuth } from '../hooks/useAuth';
+import api from '../api/client'; // Import api client
 import LoginCard from '../components/common/LoginCard';
-
-const { Title } = Typography;
+import { Form, Button,  } from 'react-bootstrap'; // Import Bootstrap components
+import useToastService from '../hooks/useToastService'; // Import ToastService
 
 const StudentLogin = () => {
-  const [form] = Form.useForm();
+  const toast = useToastService(); // Initialize toast service
+  const [loading, setLoading] = useState(false);
+  const [studentId, setStudentId] = useState('');
+  const [password, setPassword] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
-  const onFinish = async (values) => {
+  const onFinish = async (event) => {
+    event.preventDefault(); // Prevent default form submission
     setLoading(true);
-    setError(null); // Clear previous errors
+    toast.info('Logging in...'); // Show info toast
     try {
-      // Make axios post call directly
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, {
+      const response = await api.post('/auth/login', {
         role: 'student',
-        studentId: values.studentId,
-        password: values.password,
+        studentId: studentId,
+        password: password,
       });
-      
-      const { token } = response.data; // Extract token from response
-      
+
+      const { token } = response.data;
+
       if (!token) {
         throw new Error('No token received from server');
       }
-      
-      login(token); // Call login from AuthContext with the token
 
-      message.success('Login successful');
-      message.success('Login successful');
+      login(token);
+      toast.success(response.data.message || 'Login successful!');
       navigate('/student');
     } catch (error) {
       console.error('Login error:', error);
-      setError(error.response?.data?.msg || 'Login failed');
+      toast.error(error.response?.data?.msg || 'Login failed');
     } finally {
       setLoading(false);
     }
@@ -47,44 +45,38 @@ const StudentLogin = () => {
   return (
     <div className="login-container">
       <LoginCard>
-        <Title level={2} style={{ textAlign: 'center', marginBottom: '40px', color: 'var(--text-dark)' }}>Sign in</Title>
-        <Form
-          form={form}
-          name="student_login"
-          onFinish={onFinish}
-          layout="vertical"
-          onValuesChange={() => setError(null)} // Clear error on form change
-        >
-          {error && (
-            <Form.Item style={{ marginBottom: 24 }}>
-              <Alert
-                message="Login Failed"
-                description={error}
-                type="error"
-                showIcon
-              />
-            </Form.Item>
-          )}
-          <Form.Item
-            name="studentId"
-            rules={[{ required: true, message: 'Please input your Student ID!' }]}
-          >
-            <Input placeholder="Student ID" />
-          </Form.Item>
-          <Form.Item
-            name="password"
-            rules={[{ required: true, message: 'Please input your password!' }]}
-          >
-            <Input.Password placeholder="Password" />
-          </Form.Item>
+        <h2 style={{ textAlign: 'center', marginBottom: '40px', color: 'var(--text-dark)' }}>Sign in</h2>
+        <Form onSubmit={onFinish}>
+          <Form.Group className="mb-3" controlId="formStudentId">
+            <Form.Label>Student ID</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Student ID"
+              value={studentId}
+              onChange={(e) => setStudentId(e.target.value)}
+              required
+            />
+          </Form.Group>
+
+          <Form.Group className="mb-3" controlId="formPassword">
+            <Form.Label>Password</Form.Label>
+            <Form.Control
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </Form.Group>
+
           <div className="links">
             <Link to="/forgot-password" style={{ color: 'var(--text-light)' }}>Forgot Password</Link>
           </div>
-          <Form.Item style={{ marginTop: '30px' }}>
-            <Button type="primary" htmlType="submit" loading={loading} style={{ width: '100%' }}>
-              Login
+          <div style={{ marginTop: '30px' }}>
+            <Button variant="primary" type="submit" disabled={loading} className="w-100">
+              {loading ? 'Logging in...' : 'Login'}
             </Button>
-          </Form.Item>
+          </div>
         </Form>
       </LoginCard>
     </div>

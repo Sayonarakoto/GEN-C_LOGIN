@@ -1,38 +1,52 @@
-import React, { useState, useEffect } from 'react';
-import { Table, message, Form, DatePicker, Select, Button, Input } from 'antd';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Table, Form, Button, Card, Row, Col, Spinner } from 'react-bootstrap';
+import useToastService from '../hooks/useToastService';
 import api from '../api/client';
-
-const { Option } = Select;
+import axios from 'axios';
 
 const FacultyLateEntries = () => {
-  const [form] = Form.useForm();
+  const toast = useToastService();
   const [lateEntries, setLateEntries] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [rowEdits, setRowEdits] = useState({}); // { [id]: { status, remarks } }
+  const [rowEdits, setRowEdits] = useState({});
+  const formRef = useRef(null); // Ref for the form
 
-  const fetchLateEntries = async (params = {}) => {
+  const fetchLateEntries = useCallback(async (params = {}, signal) => {
     setLoading(true);
     try {
-      const response = await api.get('/api/lateentries', { params });
-      setLateEntries(response.data.entries);
-      // Initialize rowEdits with current status and remarks
+      const response = await api.get('/api/latecomers', { params, signal });
+      const entries = response.data || [];
+      setLateEntries(entries);
       const initialEdits = {};
-      response.data.entries.forEach(entry => {
-        initialEdits[entry._id] = { status: entry.status, remarks: entry.remarks };
+      entries.forEach(entry => {
+        initialEdits[entry._id] = { status: entry.status, remarks: entry.remarks || '' };
       });
       setRowEdits(initialEdits);
     } catch (error) {
-      console.error('Error fetching late entries:', error);
-      message.error(error.response?.data?.message || 'Failed to fetch late entries');
+      if (axios.isCancel(error) || error.code === 'ECONNABORTED') {
+        console.log('Request cancelled:', error.message);
+      } else {
+        console.error('Error fetching late entries:', error);
+        toast.error(error.response?.data?.message || 'Failed to fetch late entries');
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [setLoading, setLateEntries, setRowEdits, toast]); // Add toast to dependencies
 
   useEffect(() => {
-    fetchLateEntries();
-  }, []);
+    const abortController = new AbortController();
+    fetchLateEntries({ status: 'Pending,Resubmitted' }, abortController.signal);
 
-  const onFinish = (values) => {
+    return () => {
+      abortController.abort();
+    };
+  }, [fetchLateEntries]); 
+
+  const onFinish = (event) => {
+    event.preventDefault(); // Prevent default form submission
+    const formData = new FormData(formRef.current); // Get form data
+    const values = Object.fromEntries(formData.entries());
     fetchLateEntries(values);
   };
 
@@ -43,123 +57,159 @@ const FacultyLateEntries = () => {
   const handleUpdate = async (id) => {
     try {
       const { status, remarks } = rowEdits[id] || {};
-      if (!status) return message.warning('Please select a status');
-      await api.patch(`/api/lateentries/${id}/status`, { status, remarks });
-      message.success('Updated successfully');
-      // Refresh data after update
-      fetchLateEntries(form.getFieldsValue());
+      if (!status) return toast.warning('Please select a status');
+      
+      // Capture current filter values before async operation
+      const formData = new FormData(formRef.current);
+      const currentFilterValues = Object.fromEntries(formData.entries());
+      
+      await api.put(`/api/latecomers/${id}/status`, { status, remarks });
+      toast.success('Updated successfully');
+      fetchLateEntries(currentFilterValues);
     } catch (err) {
       console.error(err);
-      message.error(err.response?.data?.message || 'Update failed');
+      toast.error(err.response?.data?.message || 'Update failed');
     }
   };
 
+  const handleClearFilters = () => {
+    if (formRef.current) {
+      formRef.current.reset();
+    }
+    fetchLateEntries({ status: 'Pending,Resubmitted' });
+  };
+
   const columns = [
+    { dataField: 'studentId.studentId', text: 'Student ID' },
+    { dataField: 'studentId.fullName', text: 'Student Name' },
+    { dataField: 'studentId.department', text: 'Department' },
+    { dataField: 'date', text: 'Recorded At', formatter: (cell) => new Date(cell).toLocaleString() },
+    { dataField: 'reason', text: 'Reason' },
+    { dataField: 'gate', text: 'Gate' },
+    { dataField: 'status', text: 'Status' },
+    { dataField: 'remarks', text: 'Remarks' },
     {
-      title: 'Student ID',
-      dataIndex: ['student', 'studentId'],
-      key: 'studentId',
-    },
-    {
-      title: 'Student Name',
-      dataIndex: ['student', 'fullName'],
-      key: 'studentName',
-    },
-    {
-      title: 'Department',
-      dataIndex: ['student', 'department'],
-      key: 'department',
-    },
-    {
-      title: 'Recorded At',
-      dataIndex: 'recordedAt',
-      key: 'recordedAt',
-      render: (text) => new Date(text).toLocaleString(),
-    },
-    {
-      title: 'Reason',
-      dataIndex: 'reason',
-      key: 'reason',
-    },
-    {
-      title: 'Gate',
-      dataIndex: 'gate',
-      key: 'gate',
-    },
-    {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-    },
-    {
-      title: 'Remarks',
-      dataIndex: 'remarks',
-      key: 'remarks',
-    },
-    {
-      title: 'Action',
-      key: 'action',
-      render: (_, record) => {
-        const id = record._id;
-        const current = rowEdits[id] || { status: record.status, remarks: record.remarks };
+      dataField: 'actions',
+      text: 'Action',
+      formatter: (cellContent, row) => {
+        const id = row._id;
+        const current = rowEdits[id] || { status: row.status, remarks: row.remarks };
         return (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Select
-              placeholder="Status"
+          <div className="d-flex gap-2 align-items-center">
+            <Form.Select
               value={current.status}
-              onChange={(val) => handleChange(id, 'status', val)}
-              style={{ width: 140 }}
+              onChange={(e) => handleChange(id, 'status', e.target.value)}
+              style={{ width: '140px' }}
             >
-              <Option value="recorded">Recorded</Option>
-              <Option value="acknowledged">Acknowledged</Option>
-              <Option value="reviewed">Reviewed</Option>
-            </Select>
-            <Input
+              <option value="Pending" disabled>Pending</option>
+              <option value="Approved">Approved</option>
+              <option value="Rejected">Rejected</option>
+            </Form.Select>
+            <Form.Control
+              type="text"
               placeholder="Remarks"
               value={current.remarks}
               onChange={(e) => handleChange(id, 'remarks', e.target.value)}
-              style={{ width: 200 }}
+              style={{ flex: 1 }}
             />
-            <Button type="primary" onClick={() => handleUpdate(id)}>Save</Button>
+            <Button variant="primary" size="sm" onClick={() => handleUpdate(id)}>Save</Button>
           </div>
         );
-      }
+      },
     },
   ];
 
   return (
-    <div className="glass-container" style={{ padding: '24px' }}>
-      <h1>Late Entries</h1>
-      <Form form={form} layout="inline" onFinish={onFinish} style={{ marginBottom: '24px' }}>
-        <Form.Item name="department">
-          <Input placeholder="Department" />
-        </Form.Item>
-        <Form.Item name="from">
-          <DatePicker placeholder="From" />
-        </Form.Item>
-        <Form.Item name="to">
-          <DatePicker placeholder="To" />
-        </Form.Item>
-        <Form.Item name="status">
-          <Select placeholder="Status" allowClear>
-            <Option value="recorded">Recorded</Option>
-            <Option value="acknowledged">Acknowledged</Option>
-            <Option value="reviewed">Reviewed</Option>
-          </Select>
-        </Form.Item>
-        <Form.Item>
-          <Button type="primary" htmlType="submit">
-            Filter
-          </Button>
-        </Form.Item>
-      </Form>
-      <Table
-        dataSource={lateEntries}
-        columns={columns}
-        loading={loading}
-        rowKey="_id"
-        pagination={{ pageSize: 10 }}
-      />
+    <div>
+      <Card className="mb-4" style={{ background: 'var(--card-bg)', borderRadius: '8px' }}>
+        <Card.Body>
+          <h5 style={{ color: 'var(--text-primary)', marginBottom: '16px' }}>Filter Entries</h5>
+          <Form ref={formRef} onSubmit={onFinish}>
+            <Row className="g-3">
+              <Col xs={12} sm={6} md={3}>
+                <Form.Group controlId="filterDepartment">
+                  <Form.Label>Department</Form.Label>
+                  <Form.Control name="department" type="text" placeholder="Department" />
+                </Form.Group>
+              </Col>
+              <Col xs={12} sm={6} md={3}>
+                <Form.Group controlId="filterFromDate">
+                  <Form.Label>From Date</Form.Label>
+                  <Form.Control name="from" type="date" />
+                </Form.Group>
+              </Col>
+              <Col xs={12} sm={6} md={3}>
+                <Form.Group controlId="filterToDate">
+                  <Form.Label>To Date</Form.Label>
+                  <Form.Control name="to" type="date" />
+                </Form.Group>
+              </Col>
+              <Col xs={12} sm={6} md={3}>
+                <Form.Group controlId="filterStatus">
+                  <Form.Label>Status</Form.Label>
+                  <Form.Select name="status">
+                    <option value="">All</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Rejected">Rejected</option>
+                    <option value="Resubmitted">Resubmitted</option>
+                  </Form.Select>
+                </Form.Group>
+              </Col>
+              <Col xs={12} className="text-end">
+                <Button variant="primary" type="submit" className="me-2">Filter</Button>
+                <Button variant="secondary" onClick={handleClearFilters}>Clear</Button>
+              </Col>
+            </Row>
+          </Form>
+        </Card.Body>
+      </Card>
+
+      <Card style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '24px' }}>
+        <Card.Body>
+          <h5 style={{ color: 'var(--text-primary)' }}>All Late Entries</h5>
+          <Table striped bordered hover responsive className="dark-theme-table">
+            <thead>
+              <tr>
+                {columns.map((col, idx) => (
+                  <th key={idx}>{col.text}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={columns.length} className="text-center">
+                    <Spinner animation="border" size="sm" /> Loading...
+                  </td>
+                </tr>
+              ) : lateEntries.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length} className="text-center">No late entries found.</td>
+                </tr>
+              ) : (
+                lateEntries.map((entry) => (
+                  <tr key={entry._id}>
+                    {columns.map((col, idx) => (
+                      <td key={idx}>
+                        {col.dataField === 'actions' ? (
+                          col.formatter(null, entry) // Pass row data to formatter
+                        ) : col.dataField.includes('.') ? (
+                          col.dataField.split('.').reduce((o, i) => o[i], entry)
+                        ) : col.formatter ? (
+                          col.formatter(entry[col.dataField])
+                        ) : (
+                          entry[col.dataField]
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </Table>
+        </Card.Body>
+      </Card>
     </div>
   );
 };

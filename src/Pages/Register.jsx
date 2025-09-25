@@ -1,36 +1,42 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Select, Upload, message, Typography } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { Form, Button } from 'react-bootstrap'; // Import Bootstrap components
 import api from '../api/client';
 import LoginCard from '../components/common/LoginCard';
-
-const { Option } = Select;
-const { Title } = Typography;
-
+import useToastService from '../hooks/useToastService'; // Import ToastService
 const Register = () => {
+  const toast = useToastService(); // Initialize toast service
   const [loading, setLoading] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [department, setDepartment] = useState('');
+  const [designation, setDesignation] = useState('');
+  const [profilePhoto, setProfilePhoto] = useState(null);
 
-  const onFinish = async (values) => {
+  const onFinish = async (event) => {
+    event.preventDefault(); // Prevent default form submission
     try {
       // Password match check
-      if (values.password !== values.confirmPassword) {
-        message.error("Passwords do not match!");
+      if (password !== confirmPassword) {
+        toast.error("Passwords do not match!");
         return;
       }
 
       setLoading(true);
 
       const formData = new FormData();
-      formData.append('fullName', values.fullName);
-      formData.append('email', values.email);
-      formData.append('employeeId', values.employeeId);
-      formData.append('department', values.department);
-      formData.append('designation', values.designation);
-      formData.append('password', values.password);
+      formData.append('fullName', fullName);
+      formData.append('email', email);
+      formData.append('employeeId', employeeId);
+      formData.append('department', department);
+      formData.append('designation', designation);
+      formData.append('password', password);
 
       // Check file size before upload
-      if (values.profilePhoto?.[0]?.originFileObj) {
-        const file = values.profilePhoto[0].originFileObj;
+      if (profilePhoto) {
+        const file = profilePhoto;
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
           throw new Error('Profile photo must be smaller than 5MB');
         }
@@ -42,9 +48,8 @@ const Register = () => {
       });
 
       if (response.data.success) {
-        message.success('Registration successful!');
+        toast.success('Registration successful!');
         // Optional: Clear form or redirect
-       // form.resetFields();
       } else {
         throw new Error(response.data.message || 'Registration failed');
       }
@@ -54,124 +59,135 @@ const Register = () => {
         error.response?.data?.message || 
         error.message || 
         'Registration failed! Please try again.';
-      message.error(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Profile photo must be smaller than 5MB!');
+        setProfilePhoto(null);
+        return;
+      }
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        toast.error('Only JPG/PNG files are allowed!');
+        setProfilePhoto(null);
+        return;
+      }
+      setProfilePhoto(file);
+    } else {
+      setProfilePhoto(null);
     }
   };
 
   return (
     <div className="login-container">
       <LoginCard>
-        <Title level={2} style={{ textAlign: 'center', marginBottom: '24px', color: 'var(--text-dark)' }}>Register</Title>
-        <Form layout="vertical" onFinish={onFinish}>
-          <Form.Item
-            name="fullName"
-            label="Full Name"
-            rules={[{ required: true, message: 'Please enter your full name' }]}
-          >
-            <Input placeholder="Full Name" />
-          </Form.Item>
+        <h2 style={{ textAlign: 'center', marginBottom: '24px', color: 'var(--text-dark)' }}>Register</h2>
+        <Form onSubmit={onFinish}>
+          <Form.Group className="mb-3" controlId="formFullName">
+            <Form.Label>Full Name</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Full Name"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
+          </Form.Group>
 
-          <Form.Item
-            name="email"
-            label="Email Address"
-            rules={[
-              { type: 'email', message: 'Please enter a valid email' },
-              { required: true, message: 'Email is required' }
-            ]}
-          >
-            <Input placeholder="Email" />
-          </Form.Item>
+          <Form.Group className="mb-3" controlId="formEmail">
+            <Form.Label>Email Address</Form.Label>
+            <Form.Control
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </Form.Group>
 
-          <Form.Item
-            name="employeeId"
-            label="Faculty ID"
-            rules={[{ required: true, message: 'Please enter your Faculty ID' }]}
-          >
-            <Input placeholder="Faculty ID" />
-          </Form.Item>
+          <Form.Group className="mb-3" controlId="formEmployeeId">
+            <Form.Label>Faculty ID</Form.Label>
+            <Form.Control
+              type="text"
+              placeholder="Faculty ID"
+              value={employeeId}
+              onChange={(e) => setEmployeeId(e.target.value)}
+              required
+            />
+          </Form.Group>
 
-          <Form.Item
-            name="password"
-            label="Password"
-            rules={[{ required: true, message: 'Password is required' }]}
-          >
-            <Input.Password placeholder="Password" />
-          </Form.Item>
+          <Form.Group className="mb-3" controlId="formPassword">
+            <Form.Label>Password</Form.Label>
+            <Form.Control
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </Form.Group>
 
-          <Form.Item
-            name="confirmPassword"
-            label="Confirm Password"
-            rules={[{ required: true, message: 'Please confirm the password' }]}
-          >
-            <Input.Password placeholder="Confirm Password" />
-          </Form.Item>
+          <Form.Group className="mb-3" controlId="formConfirmPassword">
+            <Form.Label>Confirm Password</Form.Label>
+            <Form.Control
+              type="password"
+              placeholder="Confirm Password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </Form.Group>
 
-          <Form.Item
-            name="department"
-            label="Department"
-            rules={[{ required: true, message: 'Please select your department' }]}
-          >
-            <Select placeholder="Select Department">
-              <Option value="ct">CT</Option>
-              <Option value="mech-a">Mechanical-A</Option>
-              <Option value="mech-b">Mechanical-B</Option>
-              <Option value="eee">Electrical</Option>
-              <Option value="ce">Civil</Option>
-              <Option value="fs">FS</Option>
-              <Option value="auto">AUTOMOBILE</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="designation"
-            label="Designation/Role"
-            rules={[{ required: true, message: 'Please select your role' }]}
-          >
-            <Select placeholder="Select Role">
-              <Option value="hod">HOD</Option>
-              <Option value="faculty">FACULTY</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="profilePhoto"
-            label="Profile Photo"
-            valuePropName="fileList"
-            getValueFromEvent={e => e && e.fileList}
-            rules={[
-              {
-                validator: async (_, fileList) => {
-                  if (fileList && fileList.length > 0) {
-                    const file = fileList[0].originFileObj;
-                    if (file.size > 5 * 1024 * 1024) {
-                      throw new Error('Image must be smaller than 5MB!');
-                    }
-                    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-                      throw new Error('Only JPG/PNG files are allowed!');
-                    }
-                  }
-                  return Promise.resolve();
-                }
-              }
-            ]}
-          >
-            <Upload 
-              beforeUpload={() => false}
-              listType="picture"
-              accept=".jpg,.jpeg,.png"
-              maxCount={1}
+          <Form.Group className="mb-3" controlId="formDepartment">
+            <Form.Label>Department</Form.Label>
+            <Form.Select
+              value={department}
+              onChange={(e) => setDepartment(e.target.value)}
+              required
             >
-              <Button icon={<UploadOutlined />}>Upload Profile Photo</Button>
-            </Upload>
-          </Form.Item>
+              <option value="">Select Department</option>
+              <option value="ct">CT</option>
+              <option value="mech-a">Mechanical-A</option>
+              <option value="mech-b">Mechanical-B</option>
+              <option value="eee">Electrical</option>
+              <option value="ce">Civil</option>
+              <option value="fs">FS</option>
+              <option value="auto">AUTOMOBILE</option>
+            </Form.Select>
+          </Form.Group>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" block loading={loading}>
-              Register
-            </Button>
-          </Form.Item>
+          <Form.Group className="mb-3" controlId="formDesignation">
+            <Form.Label>Designation/Role</Form.Label>
+            <Form.Select
+              value={designation}
+              onChange={(e) => setDesignation(e.target.value)}
+              required
+            >
+              <option value="">Select Role</option>
+              <option value="hod">HOD</option>
+              <option value="faculty">FACULTY</option>
+            </Form.Select>
+          </Form.Group>
+
+          <Form.Group controlId="formProfilePhoto" className="mb-3">
+            <Form.Label>Profile Photo</Form.Label>
+            <Form.Control
+              type="file"
+              accept=".jpg,.jpeg,.png"
+              onChange={handleFileChange}
+            />
+            {profilePhoto && <div className="mt-2">Selected file: {profilePhoto.name}</div>}
+          </Form.Group>
+
+          <Button variant="primary" type="submit" className="w-100" disabled={loading}>
+            {loading ? 'Registering...' : 'Register'}
+          </Button>
         </Form>
       </LoginCard>
     </div>

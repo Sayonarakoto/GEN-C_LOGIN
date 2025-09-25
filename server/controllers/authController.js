@@ -92,15 +92,21 @@ exports.facultyLogin = async (req, res) => {
 
 exports.securityLogin = async (req, res) => {
   try {
+    console.log('Security login attempt started.'); // Added log
     const { passkey } = req.body;
+    console.log('Passkey received:', passkey ? 'yes' : 'no'); // Added log
     // If you have a single security doc:
     const security = await Security.findOne();
+    console.log('Security user found:', security ? 'yes' : 'no'); // Added log
     if (!security) return res.status(401).json({ success: false, message: 'Security user not found' });
 
+    console.log('Comparing passkey...'); // Added log
     const ok = await bcrypt.compare(passkey, security.passkey);
+    console.log('Passkey comparison result:', ok); // Added log
     if (!ok) return res.status(401).json({ success: false, message: 'Invalid passkey' });
 
     const token = generateToken({ id: security._id, role: 'security', name: 'Security' });
+    console.log('Token generated. Login successful.'); // Added log
     return res.json({ success: true, message: 'Login successful', token });
   } catch (err) {
     console.error('Security login error:', err);

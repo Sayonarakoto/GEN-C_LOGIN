@@ -89,7 +89,7 @@ body {
     background: transparent;
     border: none;
     outline: none;
-    color: #fff; /* Changed text color */
+    color: #333; /* Changed text color */
     font-size: 1em;
     letter-spacing: .05em;
     z-index: 10;
@@ -184,7 +184,7 @@ body {
     background: transparent !important;
     border: none !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.5) !important;
-    color: #fff !important;
+    color: #333 !important;
     padding: 10px 0 !important;
 }
 
@@ -210,3 +210,69 @@ body {
 .ant-alert-error .anticon {
     color: #fff !important;
 }
+
+/* Styles for ErrorPage.jsx (LostInWoods component) */
+.error-page-main-bg {
+  background: #0f1a24;
+  min-height: 100vh;
+  font-family: "Spline Sans", "Noto Sans", sans-serif;
+  overflow-x: hidden;
+  padding: 0;
+}
+
+.error-page-card-bg {
+  background: #1a2530;
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); /* Adjusted opacity for consistency */
+  border: 1px solid #364154;
+}
+
+.orb-spin {
+  animation: spin 4s linear infinite;
+  display: block;
+  margin: 0 auto 16px auto;
+  min-width: 128px;
+  min-height: 128px;
+  border-radius: 50%;
+  box-shadow: 0 0 16px #aaf;
+  transition: transform 0.3s ease-in-out;
+}
+
+.orb-interactive-hover {
+  transform: scale(1.1);
+}
+
+.secret-message {
+  animation: fadeIn 1s forwards;
+  color: #4aff80;
+  font-size: 1rem;
+  margin-top: 18px;
+  text-align: center;
+}
+
+.error-page-button {
+  min-width: 120px;
+  max-width: 480px;
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 14px;
+  background: #359dff;
+  color: #fff; /* Changed to white */
+  font-weight: bold;
+  font-size: 1.125rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.125); /* Adjusted opacity */
+  transition: background 0.3s;
+}
+
+.error-page-button-secret {
+  background: #38f7a6;
+}
+
+.error-page-button-hover {
+  background: #4ab3ff;
+  color: #fff; /* Changed to white */
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes spin { 0% { transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
+@keyframes pulse { 0% { opacity: 0.3;} 50% { opacity: 0.6;} 100% { opacity: 0.3;} }

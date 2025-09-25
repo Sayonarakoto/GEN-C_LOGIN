@@ -1,6 +1,5 @@
-import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const ProtectedRoute = ({ allowedRoles }) => {
     const { user, loading } = useAuth();
@@ -9,7 +8,11 @@ const ProtectedRoute = ({ allowedRoles }) => {
         return <div>Loading...</div>; // Or a spinner component
     }
 
-    if (!user || (allowedRoles && !allowedRoles.includes(user.role))) {
+    if (!user) {
+        return <Navigate to="/unauthorized" replace />;
+    }
+
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
         return <Navigate to="/unauthorized" replace />;
     }
 

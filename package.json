@@ -13,25 +13,27 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "antd": "^5.27.0",
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/icons-material": "^7.3.2",
+    "@mui/material": "^7.3.2",
     "axios": "^1.11.0",
-    "bootstrap": "^5.3.7",
+    "bootstrap": "^5.3.8",
     "boxicons": "^2.1.4",
+    "dayjs": "^1.11.18",
     "dom-router": "^5.1.3",
-
     "jwt-decode": "^4.0.0",
-    "react": "^19.1.1",
+    "react": "^18.2.0",
     "react-bootstrap": "^2.10.10",
     "react-bootstrap-icons": "^1.11.6",
-    "react-dom": "^19.1.0",
+    "react-dom": "^18.2.0",
     "react-helmet": "^6.1.0",
-    "react-router-dom": "^7.7.1",
-    "router-dom": "^3.0.3"
+    "react-router-dom": "^7.7.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.30.1",
-    "@types/react": "^19.1.8",
-    "@types/react-dom": "^19.1.6",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
     "@vitejs/plugin-react": "^4.6.0",
     "eslint": "^9.30.1",
     "eslint-plugin-react-hooks": "^5.2.0",

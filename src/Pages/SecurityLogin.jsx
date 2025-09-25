@@ -1,47 +1,45 @@
 import React, { useState } from "react";
-import { Form, Input, Button, Typography, message, Alert } from "antd";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from '../hooks/useAuth'; // Import useAuth from hooks
 import client from '../api/client';
 import LoginCard from '../components/common/LoginCard';
-import gencLogo from '../assets/genc-logo.png'; // Import the logo
-
-const { Title, Text } = Typography;
+import { Form, Button } from 'react-bootstrap'; // Import Bootstrap components
+import useToastService from '../hooks/useToastService'; // Import ToastService
 
 const SecurityLogin = () => {
-  const [form] = Form.useForm();
   const navigate = useNavigate();
   const { login } = useAuth();
+  const toast = useToastService(); // Initialize toast service
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [passkey, setPasskey] = useState('');
 
-  const onFinish = async (values) => {
+  const onFinish = async (event) => {
+    event.preventDefault(); // Prevent default form submission
     setLoading(true);
-    setError(null);
+    toast.info('Logging in...'); // Show info toast
     try {
       const response = await client.post('/auth/security-login', {
-        passkey: values.passkey,
+        passkey: passkey,
+      }, {
+        timeout: 10000,
       });
       
-      const { token } = response.data; // Extract token from response
+      const { token } = response.data;
       
       if (!token) {
         throw new Error('No token received from server');
       }
       
-      login(token); // Call login from AuthContext with the token
-
-      message.success('Login successful');
-      navigate("/security-dashboard");
+      login(token);
+      toast.success(response.data.message || 'Login successful!');
+      navigate('/security-dashboard');
     } catch (error) {
       console.error("Login error:", error);
-      // Log the actual error for debugging
       console.error("Login error details:", error.response?.data);
-      // Display generic message to user
       const userMessage = error.response?.status === 401
         ? "Invalid passkey. Please try again."
         : "Login failed. Please try again later.";
-      setError(userMessage);
+      toast.error(userMessage);
     } finally {
       setLoading(false);
     }
@@ -51,55 +49,39 @@ const SecurityLogin = () => {
     <div className="login-container">
       <LoginCard>
         <div style={{ textAlign: 'center' }}>
-          <img src={gencLogo} alt="Genc Logo" style={{ width: '100px', marginBottom: '1rem' }} />
-          <Title level={2} style={{ color: 'var(--text-dark)' }}>
+          <img src={'/images/genc-log.jpeg'} alt="Genc Logo" style={{ width: '100px', marginBottom: '1rem' }} />
+          <h2 style={{ color: 'var(--text-dark)' }}>
             Security Portal
-          </Title>
-          <Text style={{ color: 'var(--text-light)' }}>
+          </h2>
+          <p style={{ color: 'var(--text-light)' }}>
             Please enter the security passkey to proceed.
-          </Text>
+          </p>
         </div>
 
-        <Form
-          form={form}
-          name="security_login"
-          onFinish={onFinish}
-          layout="vertical"
-          onValuesChange={() => setError(null)}
-          style={{ marginTop: '30px' }}
-        >
-          {error && (
-            <Form.Item style={{ marginBottom: 24 }}>
-              <Alert
-                message="Login Failed"
-                description={error}
-                type="error"
-                showIcon
-              />
-            </Form.Item>
-          )}
-          <Form.Item
-            name="passkey"
-            rules={[{ required: true, message: "Please input the passkey!" }]}
-          >
-            <Input.Password
-              size="large"
+        <Form onSubmit={onFinish}>
+          <Form.Group className="mb-3" controlId="formPasskey">
+            <Form.Label>Security Passkey</Form.Label>
+            <Form.Control
+              type="password"
               placeholder="Enter security passkey"
+              value={passkey}
+              onChange={(e) => setPasskey(e.target.value)}
+              required
+              size="lg"
             />
-          </Form.Item>
+          </Form.Group>
 
-          <Form.Item style={{ marginTop: '30px' }}>
+          <div style={{ marginTop: '30px' }}>
             <Button
-              type="primary"
-              htmlType="submit"
-              size="large"
-              block
-              loading={loading}
-              style={{ width: '100%' }}
+              variant="primary"
+              type="submit"
+              size="lg"
+              className="w-100"
+              disabled={loading}
             >
-              Login
+              {loading ? 'Logging in...' : 'Login'}
             </Button>
-          </Form.Item>
+          </div>
         </Form>
       </LoginCard>
     </div>
@@ -107,4 +89,3 @@ const SecurityLogin = () => {
 };
 
 export default SecurityLogin;
-

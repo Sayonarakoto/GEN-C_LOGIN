@@ -7,6 +7,7 @@ const studentSchema = new mongoose.Schema({
   department: { type: String, required: true },
   year: { type: String, required: true },
   password: { type: String, required: true }, // The permanent password field
+  tempPassword: { type: String }, // Temporary password for initial login
 
   // New fields for password reset functionality
   resetPasswordToken: String,

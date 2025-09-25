@@ -1,16 +1,17 @@
 const mongoose = require('mongoose');
 
-const LateEntrySchema = new mongoose.Schema({
-  student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true, index: true },
-  reason: { type: String, required: true, maxlength: 500 },
-  entryTime: { type: Date, required: true, default: Date.now, index: true },
-  status: { type: String, enum: ['Pending', 'Approved', 'Declined'], default: 'Pending', index: true },
-  // Optional fields you may add later:
-  // gate: String,
-  // createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'SecurityUser' },
-  // department: String, // denormalized from student for faculty filtering
-}, { timestamps: true });
+const lateEntrySchema = new mongoose.Schema({
+  studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
+  studentDepartment: { type: String, required: true }, // Added studentDepartment field
+  date: { type: Date, required: true },
+  reason: { type: String, required: true },
+  status: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Resubmitted'], default: 'Pending' },
+  facultyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Faculty' },
+  rejectionReason: { type: String },
+  resubmissionCount: { type: Number, default: 0 },
+  lastActionAt: { type: Date, default: Date.now },
+  resubmittedAt: { type: Date },
+  editedFields: { type: mongoose.Schema.Types.Mixed }
+});
 
-LateEntrySchema.index({ student: 1, entryTime: -1 });
-
-module.exports = mongoose.model('LateEntry', LateEntrySchema);
+module.exports = mongoose.model('LateEntry', lateEntrySchema);

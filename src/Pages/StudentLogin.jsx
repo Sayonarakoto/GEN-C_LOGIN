@@ -23,6 +23,8 @@ const StudentLogin = () => {
         role: 'student',
         studentId: studentId,
         password: password,
+      }, {
+        headers: { 'X-Skip-Interceptor': true }
       });
 
       const { token } = response.data;

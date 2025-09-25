@@ -1,7 +1,6 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { useNavigate } from 'react-router-dom';
-import { setAuthLogoutCallback } from '../utils/authUtils';
 
 const AuthContext = createContext();
 
@@ -11,80 +10,54 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Effect to load token from sessionStorage once on mount
-  useEffect(() => {
-    const storedToken = sessionStorage.getItem('token');
-    if (storedToken) {
-      setToken(storedToken);
-    } else {
-      setLoading(false); // If no token, stop loading immediately
-    }
-  }, []); // Empty dependency array to run only once on mount
-
-  const logout = useCallback((redirectPath = '/') => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     sessionStorage.removeItem('token');
-    // Perform redirection after state is cleared
-    if (redirectPath && typeof window !== 'undefined') {
-      // Use React Router navigation instead of window.location.href
-      navigate(redirectPath); 
-    }
-  }, [navigate]);
+    window.location.replace('/');
+  }, []);
 
   useEffect(() => {
-    // Set the global callback when the component mounts
-    setAuthLogoutCallback(logout);
+    console.log('AuthContext: STARTING token rehydration.');
+    const storedToken = sessionStorage.getItem('token');
+    
+    if (storedToken) {
+        setToken(storedToken); // Set token in state for other logic that relies on the token value
+        try {
+            const decoded = jwtDecode(storedToken);
+            const currentTime = Date.now() / 1000;
 
-    // Clean up the global callback when the component unmounts
-    return () => {
-      setAuthLogoutCallback(null);
-    };
-  }, [logout]); // Empty dependency array means this runs once on mount and unmount
-
-  useEffect(() => {
-    console.log('AuthContext useEffect: Token state changed or component mounted.');
-    if (token) {
-      console.log('AuthContext useEffect: Token found, attempting to validate.');
-      try {
-        const decoded = jwtDecode(token);
-        const currentTime = Date.now() / 1000;
-
-        console.log('AuthContext useEffect: Decoded token:', decoded);
-        console.log('AuthContext useEffect: Token expiration (exp):', decoded.exp);
-        console.log('AuthContext useEffect: Current time:', currentTime);
-
-        if (decoded.exp && decoded.exp > currentTime) {
-          if (decoded.id && decoded.role && decoded.name) {
-            console.log('AuthContext useEffect: Token is valid and not expired.');
-            setUser({ id: decoded.id, role: decoded.role, name: decoded.name });
-          } else {
-            console.log('AuthContext useEffect: Token is invalid (missing fields), clearing token.');
-            // Token is invalid, clear it
+            if (decoded.exp && decoded.exp > currentTime) {
+                // Token is VALID
+                setUser({ id: decoded.id, role: decoded.role, name: decoded.name });
+                console.log('AuthContext: Token is valid. User set.');
+            } else {
+                // Token is EXPIRED
+                sessionStorage.removeItem('token');
+                setToken(null);
+                setUser(null); 
+                console.log('AuthContext: Token expired. Cleared session.');
+            }
+        } catch (err) {
+            // Token is MALFORMED/INVALID
+            console.error('AuthContext: Invalid token on decode. Clearing session.');
             sessionStorage.removeItem('token');
             setToken(null);
-            setUser(null); // Explicitly set user to null
-          }
-        } else {
-          console.log('AuthContext useEffect: Token is expired, clearing token.');
-          // Token is expired, clear it
-          sessionStorage.removeItem('token');
-          setToken(null);
-          setUser(null); // Explicitly set user to null
+            setUser(null);
         }
-      } catch (err) {
-        console.error('AuthContext useEffect: Token validation failed:', err);
-        sessionStorage.removeItem('token');
+    } else {
+        // No token found initially
         setToken(null);
-        setUser(null); // Explicitly set user to null
-      }
-    } else { // If token is null initially, ensure user is also null
-      console.log('AuthContext useEffect: No token found, ensuring user is null.');
-      setUser(null);
+        setUser(null);
+        console.log('AuthContext: No token found. Session cleared.');
     }
-    console.log('AuthContext useEffect: Setting loading to false.');
-    setLoading(false);
-  }, [token]);
+    
+    // 💥 CRITICAL: This MUST be the very last action of the entire sequence.
+    console.log('AuthContext: Setting loading to false (FINAL).');
+    setLoading(false); 
+
+  // The empty array means this runs only ONCE when the component mounts.
+  }, []);
 
   const login = (newToken) => {
     console.log('AuthContext: login function called.'); // Add this log

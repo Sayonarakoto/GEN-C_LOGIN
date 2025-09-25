@@ -14,4 +14,6 @@ const lateEntrySchema = new mongoose.Schema({
   editedFields: { type: mongoose.Schema.Types.Mixed }
 });
 
+lateEntrySchema.index({ studentDepartment: 1, status: 1 });
+
 module.exports = mongoose.model('LateEntry', lateEntrySchema);

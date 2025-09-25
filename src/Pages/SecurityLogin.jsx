@@ -22,6 +22,7 @@ const SecurityLogin = () => {
         passkey: passkey,
       }, {
         timeout: 10000,
+        headers: { 'X-Skip-Interceptor': true }
       });
       
       const { token } = response.data;

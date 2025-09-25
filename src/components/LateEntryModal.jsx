@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, ListGroup } from 'react-bootstrap';
 import useToastService from '../hooks/useToastService';
 
+import { useAuth } from '../hooks/useAuth';
+
 const LateEntryModal = ({ entry, visible, onClose, onSave, isSaving }) => {
   const [remarks, setRemarks] = useState('');
   const toast = useToastService();
+  const { user } = useAuth(); // Get user from AuthContext
 
   useEffect(() => {
     if (entry) {
@@ -24,6 +27,8 @@ const LateEntryModal = ({ entry, visible, onClose, onSave, isSaving }) => {
   if (!entry) {
     return null;
   }
+
+  const canApprove = user.role === 'faculty';
 
   return (
     <Modal show={visible} onHide={onClose} centered>
@@ -46,6 +51,7 @@ const LateEntryModal = ({ entry, visible, onClose, onSave, isSaving }) => {
             value={remarks}
             onChange={(e) => setRemarks(e.target.value)}
             placeholder="Add optional remarks before approving or denying (required for declining)"
+            readOnly={!canApprove} // Make remarks read-only for HOD
           />
         </Form.Group>
       </Modal.Body>
@@ -53,20 +59,27 @@ const LateEntryModal = ({ entry, visible, onClose, onSave, isSaving }) => {
         <Button variant="secondary" onClick={onClose} disabled={isSaving}>
           Close
         </Button>
-        <Button
-          variant="danger"
-          disabled={isSaving}
-          onClick={() => handleSave('Declined')}
-        >
-          Deny
-        </Button>
-        <Button
-          variant="primary"
-          disabled={isSaving}
-          onClick={() => handleSave('Approved')}
-        >
-          Approve
-        </Button>
+        {canApprove && (
+          <>
+            <Button
+              variant="danger"
+              disabled={isSaving}
+              onClick={() => handleSave('Declined')}
+            >
+              Deny
+            </Button>
+            <Button
+              variant="primary"
+              disabled={isSaving}
+              onClick={() => handleSave('Approved')}
+            >
+              Approve
+            </Button>
+          </>
+        )}
+        {!canApprove && user.role === 'hod' && (
+          <span className="text-muted">View Only Access</span>
+        )}
       </Modal.Footer>
     </Modal>
   );

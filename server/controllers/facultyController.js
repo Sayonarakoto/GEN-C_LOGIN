@@ -1,5 +1,4 @@
 const LateEntry = require('../models/LateEntry');
-
 // Controller to get dashboard statistics for faculty
 const getDashboardStats = async (req, res) => {
   try {
@@ -36,4 +35,30 @@ const getDashboardStats = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardStats };
+// Controller to get distinct departments based on user role
+const getDistinctDepartments = async (req, res) => {
+  try {
+    const { role, department } = req.user; // Get role and department from the verified token
+
+    if (role === 'faculty' || role === 'hod') {
+      // Faculty/HOD can only see their own department for filtering
+      return res.json({ success: true, data: [department] });
+    }
+    // If a Super-Admin/HOD needs to see all departments for a high-level view
+    // This part is commented out for now, as the primary use case is faculty's own department
+    /*
+    if (role === 'superadmin') {
+        const departments = await Student.distinct('department');
+        return res.json({ success: true, data: departments });
+    }
+    */
+
+    // Default: return nothing if role is not authorized for department viewing
+    return res.json({ success: true, data: [] });
+  } catch (error) {
+    console.error('Error fetching distinct departments:', error);
+    res.status(500).json({ success: false, message: 'Error fetching distinct departments' });
+  }
+};
+
+module.exports = { getDashboardStats, getDistinctDepartments };

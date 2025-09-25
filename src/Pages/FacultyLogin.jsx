@@ -23,6 +23,8 @@ function FacultyLogin() {
       const response = await client.post('/auth/faculty-login', {
         employeeId: employeeId,
         password: password,
+      }, {
+        headers: { 'X-Skip-Interceptor': true }
       });
       
       const { token } = response.data;

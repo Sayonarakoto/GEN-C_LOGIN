@@ -36,7 +36,7 @@ router.post('/', requireAuth, requireRole('student'), attachUserDoc, async (req,
 
 // GET /api/latecomers
 // Role: faculty
-router.get('/', requireAuth, requireRole('faculty'), attachUserDoc, async (req, res) => {
+router.get('/', requireAuth, requireRole('faculty', 'HOD'), attachUserDoc, async (req, res) => {
   console.log('GET /api/latecomers route hit!');
   console.log('Query parameters:', req.query);
   try {
@@ -45,38 +45,31 @@ router.get('/', requireAuth, requireRole('faculty'), attachUserDoc, async (req, 
       const allowedStatuses = ['Pending', 'Approved', 'Rejected', 'Resubmitted'];
       const statuses = req.query.status.split(',');
       const validStatuses = statuses.filter(status => allowedStatuses.includes(status));
-      if (validStatuses.length === 0) {
-        return res.status(400).json({ message: 'Invalid status values provided' });
+      if (validStatuses.length > 0) {
+        query.status = { $in: validStatuses };
       }
-      query.status = { $in: validStatuses };
     }
 
-    // --- Start of new filtering logic ---
-    const facultyDepartment = req.faculty.department; // Get department from req.faculty
+    const facultyDepartment = req.user.department; // Get department from JWT
     const userRole = req.user.role;
 
-    // Check if the user is logged in and has a department (for Faculty role)
-    if (userRole === 'faculty' && !facultyDepartment) {
-        return res.status(403).json({ message: 'User is not assigned to a department.' });
+    if ((userRole === 'faculty' || userRole === 'HOD') && !facultyDepartment) {
+        return res.status(403).json({ success: false, message: 'User is not assigned to a department.' });
     }
 
-    if (userRole === 'faculty') {
-        // Faculty can only see entries from their department
+    if (userRole === 'faculty' || userRole === 'HOD') {
         query.studentDepartment = facultyDepartment;
     }
-    // If userRole is 'HOD', no additional department filter is applied,
-    // meaning HODs can see all entries (or all from their college/area if implemented)
-    // --- End of new filtering logic ---
 
     const results = await LateEntry.find(query)
       .populate('studentId', 'fullName studentId department')
       .sort({ entryTime: -1 });
 
     console.log('Populated results for /api/latecomers:', results);
-    res.status(200).json(results);
+    res.status(200).json({ success: true, data: results });
   } catch (err) {
     console.error('Error fetching late entries:', err);
-    res.status(500).json({ message: 'Internal server error', error: err.message });
+    res.status(500).json({ success: false, message: 'Internal server error', error: err.message });
   }
 });
 

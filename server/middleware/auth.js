@@ -44,7 +44,7 @@ exports.attachUserDoc = async (req, res, next) => {
     const { id, role } = req.user || {};
     if (!id || !role) return next();
     if (role === 'student') req.student = await Student.findById(id).select('-password');
-    if (role === 'faculty') req.faculty = await Faculty.findById(id).select('-password');
+    if (role === 'faculty' || role === 'HOD') req.faculty = await Faculty.findById(id).select('-password');
     if (role === 'security') req.security = await Security.findById(id).select('-password');
     next();
   } catch (err) {

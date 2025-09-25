@@ -1,9 +1,10 @@
 import { useToast } from './useToast';
+import { useMemo } from 'react';
 
 const useToastService = () => {
   const { showToast } = useToast();
 
-  return {
+  return useMemo(() => ({
     success: (content, duration = 3) => {
       showToast(content, 'success', duration * 1000);
     },
@@ -16,7 +17,7 @@ const useToastService = () => {
     warning: (content, duration = 3) => {
       showToast(content, 'warning', duration * 1000);
     },
-  };
+  }), [showToast]);
 };
 
 export default useToastService;

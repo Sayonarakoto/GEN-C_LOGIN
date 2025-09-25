@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { Toast, ToastContainer } from 'react-bootstrap';
 
 import { ToastContext } from '../context/ToastContext';
@@ -7,7 +7,7 @@ export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
   const toastIdCounter = useRef(0); // Use useRef for the counter
 
-  const showToast = (message, variant = 'success', delay = 3000) => {
+  const showToast = useCallback((message, variant = 'success', delay = 3000) => {
     toastIdCounter.current += 1; // Increment the ref
     const newId = toastIdCounter.current;
     const newToast = {
@@ -18,11 +18,11 @@ export const ToastProvider = ({ children }) => {
       show: true,
     };
     setToasts((prevToasts) => [...prevToasts, newToast]);
-  };
+  }, []);
 
-  const removeToast = (id) => {
+  const removeToast = useCallback((id) => {
     setToasts((prevToasts) => prevToasts.filter((toast) => toast.id !== id));
-  };
+  }, []);
 
   return (
     <ToastContext.Provider value={{ showToast, removeToast }}>

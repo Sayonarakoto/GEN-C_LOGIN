@@ -1,6 +1,6 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import NavigationSetter from './components/NavigationSetter';
@@ -17,10 +17,10 @@ import ForgotPassword from './Pages/ForgotPassword';
 import ResetPassword from './Pages/ResetPassword';
 
 function App() {
-  
+
 
   return (
-        <Router basename='/GEN-C_LOGIN/'>
+        <Router>
           <AuthProvider>
             <NavigationSetter />
             <Routes>

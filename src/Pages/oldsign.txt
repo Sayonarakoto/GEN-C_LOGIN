@@ -1,0 +1,107 @@
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import 'bootstrap/dist/css/bootstrap.min.css';
+import './Frontpage.css';
+import axios from 'axios';
+
+function Signup() {
+  const [
+studentId, setuid] = useState("");
+  const [password, setpass] = useState("");
+    // Add this line to see what you are sending
+    console.log("Submitting with UID:", 
+studentId, " and Password:", password);
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    axios.post('http://localhost:3001/auth/signin', { 
+studentId, password })
+      .then(result => {
+        console.log(result.data);
+        alert(result.data.message);
+      })
+      .catch(err => {
+        console.error(err);
+        alert("❌ Signup failed");
+      });
+  };
+
+  return (
+    <div className="auth-container">
+      <div className="auth-box">
+        <h1 className="auth-title">Sign Up</h1>
+        <p className="auth-sub">Create your account to continue</p>
+
+        <form onSubmit={handleSubmit} className="auth-form">
+          <input
+            type="text"
+            placeholder="User ID"
+            value={
+studentId}
+            onChange={(e) => setuid(e.target.value)}
+            required
+          />
+
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setpass(e.target.value)}
+            required
+          />
+
+          <button type="submit" className="btn login-btn">
+            Sign Up
+          </button>
+        </form>
+
+        <p className="auth-sub">
+          <Link to="/forget">Forgot Password?</Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+export default Signup;
+ 
+
+ old front page
+ import './Frontpage.css';
+import 'boxicons/css/boxicons.min.css';
+import { Link } from 'react-router-dom';
+function Frontpage() {
+  return (
+    <div className="auth-container">
+      <div className="auth-box">
+        <h1 className="auth-title">Hello, Welcome!</h1>
+        <p className="auth-sub">Please select your login type:</p>
+
+        <div className="auth-buttons">
+          <Link to="/signin?role=student">
+            <button className="btn login-btn">
+              <i className="bx bxs-graduation"></i> Student Login
+            </button>
+          </Link>
+
+          <Link to="/faculty">
+            <button className="btn login-btn">
+              <i className="bx bxs-user-badge"></i> Faculty Login
+            </button>
+          </Link>
+
+          <Link to="/signin?role=security">
+            <button className="btn login-btn">
+              <i className="bx bxs-shield"></i> Security Login
+            </button>
+          </Link>
+        </div>
+
+        <p className="auth-sub">New here?</p>
+        <Link to="/regsister">
+          <button className="btn register-btn">Register</button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+export default Frontpage;

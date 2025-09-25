@@ -1,0 +1,278 @@
+/*
+* Prefixed by https://autoprefixer.github.io
+* PostCSS: v8.4.14,
+* Autoprefixer: v10.4.7
+* Browsers: last 4 version
+*/
+
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    -webkit-box-sizing: border-box;
+            box-sizing: border-box;
+    font-family: 'Poppins', sans-serif
+}
+
+body {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-pack: center;
+        -ms-flex-pack: center;
+            justify-content: center;
+    -webkit-box-align: center;
+        -ms-flex-align: center;
+            align-items: center;
+    min-height: 100vh;
+    background: #000;
+}
+
+.auth-container {
+    position: relative;
+    width: 450px; /* Increased width */
+    height: auto; /* Auto height to accommodate content */
+    background: rgba(255, 255, 255, 0.1); /* Semi-transparent background */
+    border-radius: 15px; /* More rounded corners */
+    overflow: hidden;
+    z-index: 1;
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+    border-left: 1px solid rgba(255, 255, 255, 0.5);
+    -webkit-backdrop-filter: blur(10px); /* Glass effect */
+            backdrop-filter: blur(10px); /* Glass effect */
+    -webkit-box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2);
+    padding: 40px; /* Increased padding for the container */
+}
+
+/* Remove the ::before and ::after pseudo-elements for the glass effect */
+.auth-container::before,
+.auth-container::after {
+    display: none;
+}
+
+.auth-box {
+    position: relative; /* Changed to relative */
+    inset: auto; /* Remove inset */
+    border-radius: 8px;
+    background: transparent; /* Transparent background for the inner box */
+    z-index: 10;
+    padding: 0; /* Remove padding from auth-box, handled by auth-container */
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-orient: vertical;
+    -webkit-box-direction: normal;
+        -ms-flex-direction: column;
+            flex-direction: column;
+}
+
+.auth-box h2 {
+    color: #fff; /* Changed text color for better contrast */
+    font-weight: 500;
+    text-align: center;
+    letter-spacing: .1em;
+    margin-bottom: 40px; /* Increased margin-bottom */
+}
+
+.inputBox {
+    position: relative;
+    width: 100%; /* Adjusted width */
+    margin-top: 35px
+}
+
+.inputBox input {
+    position: relative;
+    width: 100%;
+    padding: 20px 10px 10px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: #333; /* Changed text color */
+    font-size: 1em;
+    letter-spacing: .05em;
+    z-index: 10;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5); /* Added bottom border */
+}
+
+.inputBox span {
+    position: absolute;
+    left: 0;
+    padding: 20px 10px 10px;
+    font-size: 1em;
+    color: rgba(255, 255, 255, 0.7); /* Adjusted color */
+    pointer-events: none;
+    letter-spacing: .05em;
+    -webkit-transition: .5s;
+    -o-transition: .5s;
+    transition: .5s
+}
+
+.inputBox input:valid~span,
+.inputBox input:focus~span {
+    color: #00e1ff;
+    -webkit-transform: translateX(-10px) translateY(-34px);
+        -ms-transform: translateX(-10px) translateY(-34px);
+            transform: translateX(-10px) translateY(-34px);
+    font-size: .75em
+}
+
+.inputBox i {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 2px;
+    background: #00e1ff;
+    border-radius: 4px;
+    -webkit-transition: .5s;
+    -o-transition: .5s;
+    transition: .5s;
+    pointer-events: none;
+    z-index: 9;
+    display: none; /* Hide the animated border, as we have a static one */
+}
+
+.inputBox input:valid~i,
+.inputBox input:focus~i {
+    height: 44px;
+    display: none; /* Keep hidden */
+}
+
+.links {
+    display: -webkit-box;
+    display: -ms-flexbox;
+    display: flex;
+    -webkit-box-pack: justify;
+        -ms-flex-pack: justify;
+            justify-content: space-between;
+    margin-top: 20px; /* Added margin-top */
+}
+
+.links a {
+    margin: 10px 0;
+    font-size: .75em;
+    color: rgba(255, 255, 255, 0.7); /* Adjusted color */
+    text-decoration: none
+}
+
+.links a:hover,
+.links a:nth-child(2) {
+    color: #00e1ff
+}
+
+.ant-btn-primary {
+    border: none;
+    outline: none;
+    background: #00e1ff;
+    padding: 11px 25px;
+    width: 100%; /* Full width button */
+    margin-top: 30px; /* Increased margin-top */
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    color: #fff; /* Button text color */
+}
+
+.ant-btn-primary:active {
+    opacity: .8;
+}
+
+/* Ant Design specific overrides for input fields */
+.ant-form-item-control-input-content input {
+    background: transparent !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5) !important;
+    color: #333 !important;
+    padding: 10px 0 !important;
+}
+
+.ant-form-item-label > label {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.ant-input-password .ant-input-suffix {
+    color: rgba(255, 255, 255, 0.7) !important;
+}
+
+.ant-alert-error {
+    background-color: rgba(255, 0, 0, 0.2) !important;
+    border: 1px solid rgba(255, 0, 0, 0.5) !important;
+    color: #fff !important;
+}
+
+.ant-alert-error .ant-alert-message,
+.ant-alert-error .ant-alert-description {
+    color: #fff !important;
+}
+
+.ant-alert-error .anticon {
+    color: #fff !important;
+}
+
+/* Styles for ErrorPage.jsx (LostInWoods component) */
+.error-page-main-bg {
+  background: #0f1a24;
+  min-height: 100vh;
+  font-family: "Spline Sans", "Noto Sans", sans-serif;
+  overflow-x: hidden;
+  padding: 0;
+}
+
+.error-page-card-bg {
+  background: #1a2530;
+  border-radius: 24px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25); /* Adjusted opacity for consistency */
+  border: 1px solid #364154;
+}
+
+.orb-spin {
+  animation: spin 4s linear infinite;
+  display: block;
+  margin: 0 auto 16px auto;
+  min-width: 128px;
+  min-height: 128px;
+  border-radius: 50%;
+  box-shadow: 0 0 16px #aaf;
+  transition: transform 0.3s ease-in-out;
+}
+
+.orb-interactive-hover {
+  transform: scale(1.1);
+}
+
+.secret-message {
+  animation: fadeIn 1s forwards;
+  color: #4aff80;
+  font-size: 1rem;
+  margin-top: 18px;
+  text-align: center;
+}
+
+.error-page-button {
+  min-width: 120px;
+  max-width: 480px;
+  height: 48px;
+  padding: 0 24px;
+  border-radius: 14px;
+  background: #359dff;
+  color: #fff; /* Changed to white */
+  font-weight: bold;
+  font-size: 1.125rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.125); /* Adjusted opacity */
+  transition: background 0.3s;
+}
+
+.error-page-button-secret {
+  background: #38f7a6;
+}
+
+.error-page-button-hover {
+  background: #4ab3ff;
+  color: #fff; /* Changed to white */
+}
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes spin { 0% { transform: rotate(0deg);} 100% {transform: rotate(360deg);} }
+@keyframes pulse { 0% { opacity: 0.3;} 50% { opacity: 0.6;} 100% { opacity: 0.3;} }

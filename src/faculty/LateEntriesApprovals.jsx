@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react'; // Add useCallback
 import { Card, Button, Form, Modal, Badge, Container } from 'react-bootstrap';
 import { VisibilityOutlined, CheckOutlined, CloseOutlined, ArrowBack } from '@mui/icons-material';
 import Avatar from '@mui/material/Avatar';
 import { updateLatecomerStatus } from '../api/latecomerService';
 import api from '../api/client';
 import useToastService from '../hooks/useToastService';
+import { useAuth } from '../hooks/useAuth'; // <-- NEW IMPORT
 
 
 
@@ -16,6 +17,7 @@ const statusColors = {
 
 export default function LateEntriesApprovals() {
   const toast = useToastService();
+  const { user } = useAuth(); // <-- GET USER
   const [showModal, setShowModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [requests, setRequests] = useState([]);
@@ -24,15 +26,22 @@ export default function LateEntriesApprovals() {
   const [remarks, setRemarks] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-    fetchActionableRequests();
-  }, []);
+  const fetchActionableRequests = useCallback(async () => { // 1. Stabilize the fetch function using useCallback
+    if (!user?.department) return; // Guard against running before user loads
 
-  const fetchActionableRequests = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/latecomers?status=Pending,Resubmitted');
-      setRequests(response.data);
+      // ✅ Add department filter to the request
+      const response = await api.get(`/api/latecomers?status=Pending,Resubmitted&department=${user.department}`);
+      const dataArray = response.data?.data;
+
+      if (Array.isArray(dataArray)) {
+          setRequests(dataArray);
+      } else if (Array.isArray(response.data)) {
+          setRequests(response.data);
+      } else {
+          setRequests([]);
+      }
       setError(null);
     } catch (err) {
       setError('Failed to fetch actionable requests');
@@ -40,7 +49,11 @@ export default function LateEntriesApprovals() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user.department]); // 2. Add stable dependency
+
+  useEffect(() => {
+    fetchActionableRequests();
+  }, [fetchActionableRequests]); // 4. The only dependency is the stabilized function
 
   const handleView = (req) => {
     setSelected(req);

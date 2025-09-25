@@ -7,7 +7,8 @@ const lateEntrySchema = new mongoose.Schema({
   reason: { type: String, required: true },
   status: { type: String, enum: ['Pending', 'Approved', 'Rejected', 'Resubmitted'], default: 'Pending' },
   facultyId: { type: mongoose.Schema.Types.ObjectId, ref: 'Faculty' },
-  rejectionReason: { type: String },
+  remarks: { type: String, default: '' },           // <— add this
+  rejectionReason: { type: String },                // retained for compatibility
   resubmissionCount: { type: Number, default: 0 },
   lastActionAt: { type: Date, default: Date.now },
   resubmittedAt: { type: Date },

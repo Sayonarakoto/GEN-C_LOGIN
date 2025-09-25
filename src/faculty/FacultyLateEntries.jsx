@@ -3,19 +3,25 @@ import { Table, Form, Button, Card, Row, Col, Spinner } from 'react-bootstrap';
 import useToastService from '../hooks/useToastService';
 import api from '../api/client';
 import axios from 'axios';
+import { useAuth } from '../hooks/useAuth'; // <-- NEW IMPORT
 
 const FacultyLateEntries = () => {
   const toast = useToastService();
+  const { user } = useAuth(); // <-- GET USER AND DEPARTMENT
   const [lateEntries, setLateEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [rowEdits, setRowEdits] = useState({});
   const formRef = useRef(null); // Ref for the form
 
   const fetchLateEntries = useCallback(async (params = {}, signal) => {
+    // 1. Add department filter to params
+    const defaultParams = { department: user.department, status: 'Pending,Resubmitted', ...params };
+    
     setLoading(true);
     try {
-      const response = await api.get('/api/latecomers', { params, signal });
-      const entries = response.data || [];
+      // 2. Use the combined defaultParams for the GET request
+      const response = await api.get('/api/latecomers', { params: defaultParams, signal });
+      const entries = response.data.data || []; // <-- Access response.data.data
       setLateEntries(entries);
       const initialEdits = {};
       entries.forEach(entry => {
@@ -32,16 +38,19 @@ const FacultyLateEntries = () => {
     } finally {
       setLoading(false);
     }
-  }, [setLoading, setLateEntries, setRowEdits, toast]); // Add toast to dependencies
+  }, [user.department, toast]); // Dependency on user.department is required
 
   useEffect(() => {
     const abortController = new AbortController();
-    fetchLateEntries({ status: 'Pending,Resubmitted' }, abortController.signal);
+    // Ensure user.department is available before fetching
+    if (user?.department) {
+      fetchLateEntries({}, abortController.signal);
+    }
 
     return () => {
       abortController.abort();
     };
-  }, [fetchLateEntries]); 
+  }, [fetchLateEntries, user.department]); 
 
   const onFinish = (event) => {
     event.preventDefault(); // Prevent default form submission

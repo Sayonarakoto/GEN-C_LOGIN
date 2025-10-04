@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import api from '../api/client'; // Import api client
-import LoginCard from '../components/common/LoginCard';
-import { Form, Button,  } from 'react-bootstrap'; // Import Bootstrap components
-import useToastService from '../hooks/useToastService'; // Import ToastService
+import api from '../api/client';
+import useToastService from '../hooks/useToastService';
+
+// Import the glass-effect styles
+import './Auth.css';
 
 const StudentLogin = () => {
-  const toast = useToastService(); // Initialize toast service
+  const toast = useToastService();
   const [loading, setLoading] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
@@ -15,9 +16,9 @@ const StudentLogin = () => {
   const { login } = useAuth();
 
   const onFinish = async (event) => {
-    event.preventDefault(); // Prevent default form submission
+    event.preventDefault();
     setLoading(true);
-    toast.info('Logging in...'); // Show info toast
+    toast.info('Logging in...');
     try {
       const response = await api.post('/auth/login', {
         role: 'student',
@@ -28,7 +29,6 @@ const StudentLogin = () => {
       });
 
       const { token } = response.data;
-
       if (!token) {
         throw new Error('No token received from server');
       }
@@ -44,43 +44,44 @@ const StudentLogin = () => {
     }
   };
 
+  // The new structure uses divs and classes from Auth.css
   return (
-    <div className="login-container">
-      <LoginCard>
-        <h2 style={{ textAlign: 'center', marginBottom: '40px', color: 'var(--text-dark)' }}>Sign in</h2>
-        <Form onSubmit={onFinish}>
-          <Form.Group className="mb-3" controlId="formStudentId">
-            <Form.Label>Student ID</Form.Label>
-            <Form.Control
-              type="text"
-              placeholder="Student ID"
-              value={studentId}
-              onChange={(e) => setStudentId(e.target.value)}
-              required
-            />
-          </Form.Group>
+    <div className="auth-page-wrapper">
+      <div className="auth-container">
+        <div className="auth-box">
+          <form onSubmit={onFinish}>
+            <h2>Sign in</h2>
+            
+            <div className="inputBox">
+              <input
+                type="text"
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
+                required
+              />
+              <span>Student ID</span>
+            </div>
 
-          <Form.Group className="mb-3" controlId="formPassword">
-            <Form.Label>Password</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </Form.Group>
+            <div className="inputBox">
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <span>Password</span>
+            </div>
 
-          <div className="links">
-            <Link to="/forgot-password" style={{ color: 'var(--text-light)' }}>Forgot Password</Link>
-          </div>
-          <div style={{ marginTop: '30px' }}>
-            <Button variant="primary" type="submit" disabled={loading} className="w-100">
+            <div className="links">
+              <Link to="/forgot-password">Forgot Password</Link>
+            </div>
+
+            <button type="submit" className="ant-btn-primary" disabled={loading}>
               {loading ? 'Logging in...' : 'Login'}
-            </Button>
-          </div>
-        </Form>
-      </LoginCard>
+            </button>
+          </form>
+        </div>
+      </div>
     </div>
   );
 };

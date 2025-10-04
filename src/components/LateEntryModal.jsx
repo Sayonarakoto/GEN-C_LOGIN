@@ -37,12 +37,27 @@ const LateEntryModal = ({ entry, visible, onClose, onSave, isSaving }) => {
       </Modal.Header>
       <Modal.Body>
         <ListGroup variant="flush">
-          <ListGroup.Item><strong>Student ID:</strong> {entry.student?.studentId}</ListGroup.Item>
-          <ListGroup.Item><strong>Name:</strong> {entry.student?.fullName}</ListGroup.Item>
-          <ListGroup.Item><strong>Department:</strong> {entry.student?.department}</ListGroup.Item>
-          <ListGroup.Item><strong>Entry Time:</strong> {new Date(entry.entryTime).toLocaleString()}</ListGroup.Item>
+          <ListGroup.Item><strong>Student ID:</strong> {entry.studentId?.studentId || entry.student?.studentId}</ListGroup.Item>
+          <ListGroup.Item><strong>Name:</strong> {entry.studentId?.fullName || entry.student?.fullName}</ListGroup.Item>
+          <ListGroup.Item><strong>Department:</strong> {entry.studentId?.department || entry.student?.department}</ListGroup.Item>
+          <ListGroup.Item>
+            <strong>Entry Time:</strong>{' '}
+            {
+              (() => {
+                const dateValue = entry.createdAt || entry.date || entry.lastActionAt || entry.entryTime;
+                if (dateValue) {
+                  const dateObj = new Date(dateValue);
+                  return isNaN(dateObj.getTime()) ? 'N/A' : dateObj.toLocaleString();
+                }
+                return 'N/A';
+              })()
+            }
+          </ListGroup.Item>
           <ListGroup.Item><strong>Reason:</strong> {entry.reason}</ListGroup.Item>
         </ListGroup>
+        {entry.status === 'Approved' && entry.facultyId?.fullName && (
+            <ListGroup.Item><strong>Approved By:</strong> {entry.facultyId.fullName}</ListGroup.Item>
+          )}
         <Form.Group className="mt-3" controlId="facultyRemarks">
           <Form.Label>Faculty Remarks</Form.Label>
           <Form.Control
@@ -77,7 +92,7 @@ const LateEntryModal = ({ entry, visible, onClose, onSave, isSaving }) => {
             </Button>
           </>
         )}
-        {!canApprove && user.role === 'hod' && (
+        {!canApprove && user.role === 'HOD' && (
           <span className="text-muted">View Only Access</span>
         )}
       </Modal.Footer>

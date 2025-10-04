@@ -1,159 +1,175 @@
-/* General Ant Design Layout Overrides */
-.ant-layout {
-  background-color: var(--bg-primary); /* Default light grey background */
+/* Theme Variables */
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8f9fa;
+  --text-primary: #212529;
+  --text-secondary: #6c757d;
+  --border-color: #dee2e6;
+  --card-shadow: rgba(0, 0, 0, 0.05);
+  --primary-color: #0d6efd;
+  --header-bg: #ffffff;
+  --card-bg: #ffffff;
+  --warning-color: #ffc107;
+  --success-color: #198754;
+  --error-color: #dc3545;
+  --dark-gray: #343a40;
+  --color-highlight-shadow: none; /* No glow in light mode */
 }
 
-/* Dark Theme Variables */
 body.dark {
-  --bg-primary: #0f172a; /* Dark background for layout */
-  --card-bg: #1e293b; /* Darker background for content boxes/cards */
-  --header-bg: rgba(15, 23, 42, 0.8); /* Semi-transparent dark header */
-  --text-primary: #cbd5e1; /* Light text color */
-  --text-secondary: #a0aec0; /* Slightly darker light text */
-  --border-color: #334155; /* Darker border color */
-  --card-shadow: rgba(0, 0, 0, 0.3); /* Darker shadow */
-  --warning-color: #ff9800; /* Orange for warnings */
-  --success-color: #4caf50; /* Green for success */
-  --error-color: #f44336; /* Red for errors */
+  --bg-primary: #121212;
+  --bg-secondary: #1e1e1e;
+  --text-primary: #e9ecef;
+  --text-secondary: #adb5bd;
+  --border-color: #3e444a; 
+  --card-shadow: rgba(255, 255, 255, 0.05);
+  --primary-color: #6aa8f5; /* Lighter blue for pop */
+  --header-bg: #1e1e1e;
+  --card-bg: #1e1e1e;
+  --color-highlight-shadow: 
+    0 0 4px rgba(106, 168, 245, 0.4), 
+    0 0 8px rgba(106, 168, 245, 0.2); 
 }
 
-/* Light Theme Variables (default) */
-body.light {
-  --bg-primary: #f0f2f5; /* Light background for layout */
-  --card-bg: #FFFFFF; /* White background for content boxes/cards */
-  --header-bg: #FFFFFF; /* White header */
-  --text-primary: #333333; /* Dark text color */
-  --text-secondary: #666666; /* Slightly lighter dark text */
-  --border-color: #e8e8e8; /* Light border color */
-  --card-shadow: rgba(0, 0, 0, 0.1); /* Light shadow */
-  --warning-color: #ff9800; /* Orange for warnings */
-  --success-color: #4caf50; /* Green for success */
-  --error-color: #f44336; /* Red for errors */
-}
+/* Styles for StudentDashboard.jsx */
 
-
-/* Main Layout for Dashboards */
-.dashboard-page-layout {
-  min-height: 100vh;
-}
-
-.dashboard-logo {
-  height: 32px;
-  margin: 16px;
-  background: var(--card-bg);
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 6px;
-  font-weight: bold;
+.dashboard-container {
+  background-color: var(--bg-primary);
 }
 
 .dashboard-header {
   background: var(--header-bg);
-  color: var(--text-primary);
-  padding: 0 24px;
   border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: center;
+  padding: 0 16px;
 }
 
-.dashboard-content-area {
-  padding: 24px;
-  margin: 0;
+.dashboard-header h4 {
+  color: var(--text-primary);
+  text-shadow: var(--color-highlight-shadow);
 }
 
-.dashboard-content-box {
+.menu-button,
+.notification-icon,
+.logout-icon {
+  color: var(--text-primary);
+  cursor: pointer;
+  filter: drop-shadow(0 0 3px rgba(106, 168, 245, 0.6)); 
+}
+
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+}
+
+.dashboard-sidebar {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.dashboard-footer {
   background: var(--card-bg);
+  border-top: 1px solid var(--border-color);
+}
+
+.quick-action-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.quick-action-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 16px var(--card-shadow);
+}
+
+.quick-action-icon {
+  color: var(--primary-color);
+  font-size: 26px;
+  filter: drop-shadow(0 0 3px rgba(106, 168, 245, 0.6)); 
+}
+
+.request-history-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.request-history-icon {
+  color: var(--primary-color);
+  font-size: 21px;
+  filter: drop-shadow(0 0 3px rgba(106, 168, 245, 0.6)); 
+}
+
+.dashboard-content-box { 
+  background-color: var(--bg-primary);
+}
+
+.dashboard-content-box h4,
+.dashboard-content-box h5 {
+  color: var(--text-primary);
+  text-shadow: var(--color-highlight-shadow);
+}
+
+.dashboard-content-box a {
+  color: var(--primary-color);
+  text-shadow: var(--color-highlight-shadow);
+}
+
+.dashboard-content-box .text-muted {
+  color: var(--text-secondary) !important; /* Override bootstrap's default */
+}
+
+.theme-toggle-button {
+    background-color: var(--primary-color);
+    color: var(--bg-primary);
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    line-height: 1;
+}
+
+/* Styles for FacultyDashboard.jsx */
+
+.dashboard-main {
+  margin-top: 64px; /* Height of the fixed header */
+  background-color: var(--bg-primary);
   padding: 24px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px var(--card-shadow);
 }
 
-/* Responsive adjustments for mobile */
-@media (max-width: 767px) {
-  .dashboard-content-area {
-    padding: 16px;
-  }
-
-  .dashboard-content-box {
-    padding: 16px;
-    box-shadow: none;
-    border-radius: 0;
-  }
-}
-
-/* Dark theme table styles */
-body.dark .ant-table {
-  background-color: var(--card-bg);
+.dashboard-stat-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   color: var(--text-primary);
 }
 
-body.dark .ant-table-thead > tr > th {
-  background-color: var(--card-bg);
-  color: var(--text-primary);
-  border-bottom: 1px solid var(--border-color);
+.dashboard-stat-card h3 {
+  font-size: 1.5rem;
+  text-shadow: var(--color-highlight-shadow);
 }
 
-body.dark .ant-table-tbody > tr > td {
-  background-color: var(--card-bg);
-  color: var(--text-primary);
-  border-bottom: 1px solid var(--border-color);
+.dashboard-stat-card p {
+  color: var(--text-secondary);
 }
 
-body.dark .ant-table-tbody > tr.ant-table-row:hover > td {
-  background-color: var(--border-color); /* A slightly lighter dark for hover */
+.stat-icon {
+  filter: drop-shadow(0 0 3px rgba(106, 168, 245, 0.6)); 
 }
 
-body.dark .ant-pagination-item a {
+.sidebar-nav-link {
   color: var(--text-primary);
 }
 
-body.dark .ant-pagination-item-active a {
-  color: #fff;
-}
-
-body.dark .ant-pagination-item-link {
-  color: var(--text-primary);
-}
-
-/* Security Dashboard specific styles */
-body.dark .log-row-even {
-  background-color: var(--card-bg);
-}
-
-body.dark .log-row-odd {
-  background-color: var(--border-color); /* A slightly different dark for alternating rows */
-}
-
-/* Font size variables */
-body {
-  --font-size-base: 1.2em;
-  --font-size-large: 1.5em;
-}
-
-/* Ensure larger font sizes for readability */
-.ant-typography,
-.ant-input,
-.ant-btn,
-.ant-table-thead > tr > th,
-.ant-table-tbody > tr > td,
-.ant-select-selector,
-.ant-picker {
-  font-size: var(--font-size-base); /* Minimum 16px assuming base font size is 1em = 16px */
-}
-
-.ant-card-head-title {
-  font-size: var(--font-size-large);
-}
-
-.ant-btn-lg {
-  font-size: var(--font-size-large);
-  height: 60px !important;
-}
-
-.ant-input-lg {
-  font-size: var(--font-size-large);
-  height: 60px !important;
+.sidebar-nav-link:hover {
+  color: var(--primary-color);
+  text-shadow: var(--color-highlight-shadow);
 }

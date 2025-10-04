@@ -1,16 +1,37 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Container, Row, Col, Card, Button, Offcanvas, Nav, Badge, Form, Tab, Tabs } from "react-bootstrap";
+import {
+  Box,
+  Drawer,
+  AppBar,
+  Toolbar,
+  Typography,
+  IconButton,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
+  Avatar,
+  Badge,
+  Grid,
+  Paper,
+  Switch,
+  FormControlLabel,
+  useMediaQuery,
+  Stack,
+} from "@mui/material";
 import {
   Menu as MenuIcon,
   NotificationsOutlined,
   LogoutOutlined,
   LightModeOutlined,
   DarkModeOutlined,
-  DescriptionOutlined, // For FileDoneOutlined
-  AccessTime, // For ClockCircleOutlined
-  UploadFile, // For UploadOutlined
-  ErrorOutline, // For ExclamationCircleOutlined
-  CheckCircleOutline // For CheckCircleOutlined (if needed)
+  DescriptionOutlined,
+  AccessTime,
+  UploadFile,
+  ErrorOutline,
+  CheckCircleOutline,
+  Group as GroupIcon, // For Student Management
 } from "@mui/icons-material";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../hooks/useAuth';
@@ -20,33 +41,44 @@ import FacultyLateEntries from "../faculty/FacultyLateEntries";
 import LateEntriesApprovals from "../faculty/LateEntriesApprovals";
 import ExcelUpload from "../faculty/ExcelUpload";
 import StudentTable from "../faculty/StudentTable";
-import useToastService from '../hooks/useToastService'; // Import ToastService
-import "./Dashboard.css";
+import useToastService from '../hooks/useToastService';
+// import "./Dashboard.css"; // Keep if custom styles are still needed, otherwise remove
+
+const drawerWidth = 240;
 
 function FacultyDashboard() {
   const [selectedKey, setSelectedKey] = useState("approvals");
   const [allStudents, setAllStudents] = useState([]);
   const [stats, setStats] = useState({ pending: 0, lateToday: 0, approved: 0, alerts: 0 });
-  const [siderVisible, setSiderVisible] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const isMdScreen = useMediaQuery("(min-width:900px)");
 
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const toast = useToastService(); // Use ToastService
+  const toast = useToastService();
+
+  const refreshStats = useCallback(async () => {
+    try {
+      const response = await api.get('/api/latecomers/faculty/stats');
+      if (response.data && response.data.success) {
+        setStats(prevStats => ({
+          ...prevStats,
+          pending: response.data.data.pending,
+          approved: response.data.data.approved,
+          lateToday: response.data.data.todayEntry, // Map backend's todayEntry to frontend's lateToday
+          alerts: response.data.data.alerts, // Map backend's alerts to frontend's alerts
+        }));
+      }
+    } catch (error) {
+      console.error("Failed to fetch stats:", error);
+      toast.error('Failed to refresh dashboard stats.');
+    }
+  }, [toast]);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const response = await api.get('/api/faculty/stats');
-        if (response.data && response.data.success) {
-          setStats(response.data.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch stats:", error);
-      }
-    };
-    fetchStats();
-  }, []);
+    refreshStats();
+  }, [refreshStats]);
 
   const fetchAllStudents = useCallback(async () => {
     try {
@@ -54,7 +86,7 @@ function FacultyDashboard() {
       setAllStudents(response.data.data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
-      toast.error('Failed to load student data.'); // Use toast.error
+      toast.error('Failed to load student data.');
     }
   }, [toast]);
 
@@ -67,174 +99,226 @@ function FacultyDashboard() {
   const handleMenuClick = (key) => {
     if (key === 'logout') {
       logout();
-      toast.success("You have been logged out."); // Use toast.success
+      toast.success("You have been logged out.");
       navigate('/');
     } else {
       setSelectedKey(key);
     }
-    setSiderVisible(false);
+    setMobileOpen(false); // Close drawer on item click
   };
 
   const handleUploadSuccess = () => {
-    toast.success("Student data uploaded successfully!"); // Use toast.success
+    toast.success("Student data uploaded successfully!");
     fetchAllStudents();
   };
 
   const menuItems = [
     { key: 'approvals', icon: <DescriptionOutlined />, label: 'Approvals' },
     { key: 'lateEntries', icon: <AccessTime />, label: 'All Late Entries' },
-    { key: 'uploadStudents', icon: <UploadFile />, label: 'Student Management' },
-    { key: 'manageStudents', icon: <DescriptionOutlined />, label: 'Manage Students' },
-    { key: 'logout', icon: <LogoutOutlined />, label: 'Logout' },
+    { key: 'uploadStudents', icon: <UploadFile />, label: 'Upload Students' },
+    { key: 'manageStudents', icon: <GroupIcon />, label: 'Manage Students' },
   ];
 
-  const tabItems = [
-    {
-      eventKey: 'approvals',
-      title: 'Approvals',
-      children: <LateEntriesApprovals />,
-    },
-    {
-      eventKey: 'lateEntries',
-      title: 'All Late Entries',
-      children: <FacultyLateEntries />,
-    },
-    {
-      eventKey: 'uploadStudents',
-      title: 'Student Management',
-      children: <ExcelUpload onUploadSuccess={handleUploadSuccess} />
-    },
-    {
-      eventKey: 'manageStudents',
-      title: 'Manage Students',
-      children: <StudentTable students={allStudents} />
-    },
-  ];
-
-  const SidebarMenu = () => (
-    <Nav className="flex-column">
-      {menuItems.map(item => (
-        <Nav.Link
-          key={item.key}
-          active={selectedKey === item.key}
-          onClick={() => handleMenuClick(item.key)}
-          className="d-flex align-items-center"
+  const drawerContent = (
+    <Box>
+      <Box sx={{ p: 2, display: "flex", alignItems: "center", borderBottom: 1, borderColor: "#e5e7eb" }}>
+        <Typography component="span" sx={{ color: "#3b82f6", fontWeight: 700, fontSize: 24 }}>
+          G
+        </Typography>
+        <Typography
+          component="span"
+          sx={{
+            color: "#374151",
+            fontWeight: 700,
+            fontSize: 20,
+            marginLeft: 1,
+          }}
         >
-          {item.icon} <span className="ms-2">{item.label}</span>
-        </Nav.Link>
-      ))}
-    </Nav>
+          EN-C Login
+        </Typography>
+      </Box>
+      <List>
+        {menuItems.map((item) => (
+          <ListItem
+            component="button"
+            key={item.key}
+            selected={selectedKey === item.key}
+            onClick={() => handleMenuClick(item.key)}
+            sx={{
+              color: selectedKey === item.key ? "#3b82f6" : "#475569",
+              backgroundColor: selectedKey === item.key ? "#e0f2fe" : "transparent",
+              fontWeight: selectedKey === item.key ? 600 : 400,
+              "& .MuiSvgIcon-root": { color: selectedKey === item.key ? "#3b82f6" : "#475569" },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                color: selectedKey === item.key ? "#3b82f6" : "#475569",
+                minWidth: 36,
+              }}
+            >
+              {item.icon}
+            </ListItemIcon>
+            <ListItemText primary={item.label} />
+          </ListItem>
+        ))}
+      </List>
+      <Divider />
+      <Box sx={{ mt: "auto", p: 2 }}>
+        <List>
+          <ListItem component="button" onClick={() => handleMenuClick('logout')}>
+            <ListItemIcon>
+              <LogoutOutlined sx={{ color: "#475569" }} />
+            </ListItemIcon>
+            <ListItemText primary="Logout" />
+          </ListItem>
+        </List>
+      </Box>
+    </Box>
   );
 
+  const renderContent = () => {
+    switch (selectedKey) {
+      case 'approvals':
+        return <LateEntriesApprovals onActionComplete={refreshStats} />;
+      case 'lateEntries':
+        return <FacultyLateEntries />;
+      case 'uploadStudents':
+        return <ExcelUpload onUploadSuccess={handleUploadSuccess} />;
+      case 'manageStudents':
+        return <StudentTable students={allStudents} />;
+      default:
+        return <Typography>Select an option from the menu.</Typography>;
+    }
+  };
+
   return (
-    <div className="d-flex flex-column min-vh-100" style={{ background: 'var(--bg-primary)' }}>
-      {/* Header */}
-      <header style={{
-        position: 'fixed',
-        width: '100%',
-        zIndex: 1000,
-        background: 'var(--header-bg)',
-        padding: '0 16px',
-        borderBottom: '1px solid var(--border-color)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center'
-      }}>
-        <Button variant="link" onClick={() => setSiderVisible(true)} style={{ color: 'var(--text-primary)', fontSize: '24px' }}>
-          <MenuIcon />
-        </Button>
-        <h4 style={{ color: 'var(--text-primary)', margin: 0, textAlign: 'center' }}>Faculty Dashboard</h4>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <Form.Check
-            type="switch"
-            id="theme-switch"
-            label={theme === 'dark' ? <DarkModeOutlined /> : <LightModeOutlined />}
-            checked={theme === 'dark'}
-            onChange={toggleTheme}
-            style={{ display: 'flex', alignItems: 'center' }}
-          />
-          <div style={{ position: 'relative', cursor: 'pointer' }}>
-            <NotificationsOutlined style={{ fontSize: 24, color: 'var(--text-primary)' }} />
-            {stats.alerts > 0 && (
-              <Badge pill bg="danger" style={{ position: 'absolute', top: -5, right: -5 }}>
-                {stats.alerts}
-              </Badge>
-            )}
-          </div>
-          <Button variant="link" onClick={() => handleMenuClick('logout')} style={{ color: 'var(--text-primary)', fontSize: '24px' }}>
-            <LogoutOutlined />
-          </Button>
-        </div>
-      </header>
-
-      <Offcanvas
-        show={siderVisible}
-        onHide={() => setSiderVisible(false)}
-        placement="start"
-        style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+    <Box sx={{ display: "flex", minHeight: "100vh", bgcolor: "#f3f4f6", fontFamily: "'Inter', sans-serif" }}>
+      {/* Sidebar/Drawer */}
+      <Drawer
+        variant={isMdScreen ? "permanent" : "temporary"}
+        open={isMdScreen || mobileOpen}
+        onClose={() => setMobileOpen(false)}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile.
+        }}
+        sx={{
+          width: drawerWidth,
+          flexShrink: 0,
+          [`& .MuiDrawer-paper`]: { width: drawerWidth, boxSizing: "border-box" },
+          borderRight: 1,
+          borderColor: "#e5e7eb",
+        }}
       >
-        <Offcanvas.Header closeButton closeVariant={theme === 'dark' ? 'white' : 'dark'}>
-          <Offcanvas.Title>Menu</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body className="p-0">
-          <SidebarMenu />
-        </Offcanvas.Body>
-      </Offcanvas>
+        {drawerContent}
+      </Drawer>
 
-      <main className="flex-grow-1" style={{ marginTop: 64, background: 'var(--bg-primary)', padding: '24px' }}>
-        <Container fluid>
-          <Row className="g-4 mb-4">
-            <Col xs={12} sm={6} md={4} lg={3}>
-              <Card className="dashboard-content-box">
-                <Card.Body>
-                  <h3 style={{ color: 'var(--warning-color)', fontSize: '1.5rem' }}>{stats.pending}</h3>
-                  <p className="text-muted">Pending Requests</p>
-                  <ErrorOutline style={{ fontSize: 24, color: 'var(--warning-color)' }} />
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col xs={12} sm={6} md={4} lg={3}>
-              <Card className="dashboard-content-box">
-                <Card.Body>
-                  <h3 style={{ fontSize: '1.5rem' }}>{stats.lateToday}</h3>
-                  <p className="text-muted">Late Entries Today</p>
-                  <AccessTime style={{ fontSize: 24 }} />
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col xs={12} sm={6} md={4} lg={3}>
-              <Card className="dashboard-content-box">
-                <Card.Body>
-                  <h3 style={{ color: 'var(--success-color)', fontSize: '1.5rem' }}>{stats.approved}</h3>
-                  <p className="text-muted">Approved Late Entries</p>
-                  <CheckCircleOutline style={{ fontSize: 24, color: 'var(--success-color)' }} />
-                </Card.Body>
-              </Card>
-            </Col>
-            <Col xs={12} sm={6} md={4} lg={3}>
-              <Card className="dashboard-content-box">
-                <Card.Body>
-                  <h3 style={{ color: 'var(--error-color)', fontSize: '1.5rem' }}>{stats.alerts}</h3>
-                  <p className="text-muted">Security Alerts</p>
-                  <ErrorOutline style={{ fontSize: 24, color: 'var(--error-color)' }} />
-                </Card.Body>
-              </Card>
-            </Col>
-          </Row>
-          <Card className="dashboard-content-box">
-            <Card.Body>
-              <Tabs activeKey={selectedKey} onSelect={handleMenuClick} className="mb-3">
-                {tabItems.map((tab) => (
-                  <Tab eventKey={tab.eventKey} title={tab.title} key={tab.eventKey}>
-                    {tab.children}
-                  </Tab>
-                ))}
-              </Tabs>
-            </Card.Body>
-          </Card>
-        </Container>
-      </main>
-    </div>
+      {/* Main section */}
+      <Box component="main" sx={{ flexGrow: 1, width: { md: `calc(100% - ${drawerWidth}px)` }, overflow: "hidden" }}>
+        {/* AppBar/Header */}
+        <AppBar position="static" elevation={0} sx={{ bgcolor: "#fff", borderBottom: 1, borderColor: "#e5e7eb" }}>
+          <Toolbar sx={{ justifyContent: "space-between" }}>
+            <Box sx={{ display: "flex", alignItems: "center" }}>
+              {!isMdScreen && (
+                <IconButton edge="start" sx={{ color: "#475569" }} onClick={() => setMobileOpen(!mobileOpen)}>
+                  <MenuIcon />
+                </IconButton>
+              )}
+              <Typography variant="h6" sx={{ color: "#111827", fontWeight: 700, marginLeft: 2 }}>
+                Faculty Dashboard
+              </Typography>
+            </Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={theme === 'dark'}
+                    onChange={toggleTheme}
+                    icon={<LightModeOutlined />}
+                    checkedIcon={<DarkModeOutlined />}
+                  />
+                }
+                label=""
+              />
+              <Badge color="primary" badgeContent={stats.alerts} max={99}>
+                <NotificationsOutlined sx={{ color: "#475569" }} />
+              </Badge>
+              <Avatar
+                alt="Faculty profile"
+                src={user?.profilePhoto ? `http://localhost:3001/uploads/${user.profilePhoto}` : ''}
+              />
+              <Stack direction="column" alignItems="flex-end">
+                <Typography variant="subtitle1" sx={{ color: "#111827", fontWeight: 600 }}>
+                  Hi, {user?.fullName}
+                </Typography>
+                <Typography variant="body2" sx={{ color: "#6b7280" }}>
+                  Department: {user?.department}
+                </Typography>
+              </Stack>
+              <IconButton onClick={() => handleMenuClick('logout')} color="inherit">
+                <LogoutOutlined />
+              </IconButton>
+            </Box>
+          </Toolbar>
+        </AppBar>
+
+        {/* Content */}
+        <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: "#f3f4f6", minHeight: "100vh" }}>
+          {/* Statistics */}
+          <Grid container spacing={2} mb={3}>
+            <Grid>
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: "#6b7280" }}>
+                  Pending Requests
+                </Typography>
+                <Typography variant="h3" fontWeight="bold" sx={{ mt: 1, color: "#eab308" }}>
+                  {stats.pending}
+                </Typography>
+                <ErrorOutline sx={{ color: "#eab308", fontSize: 40, position: 'absolute', right: 16, bottom: 16 }} />
+              </Paper>
+            </Grid>
+            <Grid>
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: "#6b7280" }}>
+                  Late Entries Today
+                </Typography>
+                <Typography variant="h3" fontWeight="bold" sx={{ mt: 1, color: "#3b82f6" }}>
+                  {stats.lateToday}
+                </Typography>
+                <AccessTime sx={{ color: "#3b82f6", fontSize: 40, position: 'absolute', right: 16, bottom: 16 }} />
+              </Paper>
+            </Grid>
+            <Grid>
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: "#6b7280" }}>
+                  Approved Late Entries
+                </Typography>
+                <Typography variant="h3" fontWeight="bold" sx={{ mt: 1, color: "#22c55e" }}>
+                  {stats.approved}
+                </Typography>
+                <CheckCircleOutline sx={{ color: "#22c55e", fontSize: 40, position: 'absolute', right: 16, bottom: 16 }} />
+              </Paper>
+            </Grid>
+            <Grid>
+              <Paper elevation={1} sx={{ p: 3, borderRadius: 2 }}>
+                <Typography variant="subtitle2" sx={{ color: "#6b7280" }}>
+                  Security Alerts
+                </Typography>
+                <Typography variant="h3" fontWeight="bold" sx={{ mt: 1, color: "#ef4444" }}>
+                  {stats.alerts}
+                </Typography>
+                <ErrorOutline sx={{ color: "#ef4444", fontSize: 40, position: 'absolute', right: 16, bottom: 16 }} />
+              </Paper>
+            </Grid>
+          </Grid>
+
+          {/* Dynamic Content based on selectedKey */}
+          <Paper sx={{ borderRadius: 2, p: { xs: 1, md: 3 } }}>
+            {renderContent()}
+          </Paper>
+        </Box>
+      </Box>
+    </Box>
   );
 }
 

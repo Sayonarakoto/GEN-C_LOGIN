@@ -1,12 +1,20 @@
 import React, { useState } from 'react';
 import api from '../api/client';
-import LoginCard from '../components/common/LoginCard';
-import useToastService from '../hooks/useToastService'; // Import ToastService
+import useToastService from '../hooks/useToastService';
+import {
+  Box,
+  Button,
+  Typography,
+  Paper,
+  Input,
+  Stack,
+} from '@mui/material';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 
 const ExcelUpload = ({ onUploadSuccess }) => {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const toast = useToastService(); // Initialize toast service
+  const toast = useToastService();
 
   const handleFileChange = (event) => {
     setSelectedFile(event.target.files[0]);
@@ -31,19 +39,19 @@ const ExcelUpload = ({ onUploadSuccess }) => {
       if (response.data.success && (!response.data.errors || response.data.errors.length === 0)) {
         toast.success('File processed successfully!');
         if (onUploadSuccess) {
-          onUploadSuccess(response.data.uploaded); // Pass only uploaded students
+          onUploadSuccess(response.data.uploaded);
         }
       } else if (response.data.success && response.data.errors && response.data.errors.length > 0) {
         toast.warning(`File processed with some errors: ${response.data.message}`);
         if (onUploadSuccess) {
-          onUploadSuccess(response.data.uploaded); // Still pass uploaded students
+          onUploadSuccess(response.data.uploaded);
         }
         console.warn('Upload errors:', response.data.errors);
       } else {
         toast.error(response.data.message || 'Upload failed.');
         console.error('Upload failed:', response.data.errors);
       }
-      setSelectedFile(null); // Clear selected file
+      setSelectedFile(null);
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Upload failed due to a network error.';
       toast.error(errorMessage);
@@ -57,23 +65,34 @@ const ExcelUpload = ({ onUploadSuccess }) => {
   };
 
   return (
-    <LoginCard title="Upload Student Data">
-      <div className="d-flex flex-column align-items-center">
-        <input
+    <Paper elevation={3} sx={{ p: 4, maxWidth: 400, margin: 'auto', mt: 5, borderRadius: 2 }}>
+      <Typography variant="h5" component="h2" gutterBottom align="center">
+        Upload Student Data
+      </Typography>
+      <Stack spacing={3} alignItems="center">
+        <Input
           type="file"
-          accept=".xlsx,.xls"
+          inputProps={{ accept: ".xlsx,.xls" }}
           onChange={handleFileChange}
-          className="form-control mb-3"
+          sx={{ display: 'none' }}
+          id="excel-upload-button"
         />
-        <button
+        <label htmlFor="excel-upload-button">
+          <Button variant="outlined" component="span" startIcon={<CloudUploadIcon />}>
+            {selectedFile ? selectedFile.name : 'Select Excel File'}
+          </Button>
+        </label>
+        <Button
+          variant="contained"
+          color="primary"
           onClick={handleUpload}
           disabled={!selectedFile || uploading}
-          className="btn btn-primary w-100"
+          fullWidth
         >
           {uploading ? 'Uploading...' : 'Upload Excel'}
-        </button>
-      </div>
-    </LoginCard>
+        </Button>
+      </Stack>
+    </Paper>
   );
 };
 

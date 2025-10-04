@@ -4,7 +4,14 @@ const AuditLogSchema = new mongoose.Schema({
   action: {
     type: String,
     required: true,
-    enum: ['UPDATE_LATE_ENTRY_STATUS'],
+    enum: [
+      'UPDATE_LATE_ENTRY_STATUS',
+      'HOD_APPROVED',
+      'HOD_REJECTED',
+      'FACULTY_APPROVED', // Assuming these are also used
+      'FACULTY_REJECTED', // Assuming these are also used
+      'STUDENT_SUBMITTED' // Assuming this is also used
+    ],
   },
   entityType: {
     type: String,

@@ -28,7 +28,8 @@ exports.studentLogin = async (req, res) => {
     const token = generateToken({
       id: student._id,
       role: 'student',
-      name: student.fullName
+      name: student.fullName,
+      department: student.department
     });
 
     res.json({
@@ -66,7 +67,7 @@ exports.facultyLogin = async (req, res) => {
       });
     }
 
-    const role = faculty.designation === 'HOD' ? 'HOD' : 'faculty';
+    const role = faculty.designation.toLowerCase() === 'hod' ? 'HOD' : 'faculty';
     const token = generateToken({
       id: faculty._id,
       role: role,
@@ -76,7 +77,7 @@ exports.facultyLogin = async (req, res) => {
 
     const facultyData = faculty.toObject();
     delete facultyData.password;
-
+    
     res.json({
       success: true,
       message: "Login successful",
@@ -107,7 +108,7 @@ exports.securityLogin = async (req, res) => {
     console.log('Passkey comparison result:', ok); // Added log
     if (!ok) return res.status(401).json({ success: false, message: 'Invalid passkey' });
 
-    const token = generateToken({ id: security._id, role: 'security', name: 'Security' });
+    const token = generateToken({ id: security._id, role: 'security', name: 'Security', department: 'Security' });
     console.log('Token generated. Login successful.'); // Added log
     return res.json({ success: true, message: 'Login successful', token });
   } catch (err) {
@@ -181,8 +182,8 @@ exports.unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Student login successful for studentId:', studentId);
-      const token = generateToken({ id: student._id, role: 'student', name: student.fullName });
-      return res.json({ token, user: { id: student._id, role: 'student', studentId: student.studentId, fullName: student.fullName }});
+      const token = generateToken({ id: student._id, role: 'student', name: student.fullName, department: student.department });
+      return res.json({ token, user: { id: student._id, role: 'student', studentId: student.studentId, fullName: student.fullName, department: student.department }});
     }
 
     if (role === 'faculty') {
@@ -201,9 +202,8 @@ exports.unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Faculty login successful for employeeId:', id);
-      const role = faculty.designation === 'HOD' ? 'HOD' : 'faculty';
+      const role = faculty.designation.toLowerCase() === 'hod' ? 'HOD' : 'faculty';
       const token = generateToken({ id: faculty._id, role: role, name: faculty.fullName, department: faculty.department });
-      console.log('Generated token for faculty:', token, typeof token);
       const f = faculty.toObject(); delete f.password;
       return res.json({ token, user: { id: faculty._id, role: role, ...f }});
     }
@@ -215,8 +215,8 @@ exports.unifiedLogin = async (req, res) => {
       if (!security) return res.status(401).json({ message: "Security user not found" });
       const ok = await bcrypt.compare(passkey, security.passkey);
       if (!ok) return res.status(401).json({ message: "Invalid passkey" });
-      const token = generateToken({ id: security._id, role: 'security' });
-      return res.json({ token, user: { id: security._id, role: 'security' }});
+      const token = generateToken({ id: security._id, role: 'security', name: 'Security', department: 'Security' });
+      return res.json({ token, user: { id: security._id, role: 'security', name: 'Security', department: 'Security' }});
     }
 
     return res.status(400).json({ message: "Unsupported role" });

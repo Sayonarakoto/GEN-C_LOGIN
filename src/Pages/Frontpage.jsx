@@ -1,13 +1,10 @@
 import React from "react";
 import { Link } from "react-router-dom";
-
 // Bootstrap
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Card } from "react-bootstrap";
-
 import logo from '/images/genc-log.jpeg';
-
-
+import heroImage from '../assets/images/image.png';
 function Frontpage() {
   return (
     <div
@@ -34,7 +31,7 @@ function Frontpage() {
               style={{
                 height: "220px",
                 backgroundImage:
-                  "linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 100%), url('https://lh3.googleusercontent.com/aida-public/AB6AXuAxDNRZ7mgdp5NxN_4jW1HxHvjtVdQCkKOcbhVkMhOsXzkDvHz4xozDQg5zNvsPwoRk-yQCoodcGEfXGWqOqVwktw5aEAvgCEH3Mflrqhki1BnRPYyZPaRQv--_zEdIcOYUVFJYAMa42E-DeH3Mflrqhki1BnRPYyZPaRQv--_zEdIcOYUVFJYAMa42E-DeH-bj9f7C8ZPBYDTAnsw5o9gdhr_TEw4uR41ixJl_C4th4iwOzoWNIFz18d_XHp-u1PHqjOd4FpFZslNkH4zlX5OHf91Jv_uOgLVgdOke1Z9uopneREf3oAZKj0DJQ')",
+                  `linear-gradient(0deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0) 100%), url(${heroImage})`,
                 backgroundSize: "cover",
                 backgroundPosition: "center",
               }}

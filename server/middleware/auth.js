@@ -8,34 +8,47 @@ exports.requireAuth = (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
-  console.log('Auth Header:', authHeader);
-  console.log('Extracted Token:', token ? `${token.substring(0, 20)}...` : 'No token');
-
   if (!token) {
-    console.log('No token provided');
     return res.status(401).json({ message: 'Access token required' });
   }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
-      console.log('Token verification failed:', err.message);
       return res.status(403).json({ message: 'Invalid or expired token' });
     }
 
-    console.log('Token verified successfully. User:', decoded);
     req.user = decoded;
     next();
   });
 };
 
-exports.requireRole = (...roles) => (req, res, next) => {
-  console.log(`Checking for role: ${roles}. User role is: ${req.user?.role}`);
-  if (!req.user || !roles.includes(req.user.role)) {
-    console.log('Role check failed.');
-    return res.status(403).json({ message: 'Forbidden' });
-  }
-  console.log('Role check passed.');
-  next();
+exports.requireRole = (roles) => {
+    // 1. Convert single role to array if necessary, and ensure all items are strings
+    const requiredRoles = Array.isArray(roles) ? roles : [roles];
+
+    return (req, res, next) => {
+        const userRole = req.user?.role;
+        
+        if (!userRole) {
+            return res.status(403).json({ message: 'Access denied. Role not defined.' });
+        }
+
+        const isAuthorized = requiredRoles.some(requiredRole => {
+            // CRITICAL CHECK: Ensure requiredRole is a string before calling toLowerCase
+            if (typeof requiredRole !== 'string') {
+                 console.error('requireRole received a non-string role:', requiredRole);
+                 return false; // Skip authorization for this invalid role
+            }
+            // Comparison is case-insensitive for robustness
+            return userRole.toLowerCase() === requiredRole.toLowerCase();
+        });
+
+        if (isAuthorized) {
+            next();
+        } else {
+            res.status(403).json({ message: 'Access denied. Insufficient permissions.' });
+        }
+    };
 };
 
 // Optionally load full user object based on role:
@@ -43,9 +56,25 @@ exports.attachUserDoc = async (req, res, next) => {
   try {
     const { id, role } = req.user || {};
     if (!id || !role) return next();
-    if (role === 'student') req.student = await Student.findById(id).select('-password');
-    if (role === 'faculty' || role === 'HOD') req.faculty = await Faculty.findById(id).select('-password');
-    if (role === 'security') req.security = await Security.findById(id).select('-password');
+    
+    const normalizedRole = role.toLowerCase();
+    
+    if (normalizedRole === 'student') {
+      req.student = await Student.findById(id).select('-password');
+    }
+    
+    if (normalizedRole === 'faculty' || normalizedRole === 'hod') {
+      req.faculty = await Faculty.findById(id).select('-password');
+      
+      if (!req.user.department && req.faculty?.department) {
+        req.user.department = req.faculty.department;
+      }
+    }
+    
+    if (normalizedRole === 'security') {
+      req.security = await Security.findById(id).select('-password');
+    }
+    
     next();
   } catch (err) {
     next(err);

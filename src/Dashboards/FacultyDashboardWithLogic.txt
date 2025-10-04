@@ -1,0 +1,410 @@
+import React from "react";
+import { Container, Row, Col } from "react-bootstrap";
+import {
+  Box,
+  Typography,
+  Avatar,
+  Card,
+  CardContent,
+  Chip,
+  Button as MUIButton,
+  TextField,
+  InputAdornment,
+  OutlinedInput,
+  FormControl,
+  MenuItem,
+  Select,
+  useTheme,
+} from "@mui/material";
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'boxicons/css/boxicons.min.css';
+
+const sampleRequests = [
+  {
+    name: "John Doe",
+    id: "S12345",
+    date: "2023-10-27",
+    reason: "Medical",
+    status: "Pending",
+    statusColor: "warning",
+    updated: "2 min ago"
+  },
+  {
+    name: "Jane Smith",
+    id: "S67890",
+    date: "2023-10-27",
+    reason: "Family Emergency",
+    status: "Pending",
+    statusColor: "warning",
+    updated: "15 min ago"
+  },
+  {
+    name: "Alex Johnson",
+    id: "S54321",
+    date: "2023-10-26",
+    reason: "Traffic",
+    status: "Approved",
+    statusColor: "success",
+    updated: "1 day ago"
+  },
+  {
+    name: "Emily Davis",
+    id: "S09876",
+    date: "2023-10-25",
+    reason: "Overslept",
+    status: "Rejected",
+    statusColor: "error",
+    updated: "2 days ago"
+  }
+];
+
+const activityFeed = [
+  {
+    iconType: "check-circle",
+    color: "success",
+    desc: (
+      <>
+        <span style={{ fontWeight: 600 }}>You</span> approved <span style={{ fontWeight: 600 }}>Alex Johnson's</span> request.
+        <span style={{ color: "#9ca3af", display: "block" }}>1h ago</span>
+      </>
+    )
+  },
+  {
+    iconType: "cancel",
+    color: "error",
+    desc: (
+      <>
+        <span style={{ fontWeight: 600 }}>You</span> rejected <span style={{ fontWeight: 600 }}>Emily Davis's</span> request.
+        <span style={{ color: "#9ca3af", display: "block" }}>3h ago</span>
+      </>
+    )
+  },
+  {
+    iconType: "user-plus",
+    color: "info",
+    desc: (
+      <>
+        <span style={{ fontWeight: 600 }}>You</span> uploaded a new student list.
+        <span style={{ color: "#9ca3af", display: "block" }}>1d ago</span>
+      </>
+    )
+  }
+];
+
+const FacultyDashboard = () => {
+  const theme = useTheme();
+  return (
+    <Box sx={{ bgcolor: "#f3f4f6", minHeight: "100vh", fontFamily: "Inter, sans-serif" }}>
+      {/* Sidebar (desktop) */}
+      <Box sx={{ display: { xs: "none", md: "flex" }, height: "100vh", flexDirection: "column", bgcolor: "#fff", borderRight: "1px solid #e5e7eb", width: 256 }}>
+        <Box sx={{ p: 2, borderBottom: "1px solid #e5e7eb", display: "flex", alignItems: "center" }}>
+          <Typography variant="h5" color="primary" fontWeight={700}>C</Typography>
+          <Typography variant="h6" sx={{ fontWeight: 700, color: "#1e293b", ml: 1 }}>ampusFlow</Typography>
+        </Box>
+        <Box sx={{ flexGrow: 1 }}>
+          <Box component="nav" sx={{ mt: 3 }}>
+            <SidebarLink icon="dashboard" text="Dashboard" />
+            <SidebarLink icon="check-circle" text="Approvals" active />
+            <SidebarLink icon="group" text="Student Management" />
+            <SidebarLink icon="assessment" text="Reports/Logs" />
+            <SidebarLink icon="settings" text="Settings" />
+          </Box>
+        </Box>
+        <Box sx={{ p: 2, borderTop: "1px solid #e5e7eb" }}>
+          <SidebarLink icon="logout" text="Logout" />
+        </Box>
+      </Box>
+
+      {/* Main Content */}
+      <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+        {/* Header */}
+        <Box sx={{
+          bgcolor: "#fff", borderBottom: "1px solid #e5e7eb",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          px: 2, py: { xs: 1.5, md: 2 }
+        }}>
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <MUIButton variant="text" sx={{ display: { md: "none" }, minWidth: 0 }}>
+              <i className='bx bx-menu' style={{ fontSize: 26, color: "#64748b" }}></i>
+            </MUIButton>
+            <Typography
+              variant="h5"
+              fontWeight={700}
+              sx={{ color: "#111827", ml: 2, fontSize: { xs: 18, md: 24 } }}
+            >
+              Faculty Dashboard
+            </Typography>
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <i className='bx bx-bell' style={{ fontSize: 24, color: "#6b7280" }}></i>
+            <Avatar src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZmuWvxVEfvz-p7O8g6VxWQ4Fwye268EMQoOuHlLDw-QzkUWMO6DyEpjg5TH_hslRQOZkntWSFqKj7okwBv4jnfZyqWw2Yg28nqmy72hEXsVztZonmtdGHaqgfNi1j1PcR28o7q4NK6CDXOYzr79Qd9Je0OWPSa8MJMhVeX5MXlu_Jzt7Hk4kzQ0Zcy0DCWlah-ARo9HbXKKVyEQAflxAW1IHQN1Bk1Dh_FKBa2wn9Jz6FuKG_-CcMkU0p5ufCP1uKlfPcbGD2GMhk"
+              alt="Faculty profile picture"
+              sx={{ width: 32, height: 32 }}
+            />
+          </Box>
+        </Box>
+
+        {/* Main content layout */}
+        <Container fluid style={{ background: "#f3f4f6", flex: 1, padding: "32px" }}>
+          {/* Top summary cards */}
+          <Row className="mb-4">
+            <Col md={4} xs={12} className="mb-3">
+              <DashboardStatCard title="Pending Requests" value="12" color="#f59e42" />
+            </Col>
+            <Col md={4} xs={12} className="mb-3">
+              <DashboardStatCard title="Approved Today" value="45" color="#22c55e" />
+            </Col>
+            <Col md={4} xs={12} className="mb-3">
+              <DashboardStatCard title="Rejected Today" value="3" color="#ef4444" />
+            </Col>
+          </Row>
+
+          {/* Approval Queue */}
+          <Card sx={{ borderRadius: 3, p: 3, mb: 4 }}>
+            <CardContent sx={{ p: 0 }}>
+              <Box sx={{
+                display: "flex",
+                flexDirection: { xs: 'column', md: 'row' },
+                justifyContent: "space-between",
+                alignItems: { xs: "flex-start", md: "center" },
+                mb: 3
+              }}>
+                <Typography variant="h6" fontWeight={700} sx={{ color: "#1e293b" }}>Approval Queue</Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 2, width: "100%", maxWidth: 420 }}>
+                  <FormControl variant="outlined" sx={{ flexGrow: 1 }}>
+                    <OutlinedInput
+                      placeholder="Search students..."
+                      startAdornment={
+                        <InputAdornment position="start">
+                          <i className="bx bx-search" style={{ color: "#64748b" }}></i>
+                        </InputAdornment>
+                      }
+                      sx={{
+                        borderRadius: 2,
+                        "& .MuiOutlinedInput-notchedOutline": { borderColor: "#d1d5db" }
+                      }}
+                    />
+                  </FormControl>
+                  <MUIButton
+                    sx={{ bgcolor: "#3b82f6", color: "#fff", fontWeight: 600, borderRadius: 5, px: 3, py: 0.75, fontSize: 14, ml: 1 }}
+                    variant="contained"
+                  >
+                    Pending
+                  </MUIButton>
+                  <MUIButton
+                    sx={{
+                      bgcolor: "white",
+                      color: "#64748b",
+                      border: "1px solid #d1d5db",
+                      fontWeight: 500,
+                      borderRadius: 5,
+                      px: 2,
+                      py: 0.75,
+                      fontSize: 14
+                    }}
+                    variant="outlined"
+                  >
+                    Approved
+                  </MUIButton>
+                  <MUIButton
+                    sx={{
+                      bgcolor: "white",
+                      color: "#64748b",
+                      border: "1px solid #d1d5db",
+                      fontWeight: 500,
+                      borderRadius: 5,
+                      px: 2,
+                      py: 0.75,
+                      fontSize: 14
+                    }}
+                    variant="outlined"
+                  >
+                    Rejected
+                  </MUIButton>
+                </Box>
+              </Box>
+              <Row>
+                <Col>
+                  <Box sx={{ display: "grid", gap: 2 }}>
+                    {sampleRequests.map((req, idx) =>
+                      <StudentRequestCard key={req.id} {...req} />
+                    )}
+                  </Box>
+                </Col>
+              </Row>
+            </CardContent>
+          </Card>
+
+          {/* Student Management & Recent Activity */}
+          <Row>
+            <Col lg={8} className="mb-4">
+              <Card sx={{ borderRadius: 3, p: 3 }}>
+                <Typography variant="h6" fontWeight={700} sx={{ color: "#1e293b", mb: 2 }}>
+                  Student Management
+                </Typography>
+                <Row>
+                  <Col md={6} xs={12} className="mb-3">
+                    <Box sx={{ bgcolor: "#e0eafe", borderRadius: 2, p: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Box>
+                        <Typography sx={{ fontWeight: 600, color: "#1e293b" }}>Student List</Typography>
+                        <Typography sx={{ color: "#6b7280", fontSize: 14 }}>View and manage all students.</Typography>
+                      </Box>
+                      <MUIButton variant="outlined" sx={{ color: "#2563eb", borderColor: "#2563eb", fontWeight: 500 }}
+                        size="small">
+                        Access
+                      </MUIButton>
+                    </Box>
+                  </Col>
+                  <Col md={6} xs={12} className="mb-3">
+                    <Box sx={{ bgcolor: "#dcfce7", borderRadius: 2, p: 2, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <Box>
+                        <Typography sx={{ fontWeight: 600, color: "#1e293b" }}>Upload Student Data</Typography>
+                        <Typography sx={{ color: "#6b7280", fontSize: 14 }}>Import from Excel/CSV.</Typography>
+                      </Box>
+                      <MUIButton variant="outlined" sx={{ color: "#22c55e", borderColor: "#22c55e", fontWeight: 500 }}
+                        size="small">
+                        Upload
+                      </MUIButton>
+                    </Box>
+                  </Col>
+                </Row>
+              </Card>
+            </Col>
+            <Col lg={4}>
+              <Card sx={{ borderRadius: 3, p: 3 }}>
+                <Typography variant="h6" fontWeight={700} sx={{ color: "#1e293b", mb: 2 }}>
+                  Recent Activity
+                </Typography>
+                <Box as="ul" sx={{ p: 0, m: 0, listStyle: "none" }}>
+                  {activityFeed.map((item, key) => (
+                    <Box as="li" key={key} sx={{ display: "flex", alignItems: "flex-start", mb: 2 }}>
+                      <i className={`bx bx-${item.iconType}`}
+                        style={{
+                          fontSize: 22,
+                          marginRight: 12,
+                          color:
+                            item.color === "success" ? "#22c55e"
+                              : item.color === "error" ? "#ef4444"
+                                : "#3b82f6"
+                        }}
+                      ></i>
+                      <Typography sx={{ color: "#4b5563", fontSize: 15 }}>{item.desc}</Typography>
+                    </Box>
+                  ))}
+                </Box>
+              </Card>
+            </Col>
+          </Row>
+        </Container>
+
+        {/* Mobile Footer Navbar */}
+        <Box
+          sx={{
+            display: { xs: "flex", md: "none" },
+            position: "fixed",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            bgcolor: "white",
+            borderTop: "1px solid #e5e7eb",
+            justifyContent: "space-around",
+            py: 1.5
+          }}
+        >
+          <FooterNavItem icon="dashboard" text="Dashboard" />
+          <FooterNavItem icon="check-circle" text="Approvals" active />
+          <FooterNavItem icon="group" text="Students" />
+          <FooterNavItem icon="settings" text="Settings" />
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
+// Sidebar Link (used in sidebar)
+function SidebarLink({ icon, text, active }) {
+  const color = active ? "#3b82f6" : "#6b7280";
+  const w600 = active ? 600 : 500;
+  return (
+    <Box
+      sx={{
+        display: "flex", alignItems: "center",
+        px: 3, py: 1.5,
+        bgcolor: active ? "#e0f2fe" : "inherit",
+        color: color,
+        fontWeight: w600,
+        borderRadius: 2,
+        mb: 1,
+        transition: "0.2s"
+      }}
+    >
+      <i className={`bx bx-${icon}`} style={{ fontSize: 24, marginRight: 14, color }} />
+      <Typography sx={{ display: { xs: "none", md: "inline" }, color, fontWeight: w600 }}>{text}</Typography>
+    </Box>
+  );
+}
+
+// Dashboard Stat Card
+function DashboardStatCard({ title, value, color }) {
+  return (
+    <Card sx={{ borderRadius: 3, p: 3 }}>
+      <Typography fontSize={14} color="#64748b" gutterBottom fontWeight={500}>{title}</Typography>
+      <Typography fontSize={32} fontWeight={700} sx={{ mt: 1, color }}>{value}</Typography>
+    </Card>
+  );
+}
+
+// Each student request card in the Approval Queue
+function StudentRequestCard({ name, id, date, reason, status, updated, statusColor }) {
+  let chipProps = {};
+  if (status === "Pending") chipProps = { sx: { bgcolor: "#fef9c3", color: "#f59e42", fontWeight: 700, fontSize: 13 } };
+  else if (status === "Approved") chipProps = { sx: { bgcolor: "#dcfce7", color: "#22c55e", fontWeight: 700, fontSize: 13 } };
+  else chipProps = { sx: { bgcolor: "#fee2e2", color: "#ef4444", fontWeight: 700, fontSize: 13 } };
+
+  return (
+    <Card sx={{ borderRadius: 2, border: "1px solid #e5e7eb", p: 2, mb: 2 }}>
+      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1.5 }}>
+        <Typography variant="h6" fontWeight={600} color="#111827">{name}</Typography>
+        <Chip label={status} {...chipProps} />
+      </Box>
+      <Typography fontSize={14} color="#4b5563" mb={0.5}><b>ID:</b> {id}</Typography>
+      <Typography fontSize={14} color="#4b5563" mb={0.5}><b>Date:</b> {date}</Typography>
+      <Typography fontSize={14} color="#4b5563" mb={1}><b>Reason:</b> {reason}</Typography>
+      <Typography fontSize={12} color="#9ca3af" mb={2}><i>Last Updated: {updated}</i></Typography>
+      <Box sx={{ display: "flex", gap: 2 }}>
+        <MUIButton
+          sx={{
+            flex: 1,
+            bgcolor: status === "Pending" ? "#22c55e" : "#e5e7eb",
+            color: status === "Pending" ? "#fff" : "#6b7280"
+          }}
+          disabled={status !== "Pending"}
+        >
+          Approve
+        </MUIButton>
+        <MUIButton
+          sx={{
+            flex: 1,
+            bgcolor: status === "Pending" ? "#ef4444" : "#e5e7eb",
+            color: status === "Pending" ? "#fff" : "#6b7280"
+          }}
+          disabled={status !== "Pending"}
+        >
+          Reject
+        </MUIButton>
+      </Box>
+    </Card>
+  );
+}
+
+// Bottom mobile nav
+function FooterNavItem({ icon, text, active }) {
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5, color: active ? "#3b82f6" : "#6b7280" }}>
+      <i className={`bx bx-${icon}`} style={{ fontSize: 24, fontVariationSettings: active ? "'FILL' 1" : undefined }} />
+      <Typography sx={{ fontSize: 13, fontWeight: 400 }}>{text}</Typography>
+    </Box>
+  );
+}
+
+export default FacultyDashboard;

@@ -1,14 +1,29 @@
 import React, { createContext, useState, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
-import { useNavigate } from 'react-router-dom';
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null); // Initialize token to null
+  const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
-  const navigate = useNavigate();
+
+  // ℹ️ Helper function to extract and standardize user data from token
+  const extractUserData = (token) => {
+    const decoded = jwtDecode(token);
+    if (!decoded.id || !decoded.role || !decoded.name || !decoded.department) {
+      // 🛑 CRITICAL FIX: Ensure 'department' is mandatory for RBAC
+      throw new Error('Invalid token payload: missing ID, role, name, or department.');
+    }
+    return { 
+      id: decoded.id, 
+      role: decoded.role, 
+      name: decoded.name,
+      department: decoded.department, // ✅ FIX: Added department for filtering
+      departmentId: decoded.departmentId || decoded.department, // Add departmentId if available
+      exp: decoded.exp
+    };
+  };
 
   const logout = useCallback(() => {
     setUser(null);
@@ -22,15 +37,15 @@ export const AuthProvider = ({ children }) => {
     const storedToken = sessionStorage.getItem('token');
     
     if (storedToken) {
-        setToken(storedToken); // Set token in state for other logic that relies on the token value
+        setToken(storedToken); 
         try {
-            const decoded = jwtDecode(storedToken);
+            const userData = extractUserData(storedToken);
             const currentTime = Date.now() / 1000;
 
-            if (decoded.exp && decoded.exp > currentTime) {
+            if (userData.exp && userData.exp > currentTime) {
                 // Token is VALID
-                setUser({ id: decoded.id, role: decoded.role, name: decoded.name });
-                console.log('AuthContext: Token is valid. User set.');
+                setUser(userData); // ✅ FIX: Use the complete userData object
+                console.log('AuthContext: Token is valid. User set (Role/Dept confirmed).');
             } else {
                 // Token is EXPIRED
                 sessionStorage.removeItem('token');
@@ -40,35 +55,39 @@ export const AuthProvider = ({ children }) => {
             }
         } catch (err) {
             // Token is MALFORMED/INVALID
-            console.error('AuthContext: Invalid token on decode. Clearing session.');
+            console.error('AuthContext: Invalid token on decode. Clearing session.', err);
             sessionStorage.removeItem('token');
             setToken(null);
             setUser(null);
         }
     } else {
-        // No token found initially
-        setToken(null);
-        setUser(null);
         console.log('AuthContext: No token found. Session cleared.');
     }
     
-    // 💥 CRITICAL: This MUST be the very last action of the entire sequence.
     console.log('AuthContext: Setting loading to false (FINAL).');
     setLoading(false); 
+  }, [logout]); // Added logout to dependencies for stability, though it's wrapped in useCallback
 
-  // The empty array means this runs only ONCE when the component mounts.
-  }, []);
-
-  const login = (newToken) => {
-    console.log('AuthContext: login function called.'); // Add this log
+  const login = (newToken, userDataFromAPI) => { // Accept the user object from the API
+    console.log('AuthContext: login function called.');
     try {
-      const decoded = jwtDecode(newToken);
-      if (!decoded.id || !decoded.role || !decoded.name || !decoded.exp) {
-        throw new Error('Invalid token: missing required fields');
-      }
+      // 1. Save the token and use the token's payload for the official user state
+      const userData = extractUserData(newToken); 
+      
+      // 2. CRITICAL: Use the role from the token for the final user state
+      //    We combine the token data with any extra data the API provided.
+      const finalUserData = { 
+          ...userDataFromAPI, // Use the fresh data from the API response
+          ...userData,        // Override role/id/etc. with the definitive token data
+      };
+
       sessionStorage.setItem('token', newToken);
       setToken(newToken);
-      setUser({ id: decoded.id, role: decoded.role, name: decoded.name });
+      setUser(finalUserData); // Set the full, correct user data
+      
+      // Log the final role for debugging the subsequent redirect
+      console.log('AuthContext: FINAL ROLE SET IN STATE:', finalUserData.role); 
+
     } catch (error) {
       console.error('Login failed:', error);
       sessionStorage.removeItem('token');

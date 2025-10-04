@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import './Frontpage.css';
+import './Auth.css';
 import axios from 'axios';
 
 function Signup() {
@@ -66,7 +66,7 @@ export default Signup;
  
 
  old front page
- import './Frontpage.css';
+ import './Auth.css';
 import 'boxicons/css/boxicons.min.css';
 import { Link } from 'react-router-dom';
 function Frontpage() {

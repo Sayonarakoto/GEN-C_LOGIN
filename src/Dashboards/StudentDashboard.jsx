@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Routes, Route, NavLink, useNavigate, } from 'react-router-dom';
-import {  Row, Col, Card, Button, Spinner, Alert, Offcanvas, Nav, Badge, Form } from 'react-bootstrap';
-import Avatar from '@mui/material/Avatar'; // MUI Avatar
+// StudentDashboard.jsx
+import { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, NavLink, useNavigate } from 'react-router-dom';
 import {
-  Menu as MenuIcon, // Renamed to avoid conflict with Ant Design Menu
+  Row, Col, Card, Button, Spinner, Alert,
+  Offcanvas, Nav, Badge, Form
+} from 'react-bootstrap';
+import Avatar from '@mui/material/Avatar';
+import {
+  Menu as MenuIcon,
   NotificationsOutlined,
   AddOutlined,
   StarOutlined,
@@ -14,201 +18,215 @@ import {
   DashboardOutlined,
   ListAltOutlined,
   LogoutOutlined,
-  LightModeOutlined, // For light theme icon
-  DarkModeOutlined // For dark theme icon
+  LightModeOutlined,
+  DarkModeOutlined
 } from '@mui/icons-material';
+
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
+import useToastService from '../hooks/useToastService';
 import api from '../api/client';
+
 import StudentLateEntry from '../student/StudentLateEntry';
 import DeclinedRequestDetails from '../student/DeclinedRequestDetails';
-import useToastService from '../hooks/useToastService'; // Import ToastService
+import './Dashboard.css'; // Make sure to import the CSS file
 
-// Helper to determine status color
+// ---------------- Helper Functions ---------------- //
 const getStatusStyle = (status) => {
   switch (status) {
     case 'Pending':
       return { color: 'var(--warning-color)', icon: null };
     case 'Approved':
-      return { color: 'var(--success-color)', icon: <CheckCircleOutlined style={{ color: 'var(--success-color)' }} /> };
+      return {
+        color: 'var(--success-color)',
+        icon: <CheckCircleOutlined style={{ color: 'var(--success-color)' }} />
+      };
     case 'Declined':
     case 'Rejected':
-      return { color: 'var(--error-color)', icon: <CancelOutlined style={{ color: 'var(--error-color)' }} /> };
+      return {
+        color: 'var(--error-color)',
+        icon: <CancelOutlined style={{ color: 'var(--error-color)' }} />
+      };
     default:
       return { color: 'var(--text-primary)', icon: null };
   }
 };
 
-const DashboardHome = () => {
-  const { user } = useAuth();
-  const [requests, setRequests] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const { theme } = useTheme();
-  const navigate = useNavigate();
-
-  const currentTheme = {
-    card: theme === 'dark' ? 'var(--card-bg)' : '#FFFFFF',
-    innerCard: theme === 'dark' ? 'var(--bg-secondary)' : '#F8F8F8',
-    txt: theme === 'dark' ? 'var(--text-primary)' : '#333333',
-    border: theme === 'dark' ? 'var(--border-color)' : '#E8E8E8',
-    accentOrange: 'var(--warning-color)',
-    accentGreen: 'var(--success-color)',
-    accentRed: 'var(--error-color)',
-    primary: 'var(--primary-color)'
-  };
-
-  const quick = [
-    { icon: <AddOutlined />, label: "New Gate Pass", color: currentTheme.primary, path: "/student/gate-pass" },
-    { icon: <StarOutlined />, label: "Special Pass", color: currentTheme.primary, path: "/student/special-request" },
-    { icon: <PersonOutlined />, label: "Late Comer", color: currentTheme.primary, path: "/student/late-entry" },
+// ---------------- Reusable Components ---------------- //
+const QuickActions = () => {
+  const actions = [
+    { icon: <AddOutlined />, label: "New Gate Pass", path: "/student/gate-pass" },
+    { icon: <StarOutlined />, label: "Special Pass", path: "/student/special-request" },
+    { icon: <PersonOutlined />, label: "Late Comer", path: "/student/late-entry" }
   ];
 
-  useEffect(() => {
-    const fetchRequests = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get('/api/latecomers/mine');
-        if (response.data && response.data.success) {
-          setRequests(response.data.entries);
-        } else {
-          throw new Error(response.data.message || 'Failed to fetch data');
-        }
-      } catch (err) {
-        setError(err.message || 'An error occurred while fetching requests.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (user && user.role === 'student') {
-      fetchRequests();
-    }
-  }, [user]);
-
   return (
-    <div className="dashboard-content-box">
-      <Row style={{ alignItems: "center", marginBottom: 32, gap: 16 }}>
-        <Col xs="auto">
-          <Avatar src={user?.photo} sx={{ width: 80, height: 80, border: `2.5px solid ${currentTheme.primary}` }} />
-        </Col>
-        <Col>
-          <h4 style={{ display: 'block', fontSize: 24, fontWeight: 800, color: currentTheme.txt }}>
-            Hi, {user?.name}
-          </h4>
-          <p style={{ fontSize: 13, color: '#888' }}>Student ID: {user?.studentId || user?.id}</p>
-        </Col>
+    <div>
+      <h5 style={{ marginBottom: 12 }}>Quick Actions</h5>
+      <Row xs={1} sm={2} md={3} className="g-3 mb-4">
+        {actions.map((q) => (
+          <Col key={q.label}>
+            <NavLink to={q.path} style={{ textDecoration: 'none' }}>
+              <Card className="quick-action-card">
+                <Card.Body className="d-flex flex-column justify-content-center align-items-center gap-2">
+                  <div className="quick-action-icon">{q.icon}</div>
+                  <p className="fw-bold">{q.label}</p>
+                </Card.Body>
+              </Card>
+            </NavLink>
+          </Col>
+        ))}
       </Row>
-      <div>
-        <h5 style={{ color: currentTheme.txt, marginBottom: 12 }}>Quick Actions</h5>
-        <Row style={{ marginBottom: 30 }} xs={1} sm={2} md={3} className="g-3">
-          {quick.map((q) => (
-            <Col key={q.label}>
-              <NavLink to={q.path} style={{ textDecoration: 'none' }}>
-                <Card style={{ background: currentTheme.innerCard, borderRadius: 12, textAlign: 'center', minHeight: 125, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 8, border: `1px solid ${currentTheme.border}` }}>
-                  <Card.Body>
-                    <div style={{ color: q.color, fontSize: 26 }}>{q.icon}</div>
-                    <p style={{ fontWeight: 600, color: currentTheme.txt }}>{q.label}</p>
-                  </Card.Body>
-                </Card>
-              </NavLink>
-            </Col>
-          ))}
-        </Row>
-      </div>
-      <div>
-        <h5 style={{ color: currentTheme.txt }}>Request History</h5>
-        {loading ? (
-          <Spinner animation="border" size="lg" style={{ display: 'block', marginTop: 20 }} />
-        ) : error ? (
-          <Alert variant="danger" className="mt-3">Error: {error}</Alert>
-        ) : requests.length === 0 ? (
-          <Card style={{ background: currentTheme.innerCard, borderRadius: 10, textAlign: 'center', padding: '2rem 0', border: `1px solid ${currentTheme.border}` }}>
-            <Card.Body>
-              <p style={{ color: currentTheme.txt }}>No request history found. Submit a new request to get started.</p>
-            </Card.Body>
-          </Card>
-        ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 18, marginTop: 16 }}>
-            {requests.map((r) => {
-              const { color, icon: statusIcon } = getStatusStyle(r.status);
-              return (
-                <Card key={r._id} style={{ background: currentTheme.innerCard, borderRadius: 10, border: `1px solid ${currentTheme.border}` }}>
-                  <Card.Body>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 16, flexShrink: 1, minWidth: 0 }}>
-                        <div style={{ color: currentTheme.primary, fontSize: 21 }}><DescriptionOutlined /></div>
-                        <div style={{ flexShrink: 1, minWidth: 0 }}>
-                          <p style={{ fontWeight: 700, color: currentTheme.txt, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', display: 'block', marginBottom: 0 }}>
-                            {r.reason || 'Late Entry'}
-                          </p>
-                          <p style={{ color, fontSize: 14, marginBottom: 0 }}>{r.status}</p>
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                        {statusIcon}
-                        {(r.status === 'Declined' || r.status === 'Rejected') && (
-                          <Button 
-                            variant="primary" 
-                            size="sm" 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              navigate(`/student/request/edit/${r._id}`);
-                            }}
-                          >
-                            Edit/Resubmit
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </Card.Body>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </div>
     </div>
   );
 };
 
-export default function StudentDashboard() {
-  const [siderVisible, setSiderVisible] = useState(false);
+const RequestHistory = ({ loading, error, requests, navigate }) => {
+  if (loading) return <Spinner animation="border" size="lg" className="mt-3 d-block mx-auto" />;
+  if (error) return <Alert variant="danger" className="mt-3">Error: {error}</Alert>;
+
+  if (requests.length === 0) {
+    return (
+      <Card className="text-center p-4 request-history-card">
+        <p>No request history found. Submit a new request to get started.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="d-flex flex-column gap-3 mt-3">
+      {requests.map((r) => {
+        const { color, icon } = getStatusStyle(r.status);
+        return (
+          <Card key={r._id} className="request-history-card">
+            <Card.Body className="d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center gap-3 flex-grow-1 overflow-hidden">
+                <DescriptionOutlined className="request-history-icon" />
+                <div className="text-truncate">
+                  <p className="mb-0 fw-bold text-truncate">
+                    {r.reason || 'Late Entry'}
+                  </p>
+                  <p className="mb-0" style={{ color, fontSize: 14 }}>{r.status}</p>
+                </div>
+              </div>
+              <div className="d-flex align-items-center gap-2">
+                {icon}
+                {(r.status === 'Declined' || r.status === 'Rejected') && (
+                  <Button
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/student/request/edit/${r._id}`);
+                    }}
+                  >
+                    Edit/Resubmit
+                  </Button>
+                )}
+              </div>
+            </Card.Body>
+          </Card>
+        );
+      })}
+    </div>
+  );
+};
+
+// ---------------- Dashboard Home ---------------- //
+const DashboardHome = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
+
+  const [requests, setRequests] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchRequests = useCallback(async () => {
+    try {
+      const { data } = await api.get('/api/latecomers/mine');
+      if (data?.success) {
+        setRequests(data.entries);
+      } else {
+        throw new Error(data?.message || 'Failed to fetch requests');
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user?.role === 'student') fetchRequests();
+  }, [user, fetchRequests]);
+
+  return (
+    <div className="dashboard-content-box">
+      {/* Profile Header */}
+      <Row className="align-items-center mb-4">
+        <Col xs="auto">
+          <Avatar
+            src={user?.photo}
+            sx={{ width: 80, height: 80, border: `2.5px solid var(--primary-color)` }}
+          />
+        </Col>
+        <Col>
+          <h4 className="fw-bold">
+            Hi, {user?.name}
+          </h4>
+          <p className="text-muted small mb-0">Student ID: {user?.studentId || user?.id}</p>
+          <p className="text-muted small mb-0">Department: {user?.department}</p>
+          <p className="text-muted small mb-0">Year: {user?.year}</p>
+        </Col>
+      </Row>
+
+      <QuickActions />
+      <h5>Request History</h5>
+      <RequestHistory
+        loading={loading}
+        error={error}
+        requests={requests}
+        navigate={navigate}
+      />
+    </div>
+  );
+};
+
+// ---------------- Main Student Dashboard ---------------- //
+export default function StudentDashboard() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const toast = useToastService(); // Use ToastService
+  const navigate = useNavigate();
+  const toast = useToastService();
 
+  const [siderVisible, setSiderVisible] = useState(false);
   const [rejectedRequests, setRejectedRequests] = useState([]);
   const [rejectedCount, setRejectedCount] = useState(0);
 
-  useEffect(() => {
-    const fetchRejectedRequests = async () => {
-      try {
-        const response = await api.get('/api/latecomers/rejected-for-student');
-        if (response.data && response.data.success) {
-          setRejectedRequests(response.data.entries);
-          setRejectedCount(response.data.entries.length);
-        }
-      } catch (err) {
-        console.error('Error fetching rejected requests:', err);
+  const fetchRejected = useCallback(async () => {
+    try {
+      const { data } = await api.get('/api/latecomers/rejected-for-student');
+      if (data?.success) {
+        setRejectedRequests(data.entries);
+        setRejectedCount(data.entries.length);
       }
-    };
-
-    if (user && user.role === 'student') {
-      fetchRejectedRequests();
+    } catch (err) {
+      console.error('Error fetching rejected requests:', err);
     }
-  }, [user]);
+  }, []);
+
+  useEffect(() => {
+    if (user?.role === 'student') fetchRejected();
+  }, [user, fetchRejected]);
 
   const handleNotificationClick = () => {
     if (rejectedRequests.length > 0) {
       navigate(`/student/request/edit/${rejectedRequests[0]._id}`);
     } else {
-      toast.info('No rejected requests to review.'); // Use toast.info
+      toast.info('No rejected requests to review.');
     }
   };
 
-  const handleMenuClick = (path) => { // Changed to accept path directly
+  const handleMenuClick = (path) => {
     if (path === 'logout') {
       logout('/student-login');
     } else {
@@ -218,50 +236,59 @@ export default function StudentDashboard() {
   };
 
   return (
-    <div className="d-flex flex-column min-vh-100" style={{ background: 'var(--bg-primary)' }}>
+    <div className="d-flex flex-column min-vh-100 dashboard-container">
+      
       {/* Header */}
-      <header style={{ background: 'var(--header-bg)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 24px', position: 'sticky', top: 0, zIndex: 1000 }}>
-        <Button variant="link" onClick={() => setSiderVisible(true)} style={{ color: 'var(--text-primary)', fontSize: '24px' }}>
+      <header className="d-flex justify-content-between align-items-center px-4 dashboard-header">
+        <Button variant="link" onClick={() => setSiderVisible(true)} className="menu-button">
           <MenuIcon />
         </Button>
-        <h4 style={{ color: 'var(--text-primary)', margin: 0 }}>
-          Dashboard
-        </h4>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <h4 className="m-0">Dashboard</h4>
+        <div className="d-flex align-items-center gap-3">
           <Form.Check
             type="switch"
             id="theme-switch"
             label={theme === 'dark' ? <DarkModeOutlined /> : <LightModeOutlined />}
             checked={theme === 'dark'}
             onChange={toggleTheme}
-            style={{ display: 'flex', alignItems: 'center' }}
           />
-          <div style={{ position: 'relative', cursor: 'pointer' }} onClick={handleNotificationClick}>
-            <NotificationsOutlined style={{ fontSize: 24, color: 'var(--text-primary)' }} />
+          <div className="position-relative" style={{ cursor: 'pointer' }} onClick={handleNotificationClick}>
+            <NotificationsOutlined className="notification-icon" />
             {rejectedCount > 0 && (
-              <Badge pill bg="danger" style={{ position: 'absolute', top: -5, right: -5 }}>
+              <Badge pill bg="danger" className="notification-badge">
                 {rejectedCount}
               </Badge>
             )}
           </div>
-          <LogoutOutlined style={{ fontSize: 24, color: 'var(--text-primary)', cursor: 'pointer' }} onClick={() => logout('/student-login')} />
+          <LogoutOutlined
+            className="logout-icon"
+            onClick={() => logout('/student-login')}
+          />
         </div>
       </header>
 
-      {/* Offcanvas (Drawer replacement) */}
-      <Offcanvas show={siderVisible} onHide={() => setSiderVisible(false)} placement="start" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+      {/* Sidebar */}
+      <Offcanvas
+        show={siderVisible}
+        onHide={() => setSiderVisible(false)}
+        placement="start"
+        className="dashboard-sidebar"
+      >
         <Offcanvas.Header closeButton closeVariant={theme === 'dark' ? 'white' : 'dark'}>
           <Offcanvas.Title>Menu</Offcanvas.Title>
         </Offcanvas.Header>
         <Offcanvas.Body className="p-0">
           <Nav className="flex-column">
-            <NavLink to="/student" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => handleMenuClick('/student')}>
+            <NavLink to="/student" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")}
+              onClick={() => handleMenuClick('/student')}>
               <DashboardOutlined className="me-2" /> Dashboard
             </NavLink>
-            <NavLink to="/student/late-entry" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => handleMenuClick('/student/late-entry')}>
+            <NavLink to="/student/late-entry" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")}
+              onClick={() => handleMenuClick('/student/late-entry')}>
               <ListAltOutlined className="me-2" /> Late Comer
             </NavLink>
-            <NavLink to="/student/profile" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => handleMenuClick('/student/profile')}>
+            <NavLink to="/student/profile" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")}
+              onClick={() => handleMenuClick('/student/profile')}>
               <PersonOutlined className="me-2" /> Profile
             </NavLink>
             <Nav.Link onClick={() => handleMenuClick('logout')}>
@@ -271,7 +298,7 @@ export default function StudentDashboard() {
         </Offcanvas.Body>
       </Offcanvas>
 
-      {/* Content */}
+      {/* Main Content */}
       <main className="flex-grow-1 p-3 dashboard-content-area">
         <Routes>
           <Route path="/" element={<DashboardHome />} />
@@ -282,8 +309,8 @@ export default function StudentDashboard() {
       </main>
 
       {/* Footer */}
-      <footer style={{ background: 'var(--card-bg)', borderTop: '1px solid var(--border-color)', textAlign: 'center', padding: '1rem 0' }}>
-        <p style={{color: 'var(--text-secondary)', margin: 0}}>Paperless Campus ©2023</p>
+      <footer className="text-center py-3 dashboard-footer">
+        <p className="m-0 text-muted small">Paperless Campus ©2023</p>
       </footer>
     </div>
   );

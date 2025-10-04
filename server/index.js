@@ -6,7 +6,7 @@ require("dotenv").config({ path: '../.env' });
 
 const authRoutes = require('./routes/auth');
 const FacultyRoutes = require('./routes/faculty');
-const lateEntriesRouter = require('./routes/lateEntries');
+
 const latecomerRoutes = require('./routes/latecomers');
 const { requireAuth } = require('./middleware/auth'); // Import your auth middleware
 const { upload, uploadStudents, getAllStudents } = require('./controllers/excelUploadController'); // Import from new controller
@@ -44,7 +44,7 @@ app.post('/api/forgot-password', forgotPassword);
 app.post('/api/reset-password/:token', resetPassword);
 app.use('/auth', authRoutes);
 app.use('/api/faculty', FacultyRoutes);
-app.use('/api/lateentries', lateEntriesRouter);
+
 app.use('/api/latecomers', latecomerRoutes);
 
 // Serve static files from the React app
@@ -71,7 +71,6 @@ app.use((err, req, res, next) => {
   });
 });
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,

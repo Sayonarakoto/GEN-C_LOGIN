@@ -1,225 +1,279 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Table, Form, Button, Card, Row, Col, Spinner } from 'react-bootstrap';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  TextField,
+  Button,
+  Grid,
+  CircularProgress,
+  Typography,
+  Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  Stack,
+} from '@mui/material';
 import useToastService from '../hooks/useToastService';
 import api from '../api/client';
 import axios from 'axios';
-import { useAuth } from '../hooks/useAuth'; // <-- NEW IMPORT
+import { useAuth } from '../hooks/useAuth';
 
-const FacultyLateEntries = () => {
+const FacultyLateEntries = ({ currentFilter }) => {
   const toast = useToastService();
-  const { user } = useAuth(); // <-- GET USER AND DEPARTMENT
+  const { user } = useAuth();
   const [lateEntries, setLateEntries] = useState([]);
   const [loading, setLoading] = useState(false);
   const [rowEdits, setRowEdits] = useState({});
-  const formRef = useRef(null); // Ref for the form
+  const formRef = useRef(null);
+  const [filterParams, setFilterParams] = useState({
+    from: '',
+    to: '',
+    statusFilter: '',
+  });
 
   const fetchLateEntries = useCallback(async (params = {}, signal) => {
-    // 1. Add department filter to params
-    const defaultParams = { department: user.department, status: 'Pending,Resubmitted', ...params };
-    
     setLoading(true);
     try {
-      // 2. Use the combined defaultParams for the GET request
-      const response = await api.get('/api/latecomers', { params: defaultParams, signal });
-      const entries = response.data.data || []; // <-- Access response.data.data
+      const queryParams = { ...params };
+      if (queryParams.statusFilter === '') {
+        delete queryParams.statusFilter;
+      }
+
+      const response = await api.get('/api/latecomers/faculty/all', { params: queryParams, signal });
+      const entries = Array.isArray(response.data?.data) ? response.data.data : [];
       setLateEntries(entries);
       const initialEdits = {};
       entries.forEach(entry => {
-        initialEdits[entry._id] = { status: entry.status, remarks: entry.remarks || '' };
+        initialEdits[entry._id] = { remarks: entry.remarks || '' };
       });
       setRowEdits(initialEdits);
     } catch (error) {
-      if (axios.isCancel(error) || error.code === 'ECONNABORTED') {
-        console.log('Request cancelled:', error.message);
-      } else {
+      if (!axios.isCancel(error) && error.code !== 'ECONNABORTED') {
         console.error('Error fetching late entries:', error);
         toast.error(error.response?.data?.message || 'Failed to fetch late entries');
       }
     } finally {
       setLoading(false);
     }
-  }, [user.department, toast]); // Dependency on user.department is required
+  }, [user, toast]);
 
   useEffect(() => {
     const abortController = new AbortController();
-    // Ensure user.department is available before fetching
     if (user?.department) {
-      fetchLateEntries({}, abortController.signal);
+      fetchLateEntries({ ...filterParams, statusFilter: currentFilter }, abortController.signal);
     }
 
     return () => {
       abortController.abort();
     };
-  }, [fetchLateEntries, user.department]); 
-
-  const onFinish = (event) => {
-    event.preventDefault(); // Prevent default form submission
-    const formData = new FormData(formRef.current); // Get form data
-    const values = Object.fromEntries(formData.entries());
-    fetchLateEntries(values);
-  };
+  }, [fetchLateEntries, user, currentFilter, filterParams]);
 
   const handleChange = (id, field, value) => {
     setRowEdits((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   };
 
-  const handleUpdate = async (id) => {
+  const handleUpdate = async (id, action) => {
+    setLoading(true);
     try {
-      const { status, remarks } = rowEdits[id] || {};
-      if (!status) return toast.warning('Please select a status');
+      const { remarks } = rowEdits[id] || {};
       
-      // Capture current filter values before async operation
-      const formData = new FormData(formRef.current);
-      const currentFilterValues = Object.fromEntries(formData.entries());
+      let endpoint;
+      if (user.role === 'HOD') {
+        endpoint = `/api/latecomers/${id}/hod-action`;
+      } else if (user.role === 'faculty') {
+        endpoint = `/api/latecomers/${id}/faculty-action`;
+      } else {
+        return toast.error('Unauthorized action.');
+      }
       
-      await api.put(`/api/latecomers/${id}/status`, { status, remarks });
+      await api.put(endpoint, { 
+          action: action, 
+          remarks 
+      });
+      
       toast.success('Updated successfully');
-      fetchLateEntries(currentFilterValues);
+      fetchLateEntries(filterParams);
     } catch (err) {
-      console.error(err);
       toast.error(err.response?.data?.message || 'Update failed');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleFilterChange = (event) => {
+    setFilterParams({
+      ...filterParams,
+      [event.target.name]: event.target.value,
+    });
+  };
+
+  const handleApplyFilters = (event) => {
+    event.preventDefault();
+    fetchLateEntries(filterParams);
+  };
+
   const handleClearFilters = () => {
-    if (formRef.current) {
-      formRef.current.reset();
-    }
-    fetchLateEntries({ status: 'Pending,Resubmitted' });
+    setFilterParams({
+      from: '',
+      to: '',
+      statusFilter: '',
+    });
+    fetchLateEntries({});
   };
 
   const columns = [
     { dataField: 'studentId.studentId', text: 'Student ID' },
     { dataField: 'studentId.fullName', text: 'Student Name' },
     { dataField: 'studentId.department', text: 'Department' },
-    { dataField: 'date', text: 'Recorded At', formatter: (cell) => new Date(cell).toLocaleString() },
+    { dataField: 'createdAt', text: 'Date', formatter: (cell) => cell ? new Date(cell).toLocaleString() : 'N/A' },
     { dataField: 'reason', text: 'Reason' },
-    { dataField: 'gate', text: 'Gate' },
     { dataField: 'status', text: 'Status' },
-    { dataField: 'remarks', text: 'Remarks' },
+    { dataField: 'approvedBy', text: 'Approved By', formatter: (cell, row) => row.status === 'Approved' && row.facultyId?.fullName ? row.facultyId.fullName : 'N/A' },
     {
       dataField: 'actions',
       text: 'Action',
-      formatter: (cellContent, row) => {
+      formatter: (row) => {
+        const canEdit = user.role === 'faculty';
+
+        if (user.role === 'HOD') return <Typography variant="body2" color="info.main" fontWeight="bold">HOD View-Only</Typography>;
+        if (!canEdit) return <Typography variant="body2" color="text.secondary">View Only</Typography>;
+        
+        const isActionable = row.status === 'Pending Faculty' || row.status === 'Resubmitted';
+
+        if (!isActionable) {
+            return <Typography variant="body2" color="success.main" fontWeight="bold">Finalized</Typography>;
+        }
+
         const id = row._id;
-        const current = rowEdits[id] || { status: row.status, remarks: row.remarks };
+        const current = rowEdits[id] || { remarks: row.remarks || '' };
         return (
-          <div className="d-flex gap-2 align-items-center">
-            <Form.Select
-              value={current.status}
-              onChange={(e) => handleChange(id, 'status', e.target.value)}
-              style={{ width: '140px' }}
-            >
-              <option value="Pending" disabled>Pending</option>
-              <option value="Approved">Approved</option>
-              <option value="Rejected">Rejected</option>
-            </Form.Select>
-            <Form.Control
+          <Stack direction="row" spacing={1} alignItems="center">
+            <TextField
               type="text"
-              placeholder="Remarks"
+              placeholder="Remarks for rejection"
               value={current.remarks}
               onChange={(e) => handleChange(id, 'remarks', e.target.value)}
-              style={{ flex: 1 }}
+              size="small"
+              sx={{ flex: 1 }}
             />
-            <Button variant="primary" size="sm" onClick={() => handleUpdate(id)}>Save</Button>
-          </div>
+            <Button variant="contained" color="success" size="small" onClick={() => handleUpdate(id, 'approve')}>Approve</Button>
+            <Button variant="contained" color="error" size="small" onClick={() => handleUpdate(id, 'reject')}>Reject</Button>
+          </Stack>
         );
       },
     },
   ];
 
   return (
-    <div>
-      <Card className="mb-4" style={{ background: 'var(--card-bg)', borderRadius: '8px' }}>
-        <Card.Body>
-          <h5 style={{ color: 'var(--text-primary)', marginBottom: '16px' }}>Filter Entries</h5>
-          <Form ref={formRef} onSubmit={onFinish}>
-            <Row className="g-3">
-              <Col xs={12} sm={6} md={3}>
-                <Form.Group controlId="filterDepartment">
-                  <Form.Label>Department</Form.Label>
-                  <Form.Control name="department" type="text" placeholder="Department" />
-                </Form.Group>
-              </Col>
-              <Col xs={12} sm={6} md={3}>
-                <Form.Group controlId="filterFromDate">
-                  <Form.Label>From Date</Form.Label>
-                  <Form.Control name="from" type="date" />
-                </Form.Group>
-              </Col>
-              <Col xs={12} sm={6} md={3}>
-                <Form.Group controlId="filterToDate">
-                  <Form.Label>To Date</Form.Label>
-                  <Form.Control name="to" type="date" />
-                </Form.Group>
-              </Col>
-              <Col xs={12} sm={6} md={3}>
-                <Form.Group controlId="filterStatus">
-                  <Form.Label>Status</Form.Label>
-                  <Form.Select name="status">
-                    <option value="">All</option>
-                    <option value="Pending">Pending</option>
-                    <option value="Approved">Approved</option>
-                    <option value="Rejected">Rejected</option>
-                    <option value="Resubmitted">Resubmitted</option>
-                  </Form.Select>
-                </Form.Group>
-              </Col>
-              <Col xs={12} className="text-end">
-                <Button variant="primary" type="submit" className="me-2">Filter</Button>
-                <Button variant="secondary" onClick={handleClearFilters}>Clear</Button>
-              </Col>
-            </Row>
-          </Form>
-        </Card.Body>
-      </Card>
+    <Box>
+      <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
+        <Typography variant="h6" gutterBottom>Filter Entries</Typography>
+        <Box component="form" onSubmit={handleApplyFilters} ref={formRef}>
+          <Grid container spacing={2}>
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                fullWidth
+                label="From Date"
+                type="date"
+                name="from"
+                value={filterParams.from}
+                onChange={handleFilterChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <TextField
+                fullWidth
+                label="To Date"
+                type="date"
+                name="to"
+                value={filterParams.to}
+                onChange={handleFilterChange}
+                InputLabelProps={{
+                  shrink: true,
+                }}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} md={3}>
+              <FormControl fullWidth>
+                <InputLabel>Status</InputLabel>
+                <Select
+                  name="statusFilter"
+                  value={filterParams.statusFilter}
+                  label="Status"
+                  onChange={handleFilterChange}
+                >
+                  <MenuItem value="">All</MenuItem>
+                  <MenuItem value="Approved">Approved</MenuItem>
+                  <MenuItem value="Rejected">Rejected</MenuItem>
+                  <MenuItem value="Pending Faculty">Pending Faculty</MenuItem>
+                  <MenuItem value="Pending HOD">Pending HOD</MenuItem>
+                  <MenuItem value="Resubmitted">Resubmitted</MenuItem>
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={3} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+              <Button variant="contained" type="submit" sx={{ mr: 1 }}>Filter</Button>
+              <Button variant="outlined" onClick={handleClearFilters}>Clear</Button>
+            </Grid>
+          </Grid>
+        </Box>
+      </Paper>
 
-      <Card style={{ background: 'var(--bg-secondary)', borderRadius: '12px', padding: '24px' }}>
-        <Card.Body>
-          <h5 style={{ color: 'var(--text-primary)' }}>All Late Entries</h5>
-          <Table striped bordered hover responsive className="dark-theme-table">
-            <thead>
-              <tr>
+      <Paper elevation={1} sx={{ borderRadius: 2, p: 3 }}>
+        <Typography variant="h6" gutterBottom>All Late Entries</Typography>
+        <TableContainer>
+          <Table sx={{ minWidth: 650 }} aria-label="late entries table">
+            <TableHead>
+              <TableRow>
                 {columns.map((col, idx) => (
-                  <th key={idx}>{col.text}</th>
+                  <TableCell key={idx} sx={{ fontWeight: 'bold' }}>{col.text}</TableCell>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {loading ? (
-                <tr>
-                  <td colSpan={columns.length} className="text-center">
-                    <Spinner animation="border" size="sm" /> Loading...
-                  </td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={columns.length} align="center">
+                    <CircularProgress size={20} sx={{ mr: 1 }} /> Loading...
+                  </TableCell>
+                </TableRow>
               ) : lateEntries.length === 0 ? (
-                <tr>
-                  <td colSpan={columns.length} className="text-center">No late entries found.</td>
-                </tr>
+                <TableRow>
+                  <TableCell colSpan={columns.length} align="center">No late entries found.</TableCell>
+                </TableRow>
               ) : (
                 lateEntries.map((entry) => (
-                  <tr key={entry._id}>
+                  <TableRow key={entry._id} hover>
                     {columns.map((col, idx) => (
-                      <td key={idx}>
+                      <TableCell key={idx}>
                         {col.dataField === 'actions' ? (
-                          col.formatter(null, entry) // Pass row data to formatter
+                          col.formatter(entry)
                         ) : col.dataField.includes('.') ? (
-                          col.dataField.split('.').reduce((o, i) => o[i], entry)
+                          col.dataField.split('.').reduce((o, i) => o?.[i], entry)
                         ) : col.formatter ? (
-                          col.formatter(entry[col.dataField])
+                          col.formatter(entry[col.dataField], entry)
                         ) : (
                           entry[col.dataField]
                         )}
-                      </td>
+                      </TableCell>
                     ))}
-                  </tr>
+                  </TableRow>
                 ))
               )}
-            </tbody>
+            </TableBody>
           </Table>
-        </Card.Body>
-      </Card>
-    </div>
+        </TableContainer>
+      </Paper>
+    </Box>
   );
 };
 

@@ -33,15 +33,15 @@ const MainRoutes = () => {
       <Route path="/reset-password/:token" element={<ResetPassword />} />
 
       {/* Protected Routes */}
-      <Route element={<ProtectedRoute allowedRoles={['faculty']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['FACULTY', 'HOD']} />}>
         <Route path="/faculty/*" element={<FacultyDashboard />} />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={['security']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['SECURITY']} />}>
         <Route path="/security-dashboard" element={<SecurityDashboard />} />
       </Route>
 
-      <Route element={<ProtectedRoute allowedRoles={['student']} />}>
+      <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
         <Route path="/student/*" element={<StudentDashboard />} />
       </Route>
 

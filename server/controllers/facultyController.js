@@ -1,32 +1,76 @@
+const mongoose = require('mongoose');
 const LateEntry = require('../models/LateEntry');
+const Faculty = require('../models/Faculty');
+
 // Controller to get dashboard statistics for faculty
 const getDashboardStats = async (req, res) => {
+  console.log('--- DEBUG: Entering getDashboardStats ---');
   try {
-    // Get the start and end of today
+    console.log('DEBUG: req.user object in getDashboardStats:', JSON.stringify(req.user, null, 2));
+    const { department, role, id } = req.user; // Get department, role, and id from JWT
+
+    if (!department) {
+        throw new Error('User department is missing for stats calculation.');
+    }
+
+    // Base query must always include the department filter
+    const baseQuery = { department: department };
+
+    // Determine what "Pending" means for this user
+    let pendingFilter = { ...baseQuery };
+
+    if (role === 'faculty') {
+        pendingFilter.facultyId = new mongoose.Types.ObjectId(id); // ✅ Add the assignment filter for the count
+        // Faculty's pending queue (excluding HOD queue)
+        pendingFilter.status = { $in: ['Pending Faculty', 'Resubmitted'] };
+    } else if (role === 'HOD') {
+        // HOD's pending queue
+        pendingFilter.status = 'Pending HOD';
+    } else {
+        // Student or other roles shouldn't be here, but handle defensively
+        pendingFilter.status = 'N/A';
+    }
+
+
     const todayStart = new Date();
     todayStart.setHours(0, 0, 0, 0);
 
     const todayEnd = new Date();
     todayEnd.setHours(23, 59, 59, 999);
 
-    // Perform all counts in parallel
-    const [pendingCount, todayEntryCount, approvedCount] = await Promise.all([
-      LateEntry.countDocuments({ status: 'Pending' }),
-      LateEntry.countDocuments({ entryTime: { $gte: todayStart, $lte: todayEnd } }),
-      LateEntry.countDocuments({ status: 'Approved' })
+    const [pendingCount, todayEntryCount, approvedCount, alertsCount] = await Promise.all([
+        // 1. Pending Count (Filtered by Role/Department)
+        LateEntry.countDocuments(pendingFilter),
+
+        // 2. Today Entry Count (Filtered by Department)
+        LateEntry.countDocuments({ 
+            ...baseQuery,
+            date: { $gte: todayStart, $lte: todayEnd } 
+        }),
+
+        // 3. Approved Count (Filtered by Department - Show all final approvals)
+        LateEntry.countDocuments({ ...baseQuery, status: 'Approved' }),
+
+        // 4. Alerts Count (Resubmitted entries for this faculty)
+        LateEntry.countDocuments({ 
+            ...baseQuery,
+            facultyId: new mongoose.Types.ObjectId(id),
+            status: 'Resubmitted'
+        })
     ]);
 
-    // For now, alerts are static as there's no clear model for it
-    const alertsCount = 0;
-
-    res.json({
-      success: true,
-      data: {
+    const statsData = {
         pending: pendingCount,
         todayEntry: todayEntryCount,
         approved: approvedCount,
         alerts: alertsCount,
-      },
+    };
+
+    console.log('DEBUG: getDashboardStats returning:', JSON.stringify(statsData, null, 2));
+
+    res.json({
+      success: true,
+      data: statsData,
     });
 
   } catch (error) {
@@ -45,7 +89,6 @@ const getDistinctDepartments = async (req, res) => {
       return res.json({ success: true, data: [department] });
     }
     // If a Super-Admin/HOD needs to see all departments for a high-level view
-    // This part is commented out for now, as the primary use case is faculty's own department
     /*
     if (role === 'superadmin') {
         const departments = await Student.distinct('department');
@@ -61,4 +104,68 @@ const getDistinctDepartments = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardStats, getDistinctDepartments };
+const getFacultyByDepartment = async (req, res) => {
+  try {
+    const { department } = req.params; // e.g., 'CT' from the URL
+    
+    if (!department) {
+      return res.status(400).json({ success: false, message: 'Department is required' });
+    }
+
+    // CRITICAL FIX: Use a case-insensitive regex query
+    const departmentRegex = new RegExp(`^${department}`, 'i');
+
+    const facultyList = await Faculty.find({ 
+        department: departmentRegex 
+    })
+    .select('_id fullName employeeId'); // Selects minimal data for efficiency
+    
+    // Check if any faculty were found
+    if (facultyList.length === 0) {
+         console.log(`Warning: No faculty found for department '${department}' using case-insensitive search.`);
+    }
+
+    res.json({ success: true, data: facultyList });
+  } catch (error) {
+    console.error('Error fetching faculty by department:', error);
+    res.status(500).json({ success: false, message: 'Error fetching faculty' });
+  }
+};
+
+const getHODByDepartment = async (req, res) => {
+  try {
+    const { department } = req.params;
+    console.log(`[getHODByDepartment] Received department param: ${department}`); // DEBUG: Log entry
+
+    if (!department) {
+      console.log('[getHODByDepartment] Department param is missing.');
+      return res.status(400).json({ success: false, message: 'Department is required' });
+    }
+
+    // ✅ FIX 1: Department Regex (case-insensitive and exact match)
+    const departmentRegex = new RegExp(`^${department}$`, 'i'); 
+    console.log(`[getHODByDepartment] Using department regex: ${departmentRegex}`); // DEBUG: Log regex
+
+    // ✅ FIX 2: Designation Regex (case-insensitive and exact match)
+    const designationRegex = new RegExp('^HOD$', 'i');
+    
+    const hod = await Faculty.findOne({
+      department: departmentRegex,
+      designation: designationRegex, // Use the new case-insensitive regex
+    }).select('_id fullName employeeId');
+
+    console.log(`[getHODByDepartment] Query result for HOD: ${hod ? hod.fullName : 'Not Found'}`); // DEBUG: Log result
+
+    if (!hod) {
+      // This is the source of the 404 if the route is successfully hit but no HOD is found in the DB.
+      return res.status(404).json({ success: false, message: 'HOD not found for this department.' });
+    }
+
+    res.json({ success: true, data: hod });
+  } catch (error) {
+    console.error('[getHODByDepartment] Error fetching HOD by department:', error);
+    res.status(500).json({ success: false, message: 'Error fetching HOD' });
+  }
+};
+
+module.exports = { getDashboardStats, getDistinctDepartments, getFacultyByDepartment, getHODByDepartment };

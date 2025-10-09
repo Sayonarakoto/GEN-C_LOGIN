@@ -1,11 +1,10 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 import { Routes, Route } from 'react-router-dom';
-// import { AuthProvider } from './context/AuthContext'; // Removed as it's now in main.jsx
 import ProtectedRoute from './components/ProtectedRoute';
 import StudentLogin from './Pages/StudentLogin';
 import Frontpage from './Pages/Frontpage';
-import StudentDashboard from './Dashboards/StudentDashboard';
+import StudentDashboard, { DashboardHome } from './Dashboards/StudentDashboard';
 import FacultyDashboard from './Dashboards/FacultyDashboard';
 import Register from './Pages/Register';
 import FacultyLogin from './Pages/FacultyLogin';
@@ -15,7 +14,14 @@ import SecurityDashboard from './Dashboards/SecurityDashboard';
 import ForgotPassword from './Pages/ForgotPassword';
 import ResetPassword from './Pages/ResetPassword';
 import InterceptorWrapper from './components/InterceptorWrapper';
-import { useAuth } from './hooks/useAuth'; // NEW IMPORT: Need useAuth here!
+import { useAuth } from './hooks/useAuth';
+import StudentSpecialPassRequest from './student/StudentSpecialPassRequest';
+import FacultySpecialPasses from './faculty/FacultySpecialPasses';
+import StudentLateEntry from './student/StudentLateEntry'; // Added import
+import StudentActiveGatePass from './student/StudentActiveGatePass';
+import FacultyGatePass from './faculty/FacultyGatePass';
+import StudentProfile from './student/StudentProfile';
+import DeclinedRequestDetails from './student/DeclinedRequestDetails';
 
 // Create a component to hold the main Routes logic
 const MainRoutes = () => {
@@ -35,6 +41,8 @@ const MainRoutes = () => {
       {/* Protected Routes */}
       <Route element={<ProtectedRoute allowedRoles={['FACULTY', 'HOD']} />}>
         <Route path="/faculty/*" element={<FacultyDashboard />} />
+        <Route path="/faculty/special-passes" element={<FacultySpecialPasses />} />
+        <Route path="/faculty/gate-pass" element={<FacultyGatePass />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['SECURITY']} />}>
@@ -42,7 +50,15 @@ const MainRoutes = () => {
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
-        <Route path="/student/*" element={<StudentDashboard />} />
+        <Route path="/student" element={<StudentDashboard />}>
+          <Route index element={<DashboardHome />} />
+          <Route path="late-entry" element={<StudentLateEntry />} />
+          <Route path="special-pass" element={<StudentSpecialPassRequest />} />
+          <Route path="active-pass" element={<StudentActiveGatePass />} />
+          <Route path="profile" element={<StudentProfile />} />
+          <Route path="request/edit/:requestId" element={<DeclinedRequestDetails />} />
+          <Route path="submit-entry/:requestId" element={<StudentLateEntry />} />
+        </Route>
       </Route>
 
       {/* Catch all other routes */}
@@ -53,10 +69,8 @@ const MainRoutes = () => {
 
 
 function App() {
-  // We need to call useAuth() outside the return to access the loading state
-  const { loading } = useAuth(); // Access auth state
+  const { loading } = useAuth();
 
-  // ✅ CRITICAL FIX: DO NOT render the routes until the AuthProvider finishes its work.
   if (loading) {
     return (
       <div style={{ padding: '50px', textAlign: 'center' }}>
@@ -66,12 +80,9 @@ function App() {
   }
 
   return (
-    // The AuthProvider is now outside of App, likely in main.jsx
-    // as per the stable structure from earlier, but we keep the logical flow here.
-    // NOTE: This assumes App is wrapped by AuthProvider in main.jsx
     <>
       <InterceptorWrapper>
-        <MainRoutes /> {/* Render the routes only when loading is false */}
+        <MainRoutes />
       </InterceptorWrapper>
     </>
   );

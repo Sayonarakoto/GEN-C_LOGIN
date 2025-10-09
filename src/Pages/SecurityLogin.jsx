@@ -1,42 +1,48 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from '../hooks/useAuth'; // Import useAuth from hooks
+import { useAuth } from '../hooks/useAuth';
 import client from '../api/client';
-import LoginCard from '../components/common/LoginCard';
-import { Form, Button } from 'react-bootstrap'; // Import Bootstrap components
-import useToastService from '../hooks/useToastService'; // Import ToastService
+import useToastService from '../hooks/useToastService';
+import { Form, Button, InputGroup } from 'react-bootstrap';
+import Logo from '../components/common/Logo';
+import './Auth.css'; // Import the CSS file
 
 const SecurityLogin = () => {
   const navigate = useNavigate();
   const { login } = useAuth();
-  const toast = useToastService(); // Initialize toast service
+  const toast = useToastService();
   const [loading, setLoading] = useState(false);
   const [passkey, setPasskey] = useState('');
+  const [showPasskey, setShowPasskey] = useState(false);
+
+  const togglePasskeyVisibility = () => {
+    setShowPasskey(!showPasskey);
+  };
 
   const onFinish = async (event) => {
-    event.preventDefault(); // Prevent default form submission
+    event.preventDefault();
     setLoading(true);
-    toast.info('Logging in...'); // Show info toast
+    toast.info('Logging in...');
     try {
-      const response = await client.post('/auth/security-login', {
+      const response = await client.post('/api/auth/login', {
+        role: 'security',
         passkey: passkey,
       }, {
         timeout: 10000,
         headers: { 'X-Skip-Interceptor': true }
       });
       
-      const { token } = response.data;
+      const { token, user } = response.data;
       
       if (!token) {
         throw new Error('No token received from server');
       }
       
-      login(token);
+      login(token, user);
       toast.success(response.data.message || 'Login successful!');
       navigate('/security-dashboard');
     } catch (error) {
       console.error("Login error:", error);
-      console.error("Login error details:", error.response?.data);
       const userMessage = error.response?.status === 401
         ? "Invalid passkey. Please try again."
         : "Login failed. Please try again later.";
@@ -47,44 +53,45 @@ const SecurityLogin = () => {
   };
 
   return (
-    <div className="login-container">
-      <LoginCard>
-        <div style={{ textAlign: 'center' }}>
-          <img src={'/images/genc-log.jpeg'} alt="Genc Logo" style={{ width: '100px', marginBottom: '1rem' }} />
-          <h2 style={{ color: 'var(--text-dark)' }}>
-            Security Portal
-          </h2>
-          <p style={{ color: 'var(--text-light)' }}>
-            Please enter the security passkey to proceed.
-          </p>
-        </div>
+    <div className="auth-page-wrapper">
+      <div className="auth-container">
+        <div className="auth-box">
+          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            <Logo />
+            <h2 style={{ marginTop: '1rem' }}>Security Portal</h2>
+            <p>Please enter the security passkey to proceed.</p>
+          </div>
 
-        <Form onSubmit={onFinish}>
-          <Form.Group className="mb-3" controlId="formPasskey">
-            <Form.Label>Security Passkey</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="Enter security passkey"
-              value={passkey}
-              onChange={(e) => setPasskey(e.target.value)}
-              required
-              size="lg"
-            />
-          </Form.Group>
+          <Form onSubmit={onFinish}>
+            <Form.Group className="mb-3" controlId="formPasskey">
+              <Form.Label>Security Passkey</Form.Label>
+              <InputGroup>
+                <Form.Control
+                  type={showPasskey ? "text" : "password"}
+                  placeholder="Enter security passkey"
+                  value={passkey}
+                  onChange={(e) => setPasskey(e.target.value)}
+                  required
+                  size="lg"
+                />
+                <InputGroup.Text onClick={togglePasskeyVisibility} style={{ cursor: 'pointer' }}>
+                  <i className={showPasskey ? "bx bx-hide" : "bx bx-show"}></i>
+                </InputGroup.Text>
+              </InputGroup>
+            </Form.Group>
 
-          <div style={{ marginTop: '30px' }}>
             <Button
               variant="primary"
               type="submit"
               size="lg"
-              className="w-100"
+              className="w-100 mt-3"
               disabled={loading}
             >
               {loading ? 'Logging in...' : 'Login'}
             </Button>
-          </div>
-        </Form>
-      </LoginCard>
+          </Form>
+        </div>
+      </div>
     </div>
   );
 };

@@ -61,6 +61,8 @@ const lateEntrySchema = new mongoose.Schema({
   resubmissionCount: { type: Number, default: 0 },
   lastActionAt: { type: Date, default: Date.now },
   resubmittedAt: { type: Date },
+  qr_token: { type: String },
+  verification_otp: { type: String, minlength: 3, maxlength: 3 },
 }, { timestamps: true });
 
 // Compound index for efficient dashboard queries

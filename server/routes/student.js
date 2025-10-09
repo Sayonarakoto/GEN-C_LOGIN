@@ -2,6 +2,9 @@ const express = require("express");
 const router = express.Router();
 const Student = require("../models/student");
 const bcrypt = require("bcrypt");
+const { requireAuth } = require('../middleware/auth');
+const upload = require('../middleware/upload');
+const studentController = require('../controllers/studentController');
 
 // Add student (by faculty)
 router.post("/StudentForm", async (req, res) => {
@@ -36,6 +39,10 @@ router.post("/StudentForm", async (req, res) => {
     res.status(500).json({ message: "Server error", error: error.message });
   }
 });
+
+router.post('/upload-profile-picture', requireAuth, upload, studentController.uploadProfilePicture);
+
+router.put('/profile', requireAuth, studentController.updateStudentProfile);
 
 
 module.exports = router;

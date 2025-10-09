@@ -168,4 +168,36 @@ const getHODByDepartment = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardStats, getDistinctDepartments, getFacultyByDepartment, getHODByDepartment };
+
+const getAllFaculty = async (req, res) => {
+  try {
+    const facultyList = await Faculty.find({}).select('_id fullName designation department');
+    res.json({ success: true, data: facultyList });
+  } catch (error) {
+    console.error('Error fetching all faculty:', error);
+    res.status(500).json({ success: false, message: 'Error fetching all faculty' });
+  }
+};
+
+// @desc    Get all faculty members (including HODs) in the current user's department
+// @route   GET /api/faculty/department-members
+// @access  Private (Faculty, HOD)
+const getDepartmentMembers = async (req, res) => {
+  try {
+    const { department } = req.user; // Get department from the authenticated user
+
+    if (!department) {
+      return res.status(400).json({ success: false, message: 'User department is missing.' });
+    }
+
+    const departmentMembers = await Faculty.find({ department: department })
+      .select('_id fullName designation email profilePictureUrl'); // Select relevant fields
+
+    res.json({ success: true, data: departmentMembers });
+  } catch (error) {
+    console.error('Error fetching department members:', error);
+    res.status(500).json({ success: false, message: 'Error fetching department members' });
+  }
+};
+
+module.exports = { getDashboardStats, getDistinctDepartments, getFacultyByDepartment, getHODByDepartment, getAllFaculty, getDepartmentMembers };

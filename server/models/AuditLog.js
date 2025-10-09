@@ -1,38 +1,38 @@
 const mongoose = require('mongoose');
 
-const AuditLogSchema = new mongoose.Schema({
-  action: {
+const auditLogSchema = new mongoose.Schema({
+  pass_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'SpecialPass',
+    required: false // Made optional to allow for gatepass_id
+  },
+  gatepass_id: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'GatePass',
+    required: false // New field for GatePass events
+  },
+  event_type: {
     type: String,
     required: true,
-    enum: [
-      'UPDATE_LATE_ENTRY_STATUS',
-      'HOD_APPROVED',
-      'HOD_REJECTED',
-      'FACULTY_APPROVED', // Assuming these are also used
-      'FACULTY_REJECTED', // Assuming these are also used
-      'STUDENT_SUBMITTED' // Assuming this is also used
-    ],
+    enum: ['Request', 'Approved', 'Verified', 'Rejected', 'Revoked', 'LatenessLogged'] // Added LatenessLogged
   },
-  entityType: {
+  actor_role: {
     type: String,
     required: true,
-    enum: ['LateEntry'],
+    enum: ['Student', 'HOD', 'Admin', 'Security', 'Security Supervisor', 'faculty'] // Added faculty
   },
-  entityId: {
+  actor_id: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
+    required: true
   },
-  userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    required: true,
-  },
-  changes: {
+  event_details: {
     type: Object,
+    default: {}
   },
   timestamp: {
     type: Date,
-    default: Date.now,
-  },
+    default: Date.now
+  }
 });
 
-module.exports = mongoose.model('AuditLog', AuditLogSchema);
+module.exports = mongoose.model('AuditLog', auditLogSchema);

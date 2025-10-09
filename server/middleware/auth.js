@@ -22,24 +22,22 @@ exports.requireAuth = (req, res, next) => {
   });
 };
 
-exports.requireRole = (roles) => {
-    // 1. Convert single role to array if necessary, and ensure all items are strings
-    const requiredRoles = Array.isArray(roles) ? roles : [roles];
+exports.requireRole = (...roles) => {
+    // Flatten the array of roles. This handles both requireRole('admin') and requireRole(['admin', 'user'])
+    const requiredRoles = roles.flat();
 
     return (req, res, next) => {
         const userRole = req.user?.role;
-        
+
         if (!userRole) {
             return res.status(403).json({ message: 'Access denied. Role not defined.' });
         }
 
         const isAuthorized = requiredRoles.some(requiredRole => {
-            // CRITICAL CHECK: Ensure requiredRole is a string before calling toLowerCase
             if (typeof requiredRole !== 'string') {
-                 console.error('requireRole received a non-string role:', requiredRole);
-                 return false; // Skip authorization for this invalid role
+                console.error('requireRole received a non-string role:', requiredRole);
+                return false;
             }
-            // Comparison is case-insensitive for robustness
             return userRole.toLowerCase() === requiredRole.toLowerCase();
         });
 

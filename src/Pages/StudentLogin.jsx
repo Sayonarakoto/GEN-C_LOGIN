@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import api from '../api/client';
 import useToastService from '../hooks/useToastService';
+import { InputGroup, FormControl, Button, FloatingLabel } from 'react-bootstrap';
+import { Eye, EyeSlash } from 'react-bootstrap-icons';
 
 // Import the glass-effect styles
 import './Auth.css';
@@ -12,15 +14,20 @@ const StudentLogin = () => {
   const [loading, setLoading] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
   const onFinish = async (event) => {
     event.preventDefault();
     setLoading(true);
     toast.info('Logging in...');
     try {
-      const response = await api.post('/auth/login', {
+      const response = await api.post('/api/auth/login', {
         role: 'student',
         studentId: studentId,
         password: password,
@@ -62,15 +69,23 @@ const StudentLogin = () => {
               <span>Student ID</span>
             </div>
 
-            <div className="inputBox">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <span>Password</span>
-            </div>
+            <InputGroup className="mb-3 inputBox">
+              <FloatingLabel
+                controlId="floatingPassword"
+                label="Password"
+              >
+                <FormControl
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </FloatingLabel>
+              <Button variant="outline-secondary" onClick={togglePasswordVisibility}>
+                {showPassword ? <EyeSlash /> : <Eye />}
+              </Button>
+            </InputGroup>
 
             <div className="links">
               <Link to="/forgot-password">Forgot Password</Link>

@@ -12,6 +12,22 @@ const studentSchema = new mongoose.Schema({
   // New fields for password reset functionality
   resetPasswordToken: String,
   resetPasswordExpire: Date,
+  profilePictureUrl: {
+      type: String,
+      trim: true
+  },
+  gatePassHistory: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'GatePass'
+  }],
+  lateEntryHistory: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'LateEntry'
+  }],
+  specialPassHistory: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SpecialPass'
+  }]
 });
 
 module.exports = mongoose.model("Student", studentSchema);

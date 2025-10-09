@@ -1,9 +1,8 @@
-import React from "react";
 import { Link } from "react-router-dom";
 // Bootstrap
 import "bootstrap/dist/css/bootstrap.min.css";
 import { Button, Card } from "react-bootstrap";
-import logo from '/images/genc-log.jpeg';
+import Logo from '../components/common/Logo'; // Import the new Logo component
 import heroImage from '../assets/images/image.png';
 function Frontpage() {
   return (
@@ -17,14 +16,8 @@ function Frontpage() {
           <Card className="shadow-sm border-0 rounded-4 p-4">
             {/* LOGO instead of Campus Connect heading */}
             <div className="text-center mb-4">
-              <img
-                src={logo}
-                alt="GEN-C Logo"
-                className="img-fluid"
-                style={{ maxHeight: "120px" }}
-              />
+              <Logo /> {/* Render the Logo component here */}
             </div>
-
             {/* Hero Banner */}
             <div
               className="rounded-4 mb-4"

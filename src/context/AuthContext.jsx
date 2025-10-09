@@ -11,16 +11,20 @@ export const AuthProvider = ({ children }) => {
   // ℹ️ Helper function to extract and standardize user data from token
   const extractUserData = (token) => {
     const decoded = jwtDecode(token);
-    if (!decoded.id || !decoded.role || !decoded.name || !decoded.department) {
+    if (!decoded.id || !decoded.role || !decoded.fullName || !decoded.department) {
       // 🛑 CRITICAL FIX: Ensure 'department' is mandatory for RBAC
-      throw new Error('Invalid token payload: missing ID, role, name, or department.');
+      throw new Error('Invalid token payload: missing ID, role, fullName, or department.');
     }
-    return { 
-      id: decoded.id, 
-      role: decoded.role, 
-      name: decoded.name,
-      department: decoded.department, // ✅ FIX: Added department for filtering
-      departmentId: decoded.departmentId || decoded.department, // Add departmentId if available
+    return {
+      id: decoded.id,
+      role: decoded.role,
+      fullName: decoded.fullName,
+      department: decoded.department,
+      year: decoded.year,
+      studentId: decoded.studentId,
+      email: decoded.email,
+      profilePictureUrl: decoded.profilePictureUrl,
+      departmentId: decoded.departmentId || decoded.department,
       exp: decoded.exp
     };
   };
@@ -35,9 +39,9 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     console.log('AuthContext: STARTING token rehydration.');
     const storedToken = sessionStorage.getItem('token');
-    
+
     if (storedToken) {
-        setToken(storedToken); 
+        setToken(storedToken);
         try {
             const userData = extractUserData(storedToken);
             const currentTime = Date.now() / 1000;
@@ -50,7 +54,7 @@ export const AuthProvider = ({ children }) => {
                 // Token is EXPIRED
                 sessionStorage.removeItem('token');
                 setToken(null);
-                setUser(null); 
+                setUser(null);
                 console.log('AuthContext: Token expired. Cleared session.');
             }
         } catch (err) {
@@ -63,20 +67,20 @@ export const AuthProvider = ({ children }) => {
     } else {
         console.log('AuthContext: No token found. Session cleared.');
     }
-    
+
     console.log('AuthContext: Setting loading to false (FINAL).');
-    setLoading(false); 
+    setLoading(false);
   }, [logout]); // Added logout to dependencies for stability, though it's wrapped in useCallback
 
   const login = (newToken, userDataFromAPI) => { // Accept the user object from the API
     console.log('AuthContext: login function called.');
     try {
       // 1. Save the token and use the token's payload for the official user state
-      const userData = extractUserData(newToken); 
-      
+      const userData = extractUserData(newToken);
+
       // 2. CRITICAL: Use the role from the token for the final user state
       //    We combine the token data with any extra data the API provided.
-      const finalUserData = { 
+      const finalUserData = {
           ...userDataFromAPI, // Use the fresh data from the API response
           ...userData,        // Override role/id/etc. with the definitive token data
       };
@@ -84,9 +88,9 @@ export const AuthProvider = ({ children }) => {
       sessionStorage.setItem('token', newToken);
       setToken(newToken);
       setUser(finalUserData); // Set the full, correct user data
-      
+
       // Log the final role for debugging the subsequent redirect
-      console.log('AuthContext: FINAL ROLE SET IN STATE:', finalUserData.role); 
+      console.log('AuthContext: FINAL ROLE SET IN STATE:', finalUserData.role);
 
     } catch (error) {
       console.error('Login failed:', error);

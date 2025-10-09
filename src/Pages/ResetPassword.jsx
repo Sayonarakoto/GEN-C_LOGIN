@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import api from '../api/client';
 import { Form, Button, Alert, Spinner } from 'react-bootstrap'; // Import Bootstrap components
-import LoginCard from '../components/common/LoginCard';
+
 import { useParams, useNavigate } from 'react-router-dom'; // Import useParams and useNavigate
 import useToastService from '../hooks/useToastService'; // Import ToastService
+import '../Pages/Auth.css'; // Import Auth.css
 
 function ResetPassword() { // Renamed from Forgetpass to ResetPassword
   const { token } = useParams(); // Get token from URL params
@@ -79,8 +80,8 @@ function ResetPassword() { // Renamed from Forgetpass to ResetPassword
   };
 
   return (
-    <div className="login-container">
-      <LoginCard>
+    <div className="auth-page-wrapper">
+      <div className="auth-container">
         <h1 style={{ textAlign: 'center', color: 'var(--text-dark)' }}>Reset Password</h1> {/* Changed title */}
         <p style={{ textAlign: 'center', display: 'block', marginBottom: '24px', color: 'var(--text-light)' }}>Please enter your new password below.</p>
         <p style={{ textAlign: 'center', display: 'block', marginBottom: '24px', color: 'var(--text-light)', fontSize: '0.85em' }}>Password must be at least 6 characters long.</p>
@@ -140,7 +141,7 @@ function ResetPassword() { // Renamed from Forgetpass to ResetPassword
             )}
           </Button>
         </Form>
-      </LoginCard>
+      </div>
     </div>
   );
 }

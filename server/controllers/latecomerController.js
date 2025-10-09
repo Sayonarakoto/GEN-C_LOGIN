@@ -70,21 +70,33 @@ exports.getFacultyPending = async (req, res) => {
 exports.getHODPending = async (req, res) => {
   console.log('DEBUG: Entering getHODPending');
   try {
-    const department = req.user.department;
+    // This value is correctly 'CT' from the JWT
+    const department = req.user.department; 
     const hodId = req.user.id;
+
+    if (!department) {
+        console.error('ERROR: HOD user does not have a department assigned.');
+        return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+    }
+
     console.log(`DEBUG: getHODPending - User ID: ${hodId}, Department: ${department}`);
 
-    const departmentRegex = new RegExp(`^${department}$`, 'i');
-    
     const query = {
-      department: departmentRegex,
-      status: 'Pending HOD',
-      HODId: new mongoose.Types.ObjectId(hodId) 
+        // Ensure department is used here!
+        department: department, 
+        status: 'Pending HOD',
+        HODId: new mongoose.Types.ObjectId(hodId) // This is a specific check, but the department filter is necessary
     };
+
     console.log('DEBUG: getHODPending - Executing database query:', JSON.stringify(query, null, 2));
     
-    const pendingRequestsQuery = LateEntry.find(query).sort({ updatedAt: -1, createdAt: -1 });
-    const pendingRequests = await populateLateEntry(pendingRequestsQuery);
+    const pendingRequestsQuery = LateEntry.find(query)
+        .populate('studentId', 'fullName studentId department')
+        .populate('facultyId', 'fullName employeeId')
+        .populate('HODId', 'fullName employeeId')
+        .sort({ updatedAt: -1, createdAt: -1 });
+
+    const pendingRequests = await pendingRequestsQuery;
     
     console.log(`DEBUG: getHODPending - Found ${pendingRequests.length} pending requests.`);
     if (pendingRequests.length > 0) {
@@ -262,21 +274,42 @@ exports.getFacultyLateEntries = async (req, res) => {
 // NEW: Get Faculty Dashboard Stats
 exports.getFacultyStats = async (req, res) => {
     try {
-        const facultyId = req.user.id; // CRITICAL: Get ID from the authenticated user
-        console.log(`DEBUG: getFacultyStats - User ID: ${facultyId}, Role: ${req.user.role}`);
+        const userId = req.user.id; 
+        const userRole = req.user.role;
+        const userDepartment = req.user.department;
 
-        // 1. Get Pending Count (Assigned to this faculty member)
+        console.log(`DEBUG: getFacultyStats - User ID: ${userId}, Role: ${userRole}, Department: ${userDepartment}`);
+
+        let baseQuery = {};
+
+        if (userRole === 'HOD') {
+            if (!userDepartment) {
+                return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+            }
+            baseQuery.department = userDepartment;
+            // HODs see stats for their department, not just what they personally approved as faculty
+        } else if (userRole === 'faculty') {
+            baseQuery.facultyId = new mongoose.Types.ObjectId(userId);
+        } else {
+            return res.status(403).json({ success: false, message: 'Unauthorized to view faculty stats.' });
+        }
+
+        // 1. Get Pending Count
         const pendingQuery = {
-            facultyId: new mongoose.Types.ObjectId(facultyId),
+            ...baseQuery,
             status: { $in: ['Pending Faculty', 'Resubmitted'] }
         };
+        // If HOD, also include entries pending HOD approval for their department
+        if (userRole === 'HOD') {
+            pendingQuery.status.$in.push('Pending HOD');
+        }
         console.log('DEBUG: getFacultyStats - Pending Query:', JSON.stringify(pendingQuery));
         const pendingCount = await LateEntry.countDocuments(pendingQuery);
         console.log(`DEBUG: getFacultyStats - Pending Count: ${pendingCount}`);
 
         // 2. Get Approved Count
         const approvedQuery = {
-            facultyId: new mongoose.Types.ObjectId(facultyId),
+            ...baseQuery,
             status: 'Approved',
             isFinal: true
         };
@@ -286,7 +319,7 @@ exports.getFacultyStats = async (req, res) => {
 
         // 3. Get Rejected (Non-Final) Count
         const rejectedQuery = {
-            facultyId: new mongoose.Types.ObjectId(facultyId),
+            ...baseQuery,
             status: 'Rejected',
             isFinal: false
         };
@@ -626,6 +659,29 @@ exports.checkHODNeedController = async (req, res) => {
   }
 };
 
+// @desc    Get all late entry history for HOD's department
+// @route   GET /api/latecomers/hod/history
+// @access  Private (HOD)
+exports.getHODLateEntryHistory = async (req, res) => {
+  try {
+    const department = req.user.department;
+    if (!department) {
+      return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+    }
+
+    const history = await LateEntry.find({ department: department })
+      .populate('studentId', 'fullName studentId')
+      .populate('facultyId', 'fullName')
+      .populate('HODId', 'fullName')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({ success: true, data: history });
+  } catch (err) {
+    console.error('Error fetching HOD late entry history:', err);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+};
+
 // 🛑 EXPORT ALL FUNCTIONS
 module.exports = {
   getFacultyPending: exports.getFacultyPending,
@@ -642,5 +698,6 @@ module.exports = {
   getLateEntries: exports.getLateEntries,
   updateLateEntry: exports.updateLateEntry,
   getFacultyLateEntries: exports.getFacultyLateEntries,
-  getFacultyStats: exports.getFacultyStats
+  getFacultyStats: exports.getFacultyStats,
+  getHODLateEntryHistory: exports.getHODLateEntryHistory
 };

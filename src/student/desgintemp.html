@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avatar Profile System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <style>
+        body {
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100%;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .profile-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            padding: 2rem;
+            position: relative;
+        }
+
+        .profile-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.3;
+        }
+
+        .avatar-section {
+            position: relative;
+            z-index: 2;
+        }
+
+        .avatar-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+            object-fit: cover;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            color: white;
+            font-weight: 600;
+        }
+
+        .avatar-upload {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            width: 32px;
+            height: 32px;
+            background: #6366f1;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+        }
+
+        .avatar-upload:hover {
+            background: #4f46e5;
+            transform: scale(1.1);
+        }
+
+        .profile-info h2 {
+            margin: 0;
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .profile-info p {
+            margin: 0.5rem 0 0 0;
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .profile-content {
+            padding: 2rem;
+        }
+
+        .nav-tabs {
+            border-bottom: 2px solid #f1f5f9;
+            margin-bottom: 2rem;
+        }
+
+        .nav-tabs .nav-link {
+            border: none;
+            color: #64748b;
+            font-weight: 500;
+            padding: 1rem 1.5rem;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.3s ease;
+        }
+
+        .nav-tabs .nav-link.active {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+        }
+
+        .nav-tabs .nav-link:hover:not(.active) {
+            background: #f8fafc;
+            color: #6366f1;
+        }
+
+        .form-section {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-section h5 {
+            color: #1e293b;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-control, .form-select {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 0.75rem 2rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+        }
+
+        .btn-outline-secondary {
+            border: 2px solid #e2e8f0;
+            color: #64748b;
+            border-radius: 8px;
+            padding: 0.75rem 2rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .btn-outline-secondary:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .stats-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+
+        .stats-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #6366f1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stats-label {
+            color: #64748b;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .activity-item {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .activity-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            color: white;
+        }
+
+        .activity-icon.course { background: #10b981; }
+        .activity-icon.assignment { background: #f59e0b; }
+        .activity-icon.quiz { background: #ef4444; }
+
+        .table-responsive {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+
+        .table {
+            margin-bottom: 0;
+        }
+
+        .table thead th {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            font-weight: 600;
+            padding: 1rem;
+        }
+
+        .table tbody td {
+            padding: 1rem;
+            vertical-align: middle;
+            border-color: #f1f5f9;
+        }
+
+        .badge {
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        .progress {
+            height: 8px;
+            border-radius: 4px;
+            background: #f1f5f9;
+        }
+
+        .progress-bar {
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .profile-header {
+                text-align: center;
+            }
+            
+            .profile-content {
+                padding: 1rem;
+            }
+            
+            .avatar {
+                width: 100px;
+                height: 100px;
+                font-size: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="profile-container">
+        <!-- Profile Header -->
+        <div class="profile-header">
+            <div class="row align-items-center">
+                <div class="col-md-auto">
+                    <div class="avatar-section">
+                        <div class="avatar-container">
+                            <div class="avatar" id="avatarDisplay">JD</div>
+                            <div class="avatar-upload" onclick="document.getElementById('avatarInput').click()">
+                                <span class="material-icons" style="color: white; font-size: 18px;">camera_alt</span>
+                            </div>
+                            <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md">
+                    <div class="profile-info">
+                        <h2 id="displayName">John Doe</h2>
+                        <p id="displayRole">Computer Science Student</p>
+                        <p><span class="material-icons" style="vertical-align: middle; margin-right: 8px;">email</span>john.doe@university.edu</p>
+                    </div>
+                </div>
+                <div class="col-md-auto">
+                    <div class="row g-3">
+                        <div class="col-6 col-md-12">
+                            <div class="stats-card">
+                                <div class="stats-number">12</div>
+                                <div class="stats-label">Courses</div>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-12">
+                            <div class="stats-card">
+                                <div class="stats-number">85%</div>
+                                <div class="stats-label">Progress</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Content -->
+        <div class="profile-content">
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="account-tab" data-bs-toggle="tab" data-bs-target="#account" type="button" role="tab">
+                        <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">person</span>
+                        Account Settings
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="courses-tab" data-bs-toggle="tab" data-bs-target="#courses" type="button" role="tab">
+                        <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">school</span>
+                        My Courses
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity" type="button" role="tab">
+                        <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">timeline</span>
+                        Activity
+                    </button>
+                </li>
+            </ul>
+
+            <!-- Tab Content -->
+            <div class="tab-content" id="profileTabContent">
+                <!-- Account Settings Tab -->
+                <div class="tab-pane fade show active" id="account" role="tabpanel">
+                    <form id="profileForm">
+                        <!-- Personal Information -->
+                        <div class="form-section">
+                            <h5>
+                                <span class="material-icons">person_outline</span>
+                                Personal Information
+                            </h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="firstName" class="form-label">First Name</label>
+                                    <input type="text" class="form-control" id="firstName" value="John">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="lastName" class="form-label">Last Name</label>
+                                    <input type="text" class="form-control" id="lastName" value="Doe">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input type="email" class="form-control" id="email" value="john.doe@university.edu">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="phone" class="form-label">Phone</label>
+                                    <input type="tel" class="form-control" id="phone" value="+1 (555) 123-4567">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Academic Information -->
+                        <div class="form-section">
+                            <h5>
+                                <span class="material-icons">school</span>
+                                Academic Information
+                            </h5>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="studentId" class="form-label">Student ID</label>
+                                    <input type="text" class="form-control" id="studentId" value="CS2024001">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="major" class="form-label">Major</label>
+                                    <select class="form-select" id="major">
+                                        <option value="cs" selected>Computer Science</option>
+                                        <option value="math">Mathematics</option>
+                                        <option value="physics">Physics</option>
+                                        <option value="engineering">Engineering</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="year" class="form-label">Academic Year</label>
+                                    <select class="form-select" id="year">
+                                        <option value="1">1st Year</option>
+                                        <option value="2" selected>2nd Year</option>
+                                        <option value="3">3rd Year</option>
+                                        <option value="4">4th Year</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="gpa" class="form-label">Current GPA</label>
+                                    <input type="text" class="form-control" id="gpa" value="3.75">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Bio Section -->
+                        <div class="form-section">
+                            <h5>
+                                <span class="material-icons">description</span>
+                                Bio
+                            </h5>
+                            <div class="row">
+                                <div class="col-12">
+                                    <label for="bio" class="form-label">About Me</label>
+                                    <textarea class="form-control" id="bio" rows="4" placeholder="Tell us about yourself...">Passionate computer science student with interests in artificial intelligence and web development. Always eager to learn new technologies and collaborate on innovative projects.</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-3 justify-content-end">
+                            <button type="button" class="btn btn-outline-secondary">Cancel</button>
+                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- My Courses Tab -->
+                <div class="tab-pane fade" id="courses" role="tabpanel">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Instructor</th>
+                                    <th>Progress</th>
+                                    <th>Grade</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>Data Structures & Algorithms</strong>
+                                            <br><small class="text-muted">CS 201</small>
+                                        </div>
+                                    </td>
+                                    <td>Dr. Sarah Johnson</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-success" style="width: 85%"></div>
+                                        </div>
+                                        <small class="text-muted">85%</small>
+                                    </td>
+                                    <td><strong>A-</strong></td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>Web Development</strong>
+                                            <br><small class="text-muted">CS 301</small>
+                                        </div>
+                                    </td>
+                                    <td>Prof. Michael Chen</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-warning" style="width: 60%"></div>
+                                        </div>
+                                        <small class="text-muted">60%</small>
+                                    </td>
+                                    <td><strong>B+</strong></td>
+                                    <td><span class="badge bg-warning">In Progress</span></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>Database Systems</strong>
+                                            <br><small class="text-muted">CS 250</small>
+                                        </div>
+                                    </td>
+                                    <td>Dr. Emily Rodriguez</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-info" style="width: 92%"></div>
+                                        </div>
+                                        <small class="text-muted">92%</small>
+                                    </td>
+                                    <td><strong>A</strong></td>
+                                    <td><span class="badge bg-success">Active</span></td>
+                                </tr>
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <strong>Machine Learning</strong>
+                                            <br><small class="text-muted">CS 401</small>
+                                        </div>
+                                    </td>
+                                    <td>Dr. Alex Kumar</td>
+                                    <td>
+                                        <div class="progress">
+                                            <div class="progress-bar bg-primary" style="width: 45%"></div>
+                                        </div>
+                                        <small class="text-muted">45%</small>
+                                    </td>
+                                    <td><strong>B</strong></td>
+                                    <td><span class="badge bg-primary">Starting</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Activity Tab -->
+                <div class="tab-pane fade" id="activity" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <h5 class="mb-3">Recent Activity</h5>
+                            <div class="activity-item">
+                                <div class="activity-icon course">
+                                    <span class="material-icons">school</span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong>Completed Module 5: Binary Trees</strong>
+                                    <br><small class="text-muted">Data Structures & Algorithms • 2 hours ago</small>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon assignment">
+                                    <span class="material-icons">assignment</span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong>Submitted Assignment: React Portfolio</strong>
+                                    <br><small class="text-muted">Web Development • 1 day ago</small>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon quiz">
+                                    <span class="material-icons">quiz</span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong>Scored 95% on SQL Queries Quiz</strong>
+                                    <br><small class="text-muted">Database Systems • 2 days ago</small>
+                                </div>
+                            </div>
+                            <div class="activity-item">
+                                <div class="activity-icon course">
+                                    <span class="material-icons">play_circle</span>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <strong>Started new course: Machine Learning</strong>
+                                    <br><small class="text-muted">3 days ago</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h5 class="mb-3">Quick Stats</h5>
+                            <div class="stats-card mb-3">
+                                <div class="stats-number">24</div>
+                                <div class="stats-label">Assignments Completed</div>
+                            </div>
+                            <div class="stats-card mb-3">
+                                <div class="stats-number">156</div>
+                                <div class="stats-label">Study Hours</div>
+                            </div>
+                            <div class="stats-card mb-3">
+                                <div class="stats-number">8</div>
+                                <div class="stats-label">Certificates Earned</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Avatar upload functionality
+        document.getElementById('avatarInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const avatarDisplay = document.getElementById('avatarDisplay');
+                    avatarDisplay.innerHTML = `<img src="${e.target.result}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Form submission
+        document.getElementById('profileForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Get form values
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const major = document.getElementById('major').options[document.getElementById('major').selectedIndex].text;
+            
+            // Update header display
+            document.getElementById('displayName').textContent = `${firstName} ${lastName}`;
+            document.getElementById('displayRole').textContent = `${major} Student`;
+            
+            // Show success message
+            const originalText = e.target.querySelector('button[type="submit"]').textContent;
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.textContent = 'Saved!';
+            submitBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+            
+            setTimeout(() => {
+                submitBtn.textContent = originalText;
+                submitBtn.style.background = 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)';
+            }, 2000);
+        });
+
+        // Tab switching animation
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+            tab.addEventListener('shown.bs.tab', function(e) {
+                const targetPane = document.querySelector(e.target.getAttribute('data-bs-target'));
+                targetPane.style.opacity = '0';
+                targetPane.style.transform = 'translateY(20px)';
+                
+                setTimeout(() => {
+                    targetPane.style.transition = 'all 0.3s ease';
+                    targetPane.style.opacity = '1';
+                    targetPane.style.transform = 'translateY(0)';
+                }, 50);
+            });
+        });
+
+        // Interactive course progress
+        document.querySelectorAll('.progress-bar').forEach(bar => {
+            const width = bar.style.width;
+            bar.style.width = '0%';
+            
+            setTimeout(() => {
+                bar.style.transition = 'width 1s ease-in-out';
+                bar.style.width = width;
+            }, 500);
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98b87f1db7422fe1',t:'MTc1OTk1NjQ4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

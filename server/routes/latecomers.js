@@ -13,6 +13,11 @@ router.get('/faculty/pending', requireAuth, requireRole(['faculty', 'HOD']), att
 router.get('/hod/pending', requireAuth, requireRole('HOD'), attachUserDoc, latecomerController.getHODPending);
 router.get('/department/approved', requireAuth, requireRole(['faculty', 'HOD']), attachUserDoc, latecomerController.getApprovedByDepartment); 
 
+// @route   GET /api/latecomers/hod/history
+// @desc    Get all late entry history for HOD's department
+// @access  Private (HOD)
+router.get('/hod/history', requireAuth, requireRole('HOD'), attachUserDoc, latecomerController.getHODLateEntryHistory); 
+
 router.put('/:id/faculty-action',
     requireAuth,
     requireRole('faculty'),

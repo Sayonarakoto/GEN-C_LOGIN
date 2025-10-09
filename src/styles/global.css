@@ -1,13 +1,7 @@
 
 
-body {
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  margin: 0;
-  padding: 0;
-  font-family: 'Poppins', sans-serif;
-  transition: background-color 0.3s ease, color 0.3s ease; /* Smooth transition */
-}
+/* Removed body styling to allow Material-UI's CssBaseline to manage background and text colors */
+/* Removed font-family override to allow Material-UI theme's typography to take effect */
 
 .glass-card {
   background: var(--bg-secondary); /* Use theme background */

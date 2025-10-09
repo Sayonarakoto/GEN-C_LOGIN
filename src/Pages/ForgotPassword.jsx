@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import api from "../api/client";
 import { Form, Button, Spinner, Alert } from "react-bootstrap"; // Import Bootstrap components
-import LoginCard from '../components/common/LoginCard';
+
 import useToastService from '../hooks/useToastService'; // Import ToastService
+import '../Pages/Auth.css'; // Import Auth.css
 
 const ForgotPassword = () => {
   const toast = useToastService(); // Initialize toast service
@@ -47,8 +48,8 @@ const ForgotPassword = () => {
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   return (
-    <div className="login-container">
-      <LoginCard>
+    <div className="auth-page-wrapper">
+      <div className="auth-container">
         <h3 style={{ textAlign: 'center', marginBottom: '16px', color: 'var(--text-dark)' }}>
           Forgot Password?
         </h3>
@@ -112,7 +113,7 @@ const ForgotPassword = () => {
             </Button>
           </>
         )}
-      </LoginCard>
+      </div>
     </div>
   );
 };

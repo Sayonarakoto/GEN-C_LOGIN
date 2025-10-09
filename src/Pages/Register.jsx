@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Form, Button } from 'react-bootstrap'; // Import Bootstrap components
+import { Form, Button, InputGroup } from 'react-bootstrap'; // Import Bootstrap components
 import api from '../api/client';
-import LoginCard from '../components/common/LoginCard';
 import useToastService from '../hooks/useToastService'; // Import ToastService
+import '../Pages/Auth.css'; // Import Auth.css
 const Register = () => {
   const toast = useToastService(); // Initialize toast service
   const [loading, setLoading] = useState(false);
@@ -14,6 +14,16 @@ const Register = () => {
   const [department, setDepartment] = useState('');
   const [designation, setDesignation] = useState('');
   const [profilePhoto, setProfilePhoto] = useState(null);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
 
   const onFinish = async (event) => {
     event.preventDefault(); // Prevent default form submission
@@ -43,7 +53,7 @@ const Register = () => {
         formData.append('profilePhoto', file);
       }
 
-      const response = await api.post('/api/register', formData, {
+      const response = await api.post('/api/auth/register', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 
@@ -85,9 +95,11 @@ const Register = () => {
   };
 
   return (
-    <div className="login-container">
-      <LoginCard>
-        <h2 style={{ textAlign: 'center', marginBottom: '24px', color: 'var(--text-dark)' }}>Register</h2>
+    <div className="auth-page-wrapper">
+      <div className="auth-container">
+        <div className="auth-box">
+          <h2 className="auth-box">Register</h2>
+        </div>
         <Form onSubmit={onFinish}>
           <Form.Group className="mb-3" controlId="formFullName">
             <Form.Label>Full Name</Form.Label>
@@ -124,24 +136,34 @@ const Register = () => {
 
           <Form.Group className="mb-3" controlId="formPassword">
             <Form.Label>Password</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <InputGroup>
+              <Form.Control
+                type={showPassword ? "text" : "password"}
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <InputGroup.Text onClick={togglePasswordVisibility} className="cursor-pointer">
+                <i className={showPassword ? "bx bx-hide" : "bx bx-show"}></i>
+              </InputGroup.Text>
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="formConfirmPassword">
             <Form.Label>Confirm Password</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-            />
+            <InputGroup>
+              <Form.Control
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+              <InputGroup.Text onClick={toggleConfirmPasswordVisibility} className="cursor-pointer">
+                <i className={showConfirmPassword ? "bx bx-hide" : "bx bx-show"}></i>
+              </InputGroup.Text>
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="formDepartment">
@@ -189,7 +211,7 @@ const Register = () => {
             {loading ? 'Registering...' : 'Register'}
           </Button>
         </Form>
-      </LoginCard>
+      </div>
     </div>
   );
 };

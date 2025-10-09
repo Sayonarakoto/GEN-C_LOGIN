@@ -1,238 +1,378 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Container, Row, Col, Card, Form, Button, Table, Badge, Alert } from 'react-bootstrap';
-import useToastService from '../hooks/useToastService'; // For notifications
-import dayjs from 'dayjs';
-import { useNavigate } from "react-router-dom"; // Import useNavigate
-import { useAuth } from "../hooks/useAuth"; // Import useAuth
-import { mockStudents } from '../mockData'; // Import mockStudents
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  Box,
+  Typography,
+  Paper,
+  Button,
+  TextField,
+  CircularProgress,
+  Stack,
+  Alert,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Modal,
+} from "@mui/material";
+import { Row, Col } from 'react-bootstrap';
+import { QrCodeScanner, Lock, CheckCircle, Cancel, Logout, Schedule } from "@mui/icons-material";
+import apiClient from "../api/client";
+import { useAuth } from "../hooks/useAuth";
+import SecurityScanner from "../components/SecurityScanner"; // Import the SecurityScanner
 
-const SecurityDashboard = () => {
-  const [scanId, setScanId] = useState('');
-  const toast = useToastService(); // Initialize toast service
-  const [verificationData, setVerificationData] = useState(null);
-  const [logs, setLogs] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [currentTime, setCurrentTime] = useState(dayjs());
-  const scanInputRef = useRef(null);
-  const navigate = useNavigate(); // Initialize navigate
-  const { logout } = useAuth(); // Use logout from AuthContext
-
-  // Placeholder logout function (replace with actual useAuth().logout if applicable)
-  const handleLogout = () => {
-    logout(); // Call the actual logout function
-    console.log("Security user logged out.");
-    // In a real app, you would clear tokens, user data, etc.
-    navigate('/'); // Redirect to home page
-  };
-
-  // Update current time every second
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(dayjs());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Auto-focus on scan input
-  useEffect(() => {
-    if (scanInputRef.current) {
-      scanInputRef.current.focus();
-    }
-  }, []);
-
-  
-
-  const handleScan = () => {
-    const studentId = scanId.trim();
-    if (!studentId) {
-      toast.warning('Please enter a Campus ID or scan a QR code.');
-      return;
-    }
-
-    const student = mockStudents[studentId];
-    console.log('Student found:', student); // Debugging log
-
-    if (student) {
-      setVerificationData(student);
-      console.log('Verification Data set to:', student); // Debugging log
-      if (student.status === 'expired') {
-        addAlert({ type: 'warning', message: `Expired Pass Attempt: ${student.name} (${student.id})` });
-      } else {
-        // Simulate valid entry
-      }
-    } else {
-      setVerificationData(null);
-      addAlert({ type: 'error', message: `Invalid Pass Attempt: ID ${studentId}` });
-    }
-    setScanId(''); // Clear input after scan
-    scanInputRef.current.focus(); // Re-focus for next scan
-  };
-
-  const addAlert = (newAlert) => {
-    setAlerts((prev) => [...prev, { ...newAlert, timestamp: dayjs() }]);
-          toast[newAlert.type](newAlert.message); // Use toast service
-    // Optional: Play sound cue here
-  };
-
-  const handleApproveDeny = (action) => {
-    if (!verificationData) return;
-
-    const logEntry = {
-      id: Date.now(), // Generate a unique ID
-      timestamp: dayjs().format('HH:mm:ss'),
-      studentName: verificationData.name,
-      passType: verificationData.passType,
-      status: verificationData.status === 'valid' ? '✅ Valid' : '❌ Expired',
-      actionTaken: action === 'approve' ? 'Entry Allowed' : 'Entry Denied',
-    };
-    setLogs((prev) => [logEntry, ...prev]);
-    setVerificationData(null); // Clear verification card
-    scanInputRef.current.focus(); // Re-focus for next scan
-  };
-
-  const logColumns = [
-    { title: 'Timestamp', dataIndex: 'timestamp', key: 'timestamp' },
-    { title: 'Student Name', dataIndex: 'studentName', key: 'studentName' },
-    { title: 'Pass Type', dataIndex: 'passType', key: 'passType' },
-    { title: 'Status', dataIndex: 'status', key: 'status' },
-    { title: 'Action Taken', dataIndex: 'actionTaken', key: 'actionTaken' },
-  ];
-
+const LiveLogTable = ({ logs, loading }) => {
+  // ... (This component remains unchanged)
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)' }}>
-      <div style={{
-        background: 'var(--header-bg)',
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '0 24px',
-        borderBottom: '1px solid var(--border-color)'
-      }}>
-        <h3 style={{ color: 'var(--text-primary)', margin: 0 }}>Security Dashboard</h3>
-        <div className="d-flex align-items-center gap-3">
-          <i className="bx bx-time" style={{ fontSize: 24, color: 'var(--text-primary)' }}></i>
-          <span style={{ color: 'var(--text-primary)', fontSize: '1.2em' }}>{currentTime.format('HH:mm:ss')}</span>
-          <Badge bg="secondary" className="position-relative">
-            <i className="bx bx-bell" style={{ fontSize: 24, color: 'var(--text-primary)' }}></i>
-            {alerts.length > 0 && (
-              <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                {alerts.length}
-                <span className="visually-hidden">unread messages</span>
-              </span>
-            )}
-          </Badge>
-          <Button variant="text" onClick={handleLogout}>
-            <i className="bx bx-log-out" style={{ fontSize: 24, color: 'var(--text-primary)' }}></i>
-          </Button>
-        </div>
-      </div>
-
-      <Container style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '24px', maxWidth: '1400px', margin: '0 auto' }}>
-        {/* Alert Panel (Top Banner) */}
-        {alerts.length > 0 && (
-          <Alert
-            variant={alerts[alerts.length - 1].type === 'warning' ? 'warning' : 'danger'} // Map Antd type to Bootstrap variant
-            onClose={() => setAlerts([])}
-            dismissible
-            style={{ fontSize: '1.2em' }}
-          >
-            <h4 className="alert-heading" style={{ margin: 0 }}>Alerts</h4>
-            {
-              alerts.map((alert, index) => (
-                <p key={index} className="mb-0" style={{ display: 'block', fontSize: '1.2em', color: 'var(--text-primary)' }}>
-                  {alert.timestamp.format('HH:mm:ss')} - {alert.message}
-                </p>
+    <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3, height: '100%' }}>
+      <Typography variant="h5" fontWeight={600} mb={2} color="#1F2937">
+        Today's Check-Ins
+      </Typography>
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Student Name</TableCell>
+              <TableCell>Pass Type</TableCell>
+              <TableCell align="right">Time</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {loading ? (
+              <TableRow>
+                <TableCell colSpan={3} align="center">
+                  <CircularProgress />
+                </TableCell>
+              </TableRow>
+            ) : Array.isArray(logs) && logs.length > 0 ? (
+              logs.map((log) => (
+                <TableRow key={log._id}>
+                  <TableCell component="th" scope="row">{log.event_details?.student_name || 'N/A'}</TableCell>
+                  <TableCell>{log.event_details?.pass_type || 'N/A'}</TableCell>
+                  <TableCell align="right">{new Date(log.timestamp).toLocaleTimeString()}</TableCell>
+                </TableRow>
               ))
-            }
-          </Alert>
-        )}
-
-        {/* Scan Panel */}
-        <Card style={{ background: 'var(--bg-secondary)', borderRadius: '12px' }}>
-          <Card.Body>
-            <h4 style={{ color: 'var(--text-primary)' }}>Scan Panel</h4>
-            <div className="d-flex flex-column gap-3">
-              <Form.Control
-                ref={scanInputRef}
-                placeholder="SCAN OR ENTER ID"
-                value={scanId}
-                onChange={(e) => setScanId(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleScan(); }} // Use onKeyDown for Enter key
-                style={{ height: '50px', fontSize: '1.2em', width: '100%' }}
-              />
-              <Button variant="primary" onClick={handleScan} style={{ height: '50px', fontSize: '1.2em', width: '100%' }}>
-                <i className="bx bx-qr-scan me-2"></i> Scan Now
-              </Button>
-            </div>
-          </Card.Body>
-        </Card>
-
-        {/* Verification Card */}
-        {verificationData && (
-          <Card style={{
-            background: 'var(--bg-secondary)',
-            borderRadius: '12px',
-            borderWidth: '2px',
-            borderStyle: verificationData.status === 'valid' ? 'solid' : 'dashed', // Additional visual cue
-            borderColor: verificationData.status === 'valid' ? '#4caf50' : '#f44336' // Add border color
-          }}>
-            <Card.Body>
-              <Row className="align-items-center g-3">
-                <Col xs="auto">
-                  <img src={verificationData.photo} alt="Student" style={{ width: '100px', height: '100px', borderRadius: '50%', objectFit: 'cover' }} />
-                </Col>
-                <Col>
-                  <h2 style={{ color: 'var(--text-primary)', margin: 0 }}>{verificationData.name}</h2>
-                  <p style={{ fontSize: '1.2em', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Pass Type: {verificationData.passType}</p>
-                  <p style={{ fontSize: '1.2em', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Valid Until: {verificationData.validUntil.format('h:mm A, MMM D')}</p>
-                  <h3 style={{ color: verificationData.status === 'valid' ? '#4caf50' : '#f44336', margin: '10px 0 0 0' }}>
-                    {verificationData.status === 'valid' ? '✅ VALID' : '❌ EXPIRED'}
-                  </h3>
-                </Col>
-              </Row>
-              <Row className="g-3 mt-3">
-                <Col xs={12} md={6}>
-                  <Button variant="success" size="lg" style={{ width: '100%', height: '60px', fontSize: '1.5em' }} onClick={() => handleApproveDeny('approve')}>
-                    <i className="bx bx-check-circle me-2"></i> ALLOW ENTRY
-                  </Button>
-                </Col>
-                <Col xs={12} md={6}>
-                  <Button variant="danger" size="lg" style={{ width: '100%', height: '60px', fontSize: '1.5em' }} onClick={() => handleApproveDeny('deny')}>
-                    <i className="bx bx-x-circle me-2"></i> DENY
-                  </Button>
-                </Col>
-              </Row>
-            </Card.Body>
-          </Card>
-        )}
-
-        {/* Live Logs Table */}
-        <Card style={{ background: 'var(--bg-secondary)', borderRadius: '12px' }}>
-          <Card.Body>
-            <h4 style={{ color: 'var(--text-primary)' }}>Live Logs</h4>
-            <Table striped bordered hover responsive className="dark-theme-table" style={{ fontSize: '1.2em' }}>
-              <thead>
-                <tr>
-                  {logColumns.map((col) => (
-                    <th key={col.key}>{col.title}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {logs.map((log, index) => (
-                  <tr key={log.id} className={index % 2 === 0 ? 'log-row-even' : 'log-row-odd'}>
-                    {logColumns.map((col) => (
-                      <td key={col.key}>{log[col.dataIndex]}</td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </Card.Body>
-        </Card>
-      </Container>
-    </div>
+            ) : (
+              <TableRow>
+                <TableCell colSpan={3} align="center">
+                  No check-ins recorded yet.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Paper>
   );
 };
 
-export default SecurityDashboard;
+const modalStyle = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)',
+  width: 400,
+  bgcolor: 'background.paper',
+  border: '2px solid #000',
+  boxShadow: 24,
+  p: 4,
+};
+
+export default function SecurityDashboard() {
+  const { logout } = useAuth();
+  const [time, setTime] = useState(new Date());
+
+  // Verification Form State
+  const [otp, setOtp] = useState("");
+  const [studentId, setStudentId] = useState(""); // New state for student ID
+  const [verificationResult, setVerificationResult] = useState(null);
+  const [formLoading, setFormLoading] = useState(false);
+  const [showScanner, setShowScanner] = useState(false); // State for scanner modal
+  const [scannedToken, setScannedToken] = useState(""); // Temporary state to hold the scanned token
+
+  // Live Log State
+  const [logs, setLogs] = useState([]);
+  const [logLoading, setLogLoading] = useState(true);
+
+  // Create a memoized version of the unique logs to prevent duplicates in the view
+  const uniqueLogs = useMemo(() => {
+    const uniqueMap = logs.reduce((map, log) => {
+      // Use pass_id for uniqueness, otherwise fall back to _id for logs without it
+      const key = log.pass_id || log._id;
+      const existing = map.get(key);
+      // Keep only the newest log entry for each pass
+      if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
+        map.set(key, log);
+      }
+      return map;
+    }, new Map());
+    
+    const sortedUniqueLogs = Array.from(uniqueMap.values());
+    // Sort the final array by timestamp to show the most recent check-ins first
+    sortedUniqueLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    return sortedUniqueLogs;
+  }, [logs]);
+
+
+  useEffect(() => {
+    const timerId = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(timerId);
+  }, []);
+
+  const headerColor = verificationResult
+    ? verificationResult.is_valid
+      ? "#10B981"
+      : "#EF4444"
+    : "#3B82F6";
+  const backgroundColor = verificationResult
+    ? verificationResult.is_valid
+      ? "#D1FAE5"
+      : "#FEE2E2"
+    : "#F3F4F6";
+
+  const fetchLogs = useCallback(async () => {
+    setLogLoading(true);
+    try {
+      const response = await apiClient.get("/api/security/logs"); // Correct endpoint
+      if (response.data && response.data.success) {
+        setLogs(Array.isArray(response.data.data) ? response.data.data : []);
+      } else {
+        setLogs([]);
+      }
+    } catch (error) {
+      console.error("Failed to fetch live logs:", error);
+      setLogs([]);
+    } finally {
+      setLogLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLogs().finally(() => setLogLoading(false));
+    const intervalId = setInterval(fetchLogs, 60000);
+    return () => clearInterval(intervalId);
+  }, [fetchLogs]);
+
+  const handleVerification = async (token = null) => {
+    setFormLoading(true);
+    setVerificationResult(null);
+
+    const tokenToUse = token || scannedToken; // Prioritize token passed directly (from scan)
+
+    const payload = {};
+    let endpoint = "/api/special-passes/verify"; // Default to OTP verification
+
+    if (tokenToUse) {
+      payload.qr_token = tokenToUse;
+      // endpoint remains "/api/special-passes/verify";
+    } else if (studentId && otp) { // Manual input with Student ID and OTP
+      payload.student_id = studentId;
+      payload.verification_otp = otp;
+      // endpoint remains "/api/special-passes/verify"
+    } else {
+        setFormLoading(false);
+        setVerificationResult({
+            is_valid: false,
+            display_status: "INPUT REQUIRED",
+            error_message: "Please scan a QR code or enter both Student ID and OTP to verify a pass.",
+        });
+        return; // No valid input
+    }
+    
+    // Reset scanned token after preparing payload
+    setScannedToken("");
+
+    console.log("Sending verification request:", { endpoint, payload }); // Debug log
+
+    try {
+      const result = await apiClient.post(endpoint, payload);
+      console.log("Verification response:", result.data); // Debug log
+      setVerificationResult(result.data);
+      if (result.data.is_valid) {
+        // Re-fetch the logs from the database to get the new entry
+        fetchLogs();
+      }
+    } catch (error) {
+      console.error("Verification error:", error); // Debug log
+      setVerificationResult({
+        is_valid: false,
+        display_status: "VERIFICATION FAILED",
+        error_message: error.response?.data?.message || "An error occurred during verification.",
+      });
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleScanSuccess = (decodedText) => {
+    setShowScanner(false);
+    // Directly call handleVerification with the decoded token
+    handleVerification(decodedText);
+  };
+
+  const resetVerification = () => {
+    setOtp("");
+    setStudentId(""); // Reset student ID
+    setScannedToken("");
+    setVerificationResult(null);
+  };
+
+  const isManualInputValid = studentId.length > 0 && otp.length === 3;
+
+  return (
+    <Box sx={{ minHeight: "100vh", bgcolor: backgroundColor, transition: "background-color 0.5s", p: { xs: 1, md: 3 } }}>
+      <Modal open={showScanner} onClose={() => setShowScanner(false)}>
+        <Box sx={modalStyle}>
+          <Typography variant="h6" component="h2" mb={2}>Scan Pass QR Code</Typography>
+          <SecurityScanner onScanSuccess={handleScanSuccess} />
+          <Button onClick={() => setShowScanner(false)} sx={{ mt: 2 }} fullWidth>Cancel Scan</Button>
+        </Box>
+      </Modal>
+
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', bgcolor: headerColor, p: 2, color: "#fff", borderRadius: 2, mb: 3 }}>
+        <Typography variant="h4" fontWeight={700} sx={{ flexGrow: 1, textAlign: 'center' }}>
+          {verificationResult?.display_status || "AWAITING SCAN/INPUT"}
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(0,0,0,0.1)', p: '4px 12px', borderRadius: '12px' }}>
+                <Schedule sx={{ fontSize: 28 }} />
+                <Typography variant="h6" fontWeight={500}>{time.toLocaleTimeString()}</Typography>
+            </Box>
+            <IconButton onClick={logout} sx={{ color: 'white' }} aria-label="logout">
+                <Logout sx={{ fontSize: 32 }} />
+            </IconButton>
+        </Box>
+      </Box>
+
+      <Row className="g-4">
+        <Col xs={12} lg={7}>
+          <Paper elevation={3} sx={{ p: { xs: 3, md: 4 }, borderRadius: 3 }}>
+            <Typography variant="h5" fontWeight={600} mb={3} color="#1F2937">
+              Verify Pass
+            </Typography>
+            
+            {/* QR CODE SCANNER SECTION */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, p: 2, border: '1px dashed #ccc', borderRadius: 1 }}>
+              <Typography variant="h6" fontWeight={500}>
+                <QrCodeScanner sx={{ mr: 1, color: headerColor, verticalAlign: 'middle' }} /> QR Code Scan
+              </Typography>
+              <Button 
+                variant="contained" 
+                onClick={() => {
+                    resetVerification(); // Clear any existing input before scanning
+                    setShowScanner(true);
+                }}
+                disabled={formLoading}
+              >
+                Open Scanner
+              </Button>
+            </Box>
+            
+            <Typography textAlign="center" variant="overline" display="block" mb={3}>
+              — OR MANUAL OTP —
+            </Typography>
+            
+            {/* MANUAL OTP INPUT SECTION */}
+            <Typography variant="h6" fontWeight={500} mb={1}>
+              <Lock sx={{ mr: 1, color: headerColor, verticalAlign: 'middle' }} /> Enter Student ID & OTP
+            </Typography>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
+              <TextField
+                fullWidth
+                label="Student ID"
+                value={studentId}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  setStudentId(val);
+                  setScannedToken("");
+                }}
+                type="text"
+                disabled={formLoading}
+              />
+              <TextField
+                fullWidth
+                label="3-Digit OTP"
+                value={otp}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/[^0-9]/g, '');
+                  if (val.length <= 3) {
+                    setOtp(val);
+                    setScannedToken("");
+                  }
+                }}
+                type="password"
+                inputProps={{ maxLength: 3 }}
+                disabled={formLoading}
+              />
+            </Stack>
+            <Stack direction="row" spacing={2} mt={4}>
+              <Button
+                variant="contained"
+                onClick={() => handleVerification()} // No token passed, relies on OTP state
+                disabled={formLoading || !isManualInputValid}
+                sx={{
+                  py: 1.5,
+                  flexGrow: 1,
+                  bgcolor: headerColor,
+                  "&:hover": { bgcolor: headerColor },
+                }}
+              >
+                {formLoading ? <CircularProgress size={24} sx={{ color: "#fff" }} /> : "VERIFY & LOG"}
+              </Button>
+              <Button variant="outlined" onClick={resetVerification} disabled={formLoading}>
+                Reset
+              </Button>
+            </Stack>
+            
+            {/* VERIFICATION RESULT DISPLAY */}
+            {verificationResult && (
+              <Box mt={4}>
+                {verificationResult.is_valid ? (
+                  <Alert icon={<CheckCircle fontSize="inherit" />} severity="success" sx={{ mb: 2 }}>
+                    Verification Successful. Audit Log updated.
+                  </Alert>
+                ) : (
+                  <Alert icon={<Cancel fontSize="inherit" />} severity="error" sx={{ mb: 2 }}>
+                    {verificationResult.message || verificationResult.error_message || "Unknown error during verification."}
+                  </Alert>
+                )}
+                <Paper variant="outlined" sx={{ p: 2, bgcolor: "#F9FAFB" }}>
+                  <Typography variant="subtitle1" fontWeight={600} mb={1} color="#4B5563">
+                    Pass Details:
+                  </Typography>
+                   <Row>
+                      <Col xs={6}>
+                         <Typography variant="body2" color="#6B7280">Student ID:</Typography>
+                         <Typography fontWeight={500}>{verificationResult.pass_details?.student_id || "N/A"}</Typography>
+                      </Col>
+                      <Col xs={6}>
+                         <Typography variant="body2" color="#6B7280">Student Name:</Typography>
+                         <Typography fontWeight={500}>{verificationResult.pass_details?.student_name || "N/A"}</Typography>
+                      </Col>
+                      <Col xs={6}>
+                         <Typography variant="body2" color="#6B7280">Pass Type:</Typography>
+                         <Typography fontWeight={500}>{verificationResult.pass_details?.pass_type || "N/A"}</Typography>
+                      </Col>
+                      <Col xs={6}>
+                         <Typography variant="body2" color="#6B7280">Valid Until:</Typography>
+                         <Typography fontWeight={500}>
+                            {verificationResult.pass_details?.date_valid_to
+                               ? new Date(verificationResult.pass_details.date_valid_to).toLocaleDateString()
+                               : "N/A"}
+                         </Typography>
+                      </Col>
+                   </Row>
+                </Paper>
+              </Box>
+            )}
+          </Paper>
+        </Col>
+        <Col xs={12} lg={5}>
+          <LiveLogTable logs={uniqueLogs} loading={logLoading} />
+        </Col>
+      </Row>
+    </Box>
+  );
+}

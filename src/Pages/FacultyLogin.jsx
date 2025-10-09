@@ -3,6 +3,8 @@ import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from '../hooks/useAuth';
 import client from '../api/client';
 import useToastService from '../hooks/useToastService';
+import { InputGroup, FormControl, Button, FloatingLabel } from 'react-bootstrap';
+import { Eye, EyeSlash } from 'react-bootstrap-icons';
 
 // Import the new light-theme styles
 import './Auth.css';
@@ -14,13 +16,19 @@ function FacultyLogin() {
   const [loading, setLoading] = useState(false);
   const [employeeId, setEmployeeId] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
 
   const handleLoginSubmit = async (event) => {
     event.preventDefault();
     setLoading(true);
     toast.info('Logging in...');
     try {
-      const response = await client.post('/auth/faculty-login', {
+      const response = await client.post('/api/auth/login', {
+        role: 'faculty',
         employeeId: employeeId,
         password: password,
       }, {
@@ -28,7 +36,7 @@ function FacultyLogin() {
       });
       
       const newToken = response.data.token;
-      const userObject = response.data.faculty; // This object has designation: 'hod'
+      const userObject = response.data.user;
 
       if (!newToken) {
         throw new Error('No token received from server');
@@ -73,15 +81,23 @@ function FacultyLogin() {
               <span>Employee ID</span>
             </div>
 
-            <div className="inputBox">
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              <span>Password</span>
-            </div>
+            <InputGroup className="mb-3 inputBox">
+              <FloatingLabel
+                controlId="floatingPassword"
+                label="Password"
+              >
+                <FormControl
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </FloatingLabel>
+              <Button variant="outline-secondary" onClick={togglePasswordVisibility}>
+                {showPassword ? <EyeSlash /> : <Eye />}
+              </Button>
+            </InputGroup>
 
             <div className="links">
               <Link to="/forgot-password">Forgot Password?</Link>

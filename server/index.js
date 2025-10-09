@@ -6,8 +6,14 @@ require("dotenv").config({ path: '../.env' });
 
 const authRoutes = require('./routes/auth');
 const FacultyRoutes = require('./routes/faculty');
+const studentRoutes = require('./routes/student'); // New student routes
+const specialPassRoutes = require('./routes/specialPasses');
+const hodSpecialPassRoutes = require('./routes/hodSpecialPasses'); // New HOD Special Passes routes
+const auditRoutes = require('./routes/audit'); // New Audit routes
+const gatepassRoutes = require('./routes/gatepass');
 
 const latecomerRoutes = require('./routes/latecomers');
+const securityRoutes = require('./routes/Security');
 const { requireAuth } = require('./middleware/auth'); // Import your auth middleware
 const { upload, uploadStudents, getAllStudents } = require('./controllers/excelUploadController'); // Import from new controller
 const { forgotPassword, resetPassword } = require('./controllers/passwordResetController'); // Import from new controller
@@ -22,7 +28,7 @@ app.use((req, res, next) => {
   console.log('Request received by Express:', req.method, req.path);
   next();
 });
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Changed this line
 
 // Add debugging middleware
 app.use((req, res, next) => {
@@ -37,15 +43,20 @@ mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/paperlessCa
   .then(() => console.log("✅ MongoDB connected"))
   .catch(err => console.error("❌ DB connection error:", err));
 
-// API Routes
+// API Routes - Grouped and placed before static file serving
 app.post('/api/upload', requireAuth, upload.single('file'), uploadStudents);
 app.get('/api/students', requireAuth, getAllStudents);
 app.post('/api/forgot-password', forgotPassword);
 app.post('/api/reset-password/:token', resetPassword);
-app.use('/auth', authRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/faculty', FacultyRoutes);
-
+app.use('/api/student', studentRoutes); // Register student routes
+app.use('/api/special-passes', specialPassRoutes);
+app.use('/api/hod/special-passes', hodSpecialPassRoutes); // Register HOD Special Passes routes
+app.use('/api/audit', auditRoutes); // Register Audit routes
+app.use('/api/gatepass', gatepassRoutes);
 app.use('/api/latecomers', latecomerRoutes);
+app.use('/api/security', securityRoutes);
 
 // Serve static files from the React app
 app.use('/GEN-C_LOGIN', express.static(path.join(__dirname, '..', 'dist')));
@@ -54,7 +65,7 @@ app.use('/GEN-C_LOGIN', express.static(path.join(__dirname, '..', 'dist')));
 app.get('/{*path}', (req, res, next) => {
   // Check if the request is for an API route. If so, let it fall through
   // to the 404 handler, otherwise serve the index.html.
-  if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/auth')) {
+  if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/auth') || req.originalUrl.startsWith('/static/uploads')) { // Added /static/uploads
     // Let the 404 handler below manage this.
     // This is optional but can make the intent clearer.
     return next();

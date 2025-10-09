@@ -50,13 +50,18 @@
     font-weight: 500;
     text-align: center;
     letter-spacing: .1em;
-    margin-bottom: 40px;
+    margin-bottom: 24px; /* Added for Register.jsx */
 }
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
 
 .inputBox {
     position: relative;
     width: 100%;
-    margin-top: 35px
+    margin-top: 35px;
 }
 
 .inputBox input {
@@ -89,6 +94,30 @@
     color: #007bff; /* Standard primary blue color on focus */
     transform: translateX(0px) translateY(-34px);
     font-size: .75em
+}
+
+.eye-icon {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #6c757d;
+    font-size: 1.2em;
+    z-index: 11;
+    padding: 5px;
+}
+
+.eye-icon:hover {
+  color: #007bff;
+}
+
+.password-input-container input {
+  padding-right: 40px !important;
+}
+
+.password-toggle-button {
+  margin-left: 5px; /* Add some space between the input and the button */
 }
 
 .links {

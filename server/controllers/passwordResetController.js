@@ -46,7 +46,7 @@ const forgotPassword = async (req, res) => {
     await user.save(); // Use user.save()
 
     // Create reset URL
-    const resetURL = `${process.env.FRONTEND_URL}/GEN-C_LOGIN/reset-password/${resetToken}`;
+    const resetURL = `http://localhost:5173/reset-password/${resetToken}`;
     console.log('Generated reset URL:', resetURL);
 
     // Send email using the mailer utility

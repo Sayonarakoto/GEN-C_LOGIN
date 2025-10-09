@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+
+<html class="" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Faculty Gate Pass Dashboard</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>tailwind.config = {darkMode: "class", theme: {extend: {colors: {primary: "#1173d4", "background-light": "#f6f7f8", "background-dark": "#101922"}, fontFamily: {display: "Inter"}, borderRadius: {DEFAULT: "0.25rem", lg: "0.5rem", xl: "0.75rem", full: "9999px"}}}};</script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display">
+<div class="relative flex h-auto min-h-screen w-full flex-col justify-between">
+<main class="flex-grow pb-28">
+<header class="sticky top-0 z-10 bg-background-light/80 dark:bg-background-dark/80 backdrop-blur-sm p-4">
+<div class="flex items-center justify-between">
+<div class="w-10"></div>
+<h1 class="text-lg font-bold text-gray-900 dark:text-white flex-1 text-center">Dashboard</h1>
+<button class="w-10 h-10 flex items-center justify-center rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+</div>
+</header>
+<div class="p-4">
+<h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4">Pending Requests</h2>
+<div class="space-y-3">
+<div class="bg-white/5 dark:bg-white/5 p-4 rounded-lg shadow-sm border border-white/10 dark:border-white/10">
+<div class="flex items-start justify-between gap-4">
+<div class="flex-grow">
+<p class="font-semibold text-gray-900 dark:text-white">Ethan Carter</p>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+<span class="font-medium">Out:</span> 10:00 AM • <span class="font-medium">Return:</span> 12:00 PM
+                </p>
+<p class="text-sm text-gray-500 dark:text-gray-400"><span class="font-medium">Reason:</span> Library Visit</p>
+</div>
+<div class="flex flex-col items-end gap-2 shrink-0">
+<button class="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark">
+                  Approve
+                </button>
+<button class="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-white/10 rounded-lg shadow-sm hover:bg-gray-300 dark:hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark">
+                  Reject
+                </button>
+</div>
+</div>
+<button class="mt-3 w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200/50 dark:bg-white/5 rounded-lg shadow-sm hover:bg-gray-300/50 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark">
+              View Details
+            </button>
+</div>
+<div class="bg-white/5 dark:bg-white/5 p-4 rounded-lg shadow-sm border border-white/10 dark:border-white/10">
+<div class="flex items-start justify-between gap-4">
+<div class="flex-grow">
+<p class="font-semibold text-gray-900 dark:text-white">Olivia Bennett</p>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+<span class="font-medium">Out:</span> 2:00 PM • <span class="font-medium">Return:</span> 4:00 PM
+                </p>
+<p class="text-sm text-gray-500 dark:text-gray-400"><span class="font-medium">Reason:</span> Medical Appointment</p>
+</div>
+<div class="flex flex-col items-end gap-2 shrink-0">
+<button class="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark">
+                  Approve
+                </button>
+<button class="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-white/10 rounded-lg shadow-sm hover:bg-gray-300 dark:hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark">
+                  Reject
+                </button>
+</div>
+</div>
+<button class="mt-3 w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200/50 dark:bg-white/5 rounded-lg shadow-sm hover:bg-gray-300/50 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark">
+              View Details
+            </button>
+</div>
+<div class="bg-white/5 dark:bg-white/5 p-4 rounded-lg shadow-sm border border-white/10 dark:border-white/10">
+<div class="flex items-start justify-between gap-4">
+<div class="flex-grow">
+<p class="font-semibold text-gray-900 dark:text-white">Noah Thompson</p>
+<p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+<span class="font-medium">Out:</span> 4:00 PM • <span class="font-medium">Return:</span> 6:00 PM
+                </p>
+<p class="text-sm text-gray-500 dark:text-gray-400"><span class="font-medium">Reason:</span> Group Study</p>
+</div>
+<div class="flex flex-col items-end gap-2 shrink-0">
+<button class="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg shadow-sm hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark">
+                  Approve
+                </button>
+<button class="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-white/10 rounded-lg shadow-sm hover:bg-gray-300 dark:hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark">
+                  Reject
+                </button>
+</div>
+</div>
+<button class="mt-3 w-full px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200/50 dark:bg-white/5 rounded-lg shadow-sm hover:bg-gray-300/50 dark:hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary focus:ring-offset-background-light dark:focus:ring-offset-background-dark">
+              View Details
+            </button>
+</div>
+</div>
+<div class="mt-8">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xl font-bold text-gray-900 dark:text-white">History</h2>
+<div class="flex items-center gap-2">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-gray-500">search</span>
+<input class="form-input w-40 pl-10 pr-4 py-2 text-sm bg-gray-100 dark:bg-white/5 border-gray-200 dark:border-white/10 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:ring-primary focus:border-primary" placeholder="Filter..." type="text"/>
+</div>
+<button class="flex items-center justify-center w-9 h-9 bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/10">
+<span class="material-symbols-outlined text-base">download</span>
+</button>
+</div>
+</div>
+<div class="space-y-2">
+<div class="flex items-center justify-between p-3 bg-white/5 dark:bg-white/5 rounded-lg border border-white/10 dark:border-white/10">
+<div class="flex items-center gap-3">
+<div class="flex flex-col">
+<p class="font-medium text-gray-900 dark:text-white">Ava Harper</p>
+<p class="text-xs text-gray-500 dark:text-gray-400">2024-07-26 • 10:00 AM</p>
+</div>
+</div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
+                Approved
+              </span>
+</div>
+<div class="flex items-center justify-between p-3 bg-white/5 dark:bg-white/5 rounded-lg border border-white/10 dark:border-white/10">
+<div class="flex items-center gap-3">
+<div class="flex flex-col">
+<p class="font-medium text-gray-900 dark:text-white">Liam Foster</p>
+<p class="text-xs text-gray-500 dark:text-gray-400">2024-07-25 • 2:00 PM</p>
+</div>
+</div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300">
+                Rejected
+              </span>
+</div>
+<div class="flex items-center justify-between p-3 bg-white/5 dark:bg-white/5 rounded-lg border border-white/10 dark:border-white/10">
+<div class="flex items-center gap-3">
+<div class="flex flex-col">
+<p class="font-medium text-gray-900 dark:text-white">Mia Coleman</p>
+<p class="text-xs text-gray-500 dark:text-gray-400">2024-07-24 • 4:00 PM</p>
+</div>
+</div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300">
+                Approved
+              </span>
+</div>
+</div>
+</div>
+</div>
+</main>
+<nav class="fixed bottom-0 left-0 right-0 bg-background-light/90 dark:bg-background-dark/90 backdrop-blur-sm border-t border-gray-200 dark:border-white/10">
+<div class="flex justify-around items-center h-16 px-2 pb-safe">
+<a class="flex flex-col items-center justify-center text-primary" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="text-xs font-medium">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">list_alt</span>
+<span class="text-xs font-medium">Requests</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">schedule</span>
+<span class="text-xs font-medium">Latecomers</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">bar_chart</span>
+<span class="text-xs font-medium">Reports</span>
+</a>
+<a class="flex flex-col items-center justify-center text-gray-500 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="text-xs font-medium">Settings</span>
+</a>
+</div>
+</nav>
+<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+<div class="w-full max-w-sm rounded-xl bg-[#1a2530] shadow-2xl border border-white/10">
+<div class="p-6">
+<div class="flex items-center justify-between">
+<h3 class="text-lg font-bold text-white">Request Details</h3>
+<button class="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-gray-300 hover:bg-white/20">
+<span class="material-symbols-outlined text-xl">close</span>
+</button>
+</div>
+<div class="mt-6 space-y-4 text-sm">
+<div class="flex justify-between">
+<span class="text-gray-400">Student Name</span>
+<span class="font-medium text-white">Ethan Carter</span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-400">Student ID</span>
+<span class="font-medium text-white">STU-12345</span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-400">Contact Number</span>
+<span class="font-medium text-white">+1 234 567 890</span>
+</div>
+<hr class="border-white/10"/>
+<div class="flex justify-between">
+<span class="text-gray-400">Out Time</span>
+<span class="font-medium text-white">10:00 AM</span>
+</div>
+<div class="flex justify-between">
+<span class="text-gray-400">Return Time</span>
+<span class="font-medium text-white">12:00 PM</span>
+</div>
+<div class="space-y-2">
+<span class="text-gray-400">Reason</span>
+<p class="font-medium text-white">
+                Going to the library to borrow some books for the upcoming semester project.
+              </p>
+</div>
+</div>
+</div>
+<div class="flex gap-3 bg-black/20 p-4 rounded-b-xl">
+<button class="flex-1 rounded-lg bg-red-600/90 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-600">Reject</button>
+<button class="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary/90">Approve</button>
+</div>
+</div>
+</div>
+</div>
+</body></html>

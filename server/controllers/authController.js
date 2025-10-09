@@ -4,12 +4,65 @@ const Faculty = require('../models/Faculty');
 const Student = require('../models/student');
 const Security = require('../models/security');
 
+// ----------------- REGISTER -----------------
+exports.register = async (req, res) => {
+  try {
+    const { fullName, email, employeeId, department, designation, password } = req.body;
+    const profilePhotoPath = req.file ? req.file.path : null; // Get the path of the uploaded file
+
+    // Check if faculty already exists
+    let faculty = await Faculty.findOne({ employeeId });
+    if (faculty) {
+      return res.status(400).json({ success: false, message: 'Faculty with this Employee ID already exists.' });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Determine role based on designation
+    const role = designation.toUpperCase() === 'HOD' ? 'HOD' : 'faculty';
+
+    // Create new faculty
+    faculty = new Faculty({
+      fullName,
+      email,
+      employeeId,
+      department,
+      designation,
+      password: hashedPassword,
+      profilePhoto: profilePhotoPath, // Save the profile photo path
+    });
+
+    await faculty.save();
+
+    // Generate token
+    const token = generateToken({
+      id: faculty._id,
+      role: role,
+      fullName: faculty.fullName,
+      department: faculty.department
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Faculty registered successfully.',
+      token,
+      faculty: { ...faculty.toObject(), password: undefined, profilePhoto: faculty.profilePhoto }
+    });
+
+  } catch (error) {
+    console.error('Faculty registration error:', error);
+    res.status(500).json({ success: false, message: 'Server error during registration.' });
+  }
+};
+
 // ----------------- LOGIN -----------------
 exports.studentLogin = async (req, res) => {
   try {
     const { studentId, password } = req.body;
     const student = await Student.findOne({ studentId });
-    
+
     if (!student) {
       return res.status(401).json({
         success: false,
@@ -28,14 +81,18 @@ exports.studentLogin = async (req, res) => {
     const token = generateToken({
       id: student._id,
       role: 'student',
-      name: student.fullName,
-      department: student.department
+      fullName: student.fullName,
+      department: student.department,
+      year: student.year,
+      studentId: student.studentId,
+      email: student.email,
+      profilePictureUrl: student.profilePictureUrl
     });
 
     res.json({
       success: true,
       token,
-      student: { ...student.toObject(), password: undefined }
+      user: { id: student._id, role: 'student', studentId: student.studentId, fullName: student.fullName, department: student.department, profilePictureUrl: student.profilePictureUrl }
     });
   } catch (error) {
     console.error('Student login error:', error);
@@ -51,7 +108,7 @@ exports.facultyLogin = async (req, res) => {
     const { employeeId, facultyId, password } = req.body;
     const id = employeeId || facultyId;
     const faculty = await Faculty.findOne({ employeeId: id });
-    
+
     if (!faculty) {
       return res.status(401).json({
         success: false,
@@ -67,22 +124,22 @@ exports.facultyLogin = async (req, res) => {
       });
     }
 
-    const role = faculty.designation.toLowerCase() === 'hod' ? 'HOD' : 'faculty';
+    const role = faculty.designation.toUpperCase() === 'HOD' ? 'HOD' : 'faculty';
     const token = generateToken({
       id: faculty._id,
       role: role,
-      name: faculty.fullName,
+      fullName: faculty.fullName,
       department: faculty.department // Add department
     });
 
     const facultyData = faculty.toObject();
     delete facultyData.password;
-    
+
     res.json({
       success: true,
       message: "Login successful",
       token,
-      faculty: facultyData,
+      user: { id: faculty._id, role: role, ...facultyData },
     });
   } catch (error) {
     console.error('Faculty login error:', error);
@@ -108,9 +165,14 @@ exports.securityLogin = async (req, res) => {
     console.log('Passkey comparison result:', ok); // Added log
     if (!ok) return res.status(401).json({ success: false, message: 'Invalid passkey' });
 
-    const token = generateToken({ id: security._id, role: 'security', name: 'Security', department: 'Security' });
+    const token = generateToken({ id: security._id, role: 'security', fullName: 'Security', department: 'Security' });
     console.log('Token generated. Login successful.'); // Added log
-    return res.json({ success: true, message: 'Login successful', token });
+    return res.json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: { id: security._id, role: 'security', fullName: 'Security', department: 'Security' }
+    });
   } catch (err) {
     console.error('Security login error:', err);
     res.status(500).json({ success: false, message: 'Server error' });
@@ -182,8 +244,20 @@ exports.unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Student login successful for studentId:', studentId);
-      const token = generateToken({ id: student._id, role: 'student', name: student.fullName, department: student.department });
-      return res.json({ token, user: { id: student._id, role: 'student', studentId: student.studentId, fullName: student.fullName, department: student.department }});
+      const token = generateToken({
+        id: student._id,
+        role: 'student',
+        fullName: student.fullName,
+        department: student.department,
+        year: student.year,
+        studentId: student.studentId,
+        email: student.email,
+        profilePictureUrl: student.profilePictureUrl
+      });
+      const studentData = student.toObject();
+      delete studentData.password;
+
+      return res.json({ token, user: studentData });
     }
 
     if (role === 'faculty') {
@@ -202,8 +276,9 @@ exports.unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Faculty login successful for employeeId:', id);
-      const role = faculty.designation.toLowerCase() === 'hod' ? 'HOD' : 'faculty';
-      const token = generateToken({ id: faculty._id, role: role, name: faculty.fullName, department: faculty.department });
+      const role = faculty.designation.toUpperCase() === 'HOD' ? 'HOD' : 'faculty';
+      const token = generateToken({ id: faculty._id, role: role, fullName: faculty.fullName, department: faculty.department });
+      console.log('Generated token for faculty:', token, typeof token);
       const f = faculty.toObject(); delete f.password;
       return res.json({ token, user: { id: faculty._id, role: role, ...f }});
     }
@@ -215,8 +290,8 @@ exports.unifiedLogin = async (req, res) => {
       if (!security) return res.status(401).json({ message: "Security user not found" });
       const ok = await bcrypt.compare(passkey, security.passkey);
       if (!ok) return res.status(401).json({ message: "Invalid passkey" });
-      const token = generateToken({ id: security._id, role: 'security', name: 'Security', department: 'Security' });
-      return res.json({ token, user: { id: security._id, role: 'security', name: 'Security', department: 'Security' }});
+      const token = generateToken({ id: security._id, role: 'security', fullName: 'Security', department: 'Security' });
+      return res.json({ token, user: { id: security._id, role: 'security', fullName: 'Security', department: 'Security' }});
     }
 
     return res.status(400).json({ message: "Unsupported role" });

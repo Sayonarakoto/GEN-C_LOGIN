@@ -165,12 +165,8 @@ exports.getGatePassHistory = async (req, res) => {
     const facultyId = req.user.id;
     const historyPasses = await GatePass.find({
       $or: [
-        { faculty_approver_id: facultyId },
+        { faculty_approver_id: facultyId, faculty_status: { $ne: 'PENDING' } }, // Faculty has acted on it
         { hod_approver_id: facultyId, hod_status: { $ne: 'PENDING' } } // HOD has acted on it
-      ],
-      $and: [
-        { faculty_status: { $ne: 'PENDING' } }, // Not pending faculty approval
-        { hod_status: { $ne: 'PENDING' } } // Not pending HOD approval
       ]
     })
       .populate('student_id', 'fullName studentId department')
@@ -208,7 +204,7 @@ exports.facultyApproveGatePass = async (req, res) => {
     await AuditLog.create({
         pass_id: pass._id,
         event_type: 'Approved',
-        actor_role: 'Faculty',
+        actor_role: 'faculty',
         actor_id: req.user.id,
         event_details: {
             status_change: 'faculty_status: PENDING -> APPROVED',
@@ -242,7 +238,14 @@ exports.facultyApproveGatePass = async (req, res) => {
     res.status(200).json({ success: true, data: pass });
   } catch (error) {
     console.error('Error in facultyApproveGatePass:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    // Log more details about the error for debugging
+    if (error.name === 'CastError') {
+      return res.status(400).json({ success: false, message: 'Invalid ID format provided.' });
+    }
+    if (error.name === 'ValidationError') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+    res.status(500).json({ success: false, message: 'Server Error', details: error.message });
   }
 };
 
@@ -268,7 +271,7 @@ exports.facultyRejectGatePass = async (req, res) => {
         await AuditLog.create({
             pass_id: pass._id,
             event_type: 'Rejected',
-            actor_role: 'Faculty',
+            actor_role: 'faculty',
             actor_id: req.user.id,
             event_details: {
                 status_change: 'faculty_status: PENDING -> REJECTED',

@@ -244,6 +244,53 @@ const FacultyDashboard = () => {
 
       {/* Main Content */}
       <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+<<<<<<< HEAD
+=======
+        {/* Header */}
+        {/* Header */}
+        <Box
+          sx={{
+            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)', // Apply the gradient
+            color: 'white', // Ensure text is visible on the dark background
+            borderBottom: "1px solid #e5e7eb", // Keep existing border
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+            px: 4, py: { xs: 1.5, md: 2 }
+          }}
+        >
+          <Box sx={{ display: "flex", alignItems: "center" }}>
+            <MUIButton variant="text" onClick={() => setShowOffcanvas(true)} sx={{ display: { md: "none" }, minWidth: 0 }}>
+              <i className='bx bx-menu' style={{ fontSize: 26, color: "white" }}></i>
+            </MUIButton>
+            <Typography
+              variant="h5"
+              fontWeight={700}
+              sx={{ color: "white", ml: { xs: 0, md: 2 }, fontSize: { xs: 18, md: 24 } }}
+            >
+              {user?.role === 'HOD' ? 'HOD Dashboard' : 'Faculty Dashboard'}
+            </Typography>
+          </Box>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+            <i className='bx bx-bell' style={{ fontSize: 24, color: "white' }}></i>
+            <Avatar
+              src={user?.profilePictureUrl ? `http://localhost:3001${user.profilePictureUrl}` : undefined}
+              alt={user?.fullName ? user.fullName.charAt(0).toUpperCase() : ''}
+              sx={{ width: 32, height: 32, cursor: 'pointer' }}
+              onClick={() => handleMenuClick('profile')}
+            >
+              {user?.fullName ? user.fullName.charAt(0).toUpperCase() : ''}
+            </Avatar>
+            <Box sx={{ display: "flex", flexDirection": "column", alignItems: "flex-end" }}>
+              <Typography variant="subtitle1" sx={{ color: "white", fontWeight: 600 }}>
+                Hi, {user?.fullName}
+              </Typography>
+              <Typography variant="body2" sx={{ color: "white" }}>
+                Department: {user?.department}
+              </Typography>
+            </Box>
+          </Box>
+        </Box>
+
+>>>>>>> 3c5e8e76f3f1bfa95d35f208fbc285b52afea724
         {/* Main content layout */}
         <Container fluid sx={{ background: "#f3f4f6", flex: 1, p: { xs: 2, md: 6 } }}>
           <ProfileHeaderBox>

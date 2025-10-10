@@ -2,13 +2,16 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Container, Row, Col, Nav, Offcanvas } from "react-bootstrap";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'boxicons/css/boxicons.min.css'; // Import boxicons CSS
+import { io } from 'socket.io-client';
 import {
   Box,
   Typography,
   Avatar,
   Card, // Using MUI Card for consistency
   Button as MUIButton, // Renamed to avoid conflict with react-bootstrap Button
+  Grid,
 } from "@mui/material";
+import { styled } from '@mui/material/styles';
 
 import { useNavigate } from "react-router-dom";
 import { useAuth } from '../hooks/useAuth';
@@ -75,6 +78,28 @@ const FacultyDashboard = () => {
     }
   }, [selectedKey, fetchAllStudents, loading, user]);
 
+  useEffect(() => {
+    if (user) { // Check if user object is available
+      const socket = io('http://localhost:3001');
+
+      socket.on('connect', () => {
+        console.log('Faculty connected to Socket.IO');
+        if (user.id) {
+          socket.emit('authenticate', user.id);
+        }
+      });
+
+      socket.on('newNotification', (data) => {
+        toast.info(data.message);
+        refreshStats(); // Refresh stats on new notification
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, [user, toast, refreshStats]);
+
   const handleMenuClick = (key) => {
     if (key === 'logout') {
       logout();
@@ -129,6 +154,27 @@ const FacultyDashboard = () => {
       </Card>
     );
   };
+
+  const ProfileHeaderBox = styled(Box)(({ theme }) => ({
+    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', // Pink gradient
+    color: 'white',
+    padding: theme.spacing(4),
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: '16px',
+    marginBottom: theme.spacing(4),
+    '&::before': {
+        content: "' '",
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'url("data:image/svg+xml,<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\"><defs><pattern id=\"grain\" width=\"100\" height=\"100\" patternUnits=\"userSpaceOnUse\"><circle cx=\"25\" cy=\"25\" r=\"1\" fill=\"white\" opacity=\"0.1\"/><circle cx=\"75\" cy=\"75\" r=\"1\" fill=\"white\" opacity=\"0.1\"/><circle cx=\"50\" cy=\"10\" r=\"0.5\" fill=\"white\" opacity=\"0.1\"/></pattern></defs><rect width=\"100\" height=\"100\" fill=\"url(%23grain)\" /></svg>")',
+        opacity: 0.3,
+        zIndex: 1,
+    },
+  }));
 
   const baseMenuItems = [
     { key: 'approvals', icon: 'check-circle', label: 'Approvals' },
@@ -200,16 +246,18 @@ const FacultyDashboard = () => {
       <Box sx={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh" }}>
         {/* Main content layout */}
         <Container fluid sx={{ background: "#f3f4f6", flex: 1, p: { xs: 2, md: 6 } }}>
+          <ProfileHeaderBox>
+            <Grid container alignItems="center" spacing={3} sx={{ zIndex: 2, position: 'relative' }}>
+              <Grid item xs={12}>
+                <Typography variant="h4" component="h1" sx={{ fontWeight: 700 }}>Welcome, {user?.fullName}</Typography>
+                <Typography variant="h6" sx={{ opacity: 0.9, mt: 0.5 }}>{user?.designation} - {user?.department}</Typography>
+              </Grid>
+            </Grid>
+          </ProfileHeaderBox>
           {/* Top summary cards */}
           <Row className="mb-4">
             <Col md={3} xs={12} className="mb-3">
-              <DashboardStatCard title="Pending Requests" value={stats.pending} color="#f59e42" />
-            </Col>
-            <Col md={3} xs={12} className="mb-3">
               <DashboardStatCard title="Late Entries Today" value={stats.lateToday} color="#22c55e" />
-            </Col>
-            <Col md={3} xs={12} className="mb-3">
-              <DashboardStatCard title="Approved Late Entries" value={stats.approved} color="#3b82f6" />
             </Col>
             <Col md={3} xs={12} className="mb-3">
               <DashboardStatCard title="Alerts" value={stats.alerts} color="#ef4444" />

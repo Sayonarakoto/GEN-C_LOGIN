@@ -164,20 +164,20 @@ const FacultyGatePass = () => {
 
   const handleApprove = async (id) => {
     try {
-      await apiClient.put(`/api/gatepass/approve/${id}`);
+      await apiClient.put(`/api/gatepass/faculty/approve/${id}`);
       fetchGatePassData(); // Refresh data
     } catch (err) {
-      setError('Failed to approve request.');
+      setError(err.response?.data?.message || 'Failed to approve request.');
       console.error(err);
     }
   };
 
   const handleReject = async (id) => {
     try {
-      await apiClient.put(`/api/gatepass/reject/${id}`);
+      await apiClient.put(`/api/gatepass/faculty/reject/${id}`); // Corrected endpoint
       fetchGatePassData(); // Refresh data
     } catch (err) {
-      setError('Failed to reject request.');
+      setError(err.response?.data?.message || 'Failed to reject request.');
       console.error(err);
     }
   };

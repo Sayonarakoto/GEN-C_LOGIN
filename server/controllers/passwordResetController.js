@@ -41,9 +41,13 @@ const forgotPassword = async (req, res) => {
     const resetPasswordExpire = Date.now() + 3600000; // 1 hour
 
     // Update user with reset token and expiration
-    user.resetPasswordToken = passwordResetToken;
-    user.resetPasswordExpire = resetPasswordExpire;
-    await user.save(); // Use user.save()
+    // Update user with reset token and expiration
+    await Student.updateOne({ _id: user._id }, {
+      $set: {
+        resetPasswordToken: passwordResetToken,
+        resetPasswordExpire: resetPasswordExpire,
+      }
+    });
 
     // Create reset URL
     const resetURL = `http://localhost:5173/reset-password/${resetToken}`;
@@ -94,10 +98,13 @@ const resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update user's password and clear reset token fields
-    user.password = hashedPassword; // Update the hashed password field
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpire = undefined;
-    await user.save(); // Use user.save()
+    await Student.updateOne({ _id: user._id }, {
+      $set: {
+        password: hashedPassword,
+        resetPasswordToken: undefined,
+        resetPasswordExpire: undefined,
+      }
+    });
 
     res.status(200).json({ message: 'Password has been reset successfully.' });
   } catch (error) {

@@ -10,11 +10,9 @@ const ForgotPassword = () => {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [email, setEmail] = useState('');
-  const [emailForResend, setEmailForResend] = useState(''); // New state
 
-  const handleSubmit = async (event) => {
-    event.preventDefault(); // Prevent default form submission
-    if (!isValidEmail(email)) {
+  const sendResetLink = async (emailToSend) => {
+    if (!isValidEmail(emailToSend)) {
       toast.error("Please enter a valid email!");
       return;
     }
@@ -22,10 +20,9 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       await api.post('/api/forgot-password', {
-        email: email,
+        email: emailToSend,
       });
       setSubmitted(true);
-      setEmailForResend(email); // Store email for resend
       toast.success("✅ A new password reset email has been sent!");
     } catch (err) {
       console.error(err);
@@ -36,12 +33,13 @@ const ForgotPassword = () => {
     }
   };
 
+  const handleSubmit = async (event) => {
+    event.preventDefault(); // Prevent default form submission
+    await sendResetLink(email);
+  };
+
   const handleResendEmail = async () => {
-    if (!emailForResend) {
-      toast.error("Email is missing for resend.");
-      return;
-    }
-    await handleSubmit({ email: emailForResend }); // Use stored email
+    await sendResetLink(email);
   };
 
   // Basic email regex

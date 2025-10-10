@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table,
   TableBody,
@@ -10,11 +10,35 @@ import {
   TablePagination,
   Typography,
   Box,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
+import { useAuth } from '../hooks/useAuth';
+import api from '../api/client';
 
-const StudentTable = ({ students }) => {
+const StudentTable = () => {
+  const [students, setStudents] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [yearFilter, setYearFilter] = useState('all');
+  const { user } = useAuth();
+
+  const fetchStudents = useCallback(async (year, department) => {
+    try {
+      const response = await api.get(`/api/students?year=${year}&department=${department}`);
+      setStudents(response.data.data || []);
+    } catch (error) {
+      console.error("Failed to fetch students:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user?.department) {
+      fetchStudents(yearFilter, user.department);
+    }
+  }, [yearFilter, user, fetchStudents]);
 
   const columns = [
     { title: 'Student ID', dataField: 'studentId' },
@@ -38,10 +62,31 @@ const StudentTable = ({ students }) => {
     setPage(0);
   };
 
+  const handleYearChange = (event) => {
+    setYearFilter(event.target.value);
+  };
+
   const emptyRows = page > 0 ? Math.max(0, (1 + page) * rowsPerPage - students.length) : 0;
 
   return (
     <Paper sx={{ width: '100%', overflow: 'hidden' }}>
+      <Box sx={{ p: 2 }}>
+        <FormControl sx={{ minWidth: 120 }}>
+          <InputLabel id="year-filter-label">Year</InputLabel>
+          <Select
+            labelId="year-filter-label"
+            id="year-filter"
+            value={yearFilter}
+            label="Year"
+            onChange={handleYearChange}
+          >
+            <MenuItem value="all">All</MenuItem>
+            <MenuItem value="1st">1st Year</MenuItem>
+            <MenuItem value="2nd">2nd Year</MenuItem>
+            <MenuItem value="3rd">3rd Year</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
       <TableContainer sx={{ maxHeight: 440 }}>
         <Table stickyHeader aria-label="student table">
           <TableHead>

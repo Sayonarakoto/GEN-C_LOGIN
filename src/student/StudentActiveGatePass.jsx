@@ -2,6 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Image, Badge, Form, Button, InputGroup, Alert, Spinner } from 'react-bootstrap';
 import { CheckCircleOutline, Key, CalendarToday, Place, Comment, PersonPin, QrCode2, Send } from '@mui/icons-material';
 import apiClient from '../api/client'; // Assuming apiClient is in this path
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { TimePicker } from '@mui/x-date-pickers/TimePicker';
+import { TextField } from '@mui/material';
+import dayjs from 'dayjs';
+import { useToast } from '../hooks/useToast';
 
 // --- Reusable Detail Row Component ---
 const DetailRow = ({ icon, label, value, className = '' }) => (
@@ -17,11 +23,15 @@ const DetailRow = ({ icon, label, value, className = '' }) => (
 // --- Gate Pass Request Form Component ---
 const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
     const [isHalfDay, setIsHalfDay] = useState(false);
+    const [exitTime, setExitTime] = useState(null);
+    const [returnTime, setReturnTime] = useState(null);
 
     const handleSubmit = (event) => {
         event.preventDefault();
         const formData = new FormData(event.target);
         const data = Object.fromEntries(formData.entries());
+        data.exitTime = exitTime ? dayjs(exitTime).format('HH:mm') : '';
+        data.returnTime = returnTime ? dayjs(returnTime).format('HH:mm') : '';
         onSubmit(data);
     };
 
@@ -44,7 +54,7 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
 
                     <Form.Group className="mb-3" controlId="faculty-select">
                         <Form.Label>Select Approving Faculty/HOD</Form.Label>
-                        <Form.Select name="facultyId" required>
+                        <Form.Select name="selectedApproverId" required>
                             <option value="">Select a faculty member...</option>
                             {facultyList.map(faculty => (
                                 <option key={faculty._id} value={faculty._id}>{faculty.fullName} ({faculty.designation} - {faculty.department})</option>
@@ -64,14 +74,26 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
                         <Col sm={6}>
                             <Form.Group className="mb-3" controlId="exit-time">
                                 <Form.Label>Required Exit Time</Form.Label>
-                                <Form.Control type="time" name="exitTime" required />
+                                <TimePicker
+                                    enableAccessibleFieldDOMStructure={false}
+                                    value={exitTime}
+                                    onChange={setExitTime}
+                                    slots={{ textField: TextField }}
+                                    slotProps={{ textField: { required: true, fullWidth: true } }}
+                                />
                             </Form.Group>
                         </Col>
                         {!isHalfDay && (
                             <Col sm={6}>
                                 <Form.Group className="mb-3" controlId="return-time">
                                     <Form.Label>Expected Return Time</Form.Label>
-                                    <Form.Control type="time" name="returnTime" />
+                                    <TimePicker
+                                        enableAccessibleFieldDOMStructure={false}
+                                        value={returnTime}
+                                        onChange={setReturnTime}
+                                        slots={{ textField: TextField }}
+                                        slotProps={{ textField: { fullWidth: true } }}
+                                    />
                                 </Form.Group>
                             </Col>
                         )}
@@ -96,6 +118,7 @@ const StudentGatePass = () => {
     const [liveTime, setLiveTime] = useState(new Date());
     const [faculty, setFaculty] = useState([]);
     const [submitLoading, setSubmitLoading] = useState(false);
+    const { showToast } = useToast();
 
 
     const fetchActiveGatePass = useCallback(async () => {
@@ -122,9 +145,9 @@ const StudentGatePass = () => {
             setHistory(response.data.data);
         } catch (err) {
             console.error('Failed to fetch gate pass history:', err);
-            // Non-critical error, so we don't show a full error screen
+            showToast('Failed to fetch gate pass history.', 'error');
         }
-    }, []);
+    }, [showToast]);
 
     const fetchFaculty = useCallback(async () => {
         try {
@@ -154,6 +177,7 @@ const StudentGatePass = () => {
         try {
             // I need a new endpoint for this
             const response = await apiClient.post('/api/gatepass/student/request', formData);
+            showToast('Gate pass request submitted successfully!', 'success');
             // After submitting, we should probably show a "pending" status, not an active pass.
             // For now, let's just refetch the active pass.
             fetchActiveGatePass();
@@ -241,7 +265,9 @@ const StudentGatePass = () => {
                 </Card>
             ) : (
                 // --- Form View ---
-                <GatePassRequestForm onSubmit={handleRequestSubmit} loading={submitLoading} facultyList={faculty} />
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <GatePassRequestForm onSubmit={handleRequestSubmit} loading={submitLoading} facultyList={faculty} />
+                </LocalizationProvider>
             )}
             
             <GatePassHistory history={history} />

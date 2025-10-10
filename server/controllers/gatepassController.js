@@ -80,6 +80,16 @@ exports.requestGatePass = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid approver designation.' });
         }
 
+        const now = new Date();
+        const [exitHours, exitMinutes] = exitTime.split(':');
+        const exitDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), exitHours, exitMinutes);
+
+        let returnDate = null;
+        if (returnTime) {
+            const [returnHours, returnMinutes] = returnTime.split(':');
+            returnDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), returnHours, returnMinutes);
+        }
+
         const newPass = new GatePass({
             student_id: studentId,
             destination,
@@ -87,8 +97,8 @@ exports.requestGatePass = async (req, res) => {
             faculty_approver_id,
             hod_approver_id,
             department_id: student.department,
-            date_valid_from: new Date(exitTime),
-            date_valid_to: returnTime ? new Date(returnTime) : null,
+            date_valid_from: exitDate,
+            date_valid_to: returnDate,
             faculty_status,
             hod_status,
         });

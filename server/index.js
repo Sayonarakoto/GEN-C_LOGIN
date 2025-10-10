@@ -33,7 +33,7 @@ app.use((req, res, next) => {
   req.userSocketMap = socketManager.getUserSocketMap();
   next();
 });
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Changed this line
+app.use('/static/uploads', express.static(path.join(__dirname, 'uploads'))); // Changed this line
 
 // Add debugging middleware
 app.use((req, res, next) => {

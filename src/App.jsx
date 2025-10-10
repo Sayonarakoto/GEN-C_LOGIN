@@ -24,6 +24,7 @@ import StudentProfile from './student/StudentProfile';
 import DeclinedRequestDetails from './student/DeclinedRequestDetails';
 import React, { useEffect, useState, createContext, useContext } from 'react';
 import io from 'socket.io-client';
+import { NotificationProvider } from './context/NotificationContext';
 
 // Create a component to hold the main Routes logic
 const MainRoutes = () => {
@@ -83,9 +84,11 @@ function App() {
 
   return (
     <>
-      <InterceptorWrapper>
-        <MainRoutes />
-      </InterceptorWrapper>
+      <NotificationProvider>
+        <InterceptorWrapper>
+          <MainRoutes />
+        </InterceptorWrapper>
+      </NotificationProvider>
     </>
   );
 }

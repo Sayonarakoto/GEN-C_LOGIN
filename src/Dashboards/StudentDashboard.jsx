@@ -27,6 +27,8 @@ import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import useToastService from '../hooks/useToastService';
 import api from '../api/client';
+import { useNotifications } from '../context/NotificationContext';
+import NotificationList from '../components/NotificationList';
 
 import './Dashboard.css';
 
@@ -140,6 +142,7 @@ export const DashboardHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const toast = useToastService();
+  const { addNotification } = useNotifications(); // Import useNotifications
   const [recentPasses, setRecentPasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -236,7 +239,9 @@ export const DashboardHome = () => {
 
       socket.on('statusUpdate:gatePass', (data) => {
         console.log('Gate pass status update received:', data);
-        toast.info(`Your gate pass status has been updated to ${data.newStatus}`);
+        const message = `Your gate pass status has been updated to ${data.newStatus}.`;
+        toast.info(message);
+        addNotification(message, data.newStatus === 'Approved' ? 'success' : 'alert', `/student/active-pass`); // Add notification
         fetchRequests();
       });
 
@@ -244,7 +249,7 @@ export const DashboardHome = () => {
         socket.disconnect();
       };
     }
-  }, [user, fetchRequests, toast]);
+  }, [user, fetchRequests, toast, addNotification]); // Add addNotification to dependency array
 
   return (
     <div className="dashboard-content-box">
@@ -280,36 +285,16 @@ export default function StudentDashboard() {
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const toast = useToastService();
+  const { unreadCount, markAllAsRead } = useNotifications();
 
   const [siderVisible, setSiderVisible] = useState(false);
-  const [rejectedRequests, setRejectedRequests] = useState([]);
-  const [rejectedCount, setRejectedCount] = useState(0);
-
-  // This currently only fetches REJECTED Late Comers for notifications
-  const fetchRejected = useCallback(async () => {
-    try {
-      // NOTE: If you want to include rejected Special Passes in the notification count,
-      // you'll need to create a new backend endpoint to fetch ALL rejected passes.
-      const { data } = await api.get('/api/latecomers/rejected-for-student');
-      if (data?.success) {
-        setRejectedRequests(data.entries);
-        setRejectedCount(data.entries.length);
-      }
-    } catch (err) {
-      console.error('Error fetching rejected requests:', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (user?.role === 'student') fetchRejected();
-  }, [user, fetchRejected]);
+  const [showNotificationList, setShowNotificationList] = useState(false);
 
   const handleNotificationClick = () => {
-    if (rejectedRequests.length > 0) {
-      // Directs to the first rejected request's edit page
-      navigate(`request/edit/${rejectedRequests[0]._id}`);
-    } else {
-      toast.info('No rejected requests to review.');
+    console.log("Notification bell clicked. showNotificationList:", showNotificationList);
+    setShowNotificationList((prev) => !prev);
+    if (!showNotificationList && unreadCount > 0) {
+      markAllAsRead();
     }
   };
 
@@ -333,7 +318,15 @@ export default function StudentDashboard() {
           <Form.Check type="switch" id="theme-switch" label={theme === 'dark' ? <DarkModeOutlined /> : <LightModeOutlined />} checked={theme === 'dark'} onChange={toggleTheme} />
           <div className="position-relative" style={{ cursor: 'pointer' }} onClick={handleNotificationClick}>
             <NotificationsOutlined className="notification-icon" />
-            {rejectedCount > 0 && <Badge pill bg="danger" className="notification-badge">{rejectedCount}</Badge>}
+            {unreadCount > 0 && <Badge pill bg="danger" className="notification-badge">{unreadCount}</Badge>}
+            {showNotificationList && (
+              <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 1000, marginTop: '10px' }}>
+                <NotificationList onClose={() => {
+                  console.log("NotificationList onClose called.");
+                  setShowNotificationList(false);
+                }} />
+              </div>
+            )}
           </div>
           <LogoutOutlined className="logout-icon" onClick={() => logout('/student-login')} />
         </div>

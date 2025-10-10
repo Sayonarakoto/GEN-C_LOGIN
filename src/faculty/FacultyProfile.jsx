@@ -247,7 +247,7 @@ const FacultyProfile = () => {
             <Paper elevation={3} sx={{ borderRadius: '16px', overflow: 'hidden' }}>
                 <ProfileHeaderBox>
                     <Grid container alignItems="center" spacing={3} sx={{ zIndex: 2, position: 'relative' }}>
-                        <Grid item xs={12} md={3} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+                        <Grid xs={12} md={3} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
                             <AvatarContainer>
                                 <StyledAvatar
                                     src={fullProfilePictureUrl}
@@ -268,7 +268,7 @@ const FacultyProfile = () => {
                                 </UploadButton>
                             </AvatarContainer>
                         </Grid>
-                        <Grid item xs={12} md={6} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+                        <Grid xs={12} md={6} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
                             <Typography variant="h4" component="h2" sx={{ fontWeight: 700 }}>{formData.fullName}</Typography>
                             <Typography variant="h6" sx={{ opacity: 0.9, mt: 0.5 }}>{formData.designation} - {formData.department}</Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', md: 'flex-start' }, mt: 1 }}>
@@ -300,19 +300,19 @@ const FacultyProfile = () => {
                                     <PersonOutline /> Personal Information
                                 </Typography>
                                 <Grid container spacing={3}>
-                                    <Grid item xs={12} sm={6}>
+                                    <Grid xs={12} sm={6}>
                                         <TextField fullWidth label="Full Name" name="fullName" value={formData.fullName} onChange={handleInputChange} margin="normal" />
                                     </Grid>
-                                    <Grid item xs={12} sm={6}>
+                                    <Grid xs={12} sm={6}>
                                         <TextField fullWidth label="Faculty ID" name="facultyId" value={formData.facultyId} InputProps={{ readOnly: true }} margin="normal" />
                                     </Grid>
-                                    <Grid item xs={12} sm={6}>
+                                    <Grid xs={12} sm={6}>
                                         <TextField fullWidth label="Email" name="email" value={formData.email} onChange={handleInputChange} margin="normal" />
                                     </Grid>
-                                    <Grid item xs={12} sm={6}>
+                                    <Grid xs={12} sm={6}>
                                         <TextField fullWidth label="Designation" name="designation" value={formData.designation} onChange={handleInputChange} margin="normal" />
                                     </Grid>
-                                    <Grid item xs={12} sm={6}>
+                                    <Grid xs={12} sm={6}>
                                         <TextField fullWidth label="Department" name="department" value={formData.department} onChange={handleInputChange} margin="normal" />
                                     </Grid>
                                 </Grid>

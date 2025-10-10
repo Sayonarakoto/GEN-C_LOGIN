@@ -107,7 +107,7 @@ const StudentProfile = () => {
             let profilePictureUrl = formData.profilePictureUrl;
             if (selectedFile) {
                 const uploadData = new FormData();
-                uploadData.append('profileImage', selectedData);
+                uploadData.append('profileImage', selectedFile);
                 const res = await apiClient.post('/api/student/upload-profile-picture', uploadData);
                 profilePictureUrl = res.data.filePath;
             }
@@ -141,7 +141,7 @@ const StudentProfile = () => {
             {alert && <AlertMessage message={alert.message} type={alert.type} />}
             <form onSubmit={handleUpdate}>
                 <Grid container spacing={3} direction="column">
-                    <Grid item xs={12} md={4}>
+                    <Grid xs={12} md={4}>
                         <Paper elevation={3} sx={{ p: 3, textAlign: 'center' }}>
                             <AvatarContainer>
                                 <StyledAvatar
@@ -166,13 +166,13 @@ const StudentProfile = () => {
                             <Typography variant="body2" color="text.secondary">{formData.registerNumber}</Typography>
                         </Paper>
                     </Grid>
-                    <Grid item xs={12} md={8}>
+                    <Grid xs={12} md={8}>
                         <Paper elevation={3} sx={{ p: 3 }}>
                             <Grid container spacing={2}>
-                                <Grid item xs={12}>
+                                <Grid xs={12}>
                                     <Typography variant="h6" gutterBottom>Profile Information</Typography>
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid xs={12} sm={6}>
                                     <TextField
                                         fullWidth
                                         label="Full Name"
@@ -182,7 +182,7 @@ const StudentProfile = () => {
                                         margin="normal"
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid xs={12} sm={6}>
                                     <TextField
                                         fullWidth
                                         label="Register Number"
@@ -192,7 +192,7 @@ const StudentProfile = () => {
                                         margin="normal"
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid xs={12} sm={6}>
                                     <TextField
                                         fullWidth
                                         label="Department"
@@ -202,7 +202,7 @@ const StudentProfile = () => {
                                         margin="normal"
                                     />
                                 </Grid>
-                                <Grid item xs={12} sm={6}>
+                                <Grid xs={12} sm={6}>
                                     <TextField
                                         fullWidth
                                         label="Year"
@@ -212,7 +212,7 @@ const StudentProfile = () => {
                                         margin="normal"
                                     />
                                 </Grid>
-                                <Grid item xs={12}>
+                                <Grid xs={12}>
                                     <TextField
                                         fullWidth
                                         label="Email"
@@ -222,7 +222,7 @@ const StudentProfile = () => {
                                         margin="normal"
                                     />
                                 </Grid>
-                                <Grid item xs={12}>
+                                <Grid xs={12}>
                                     <Button
                                         type="submit"
                                         variant="contained"

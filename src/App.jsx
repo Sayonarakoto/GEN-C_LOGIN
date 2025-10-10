@@ -22,6 +22,8 @@ import StudentActiveGatePass from './student/StudentActiveGatePass';
 import FacultyGatePass from './faculty/FacultyGatePass';
 import StudentProfile from './student/StudentProfile';
 import DeclinedRequestDetails from './student/DeclinedRequestDetails';
+import React, { useEffect, useState, createContext, useContext } from 'react';
+import io from 'socket.io-client';
 
 // Create a component to hold the main Routes logic
 const MainRoutes = () => {

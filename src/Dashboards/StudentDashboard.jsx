@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import {
   Row, Col, Card, Button, Spinner, Alert,
   Offcanvas, Nav, Badge, Form
@@ -138,6 +139,7 @@ const RequestHistory = ({ loading, error, requests, navigate }) => {
 export const DashboardHome = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const toast = useToastService();
   const [recentPasses, setRecentPasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -220,8 +222,29 @@ export const DashboardHome = () => {
 }, []);
 
   useEffect(() => {
-    if (user?.role === 'student') fetchRequests();
-  }, [user, fetchRequests]);
+    if (user?.role === 'student') {
+      fetchRequests();
+
+      const socket = io('http://localhost:3001');
+
+      socket.on('connect', () => {
+        console.log('Connected to Socket.IO server');
+        if (user?.id) {
+          socket.emit('authenticate', user.id);
+        }
+      });
+
+      socket.on('statusUpdate:gatePass', (data) => {
+        console.log('Gate pass status update received:', data);
+        toast.info(`Your gate pass status has been updated to ${data.newStatus}`);
+        fetchRequests();
+      });
+
+      return () => {
+        socket.disconnect();
+      };
+    }
+  }, [user, fetchRequests, toast]);
 
   return (
     <div className="dashboard-content-box">

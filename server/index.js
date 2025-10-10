@@ -20,12 +20,17 @@ const { forgotPassword, resetPassword } = require('./controllers/passwordResetCo
 
 const app = express();
 
+const server = require('http').createServer(app);
+const socketManager = require('./socket');
+socketManager.init(server);
+
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use((req, res, next) => {
-  req.io = io;
+  req.io = socketManager.getIo();
+  req.userSocketMap = socketManager.getUserSocketMap();
   next();
 });
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Changed this line
@@ -89,15 +94,6 @@ app.use((req, res) => {
   });
 });
 const PORT = process.env.PORT || 3001;
-
-const server = require('http').createServer(app);
-const io = require('socket.io')(server, {
-  cors: {
-    origin: '*',
-  }
-});
-
-require('./socket')(io);
 
 server.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);

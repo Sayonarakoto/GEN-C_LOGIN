@@ -33,6 +33,7 @@
     "pdfkit": "^0.17.2",
     "qrcode": "^1.5.4",
     "require": "^0.4.9",
+    "socket.io": "^4.8.1",
     "speakeasy": "^2.0.0"
   },
   "devDependencies": {

@@ -324,7 +324,7 @@ exports.verifyPass = async (req, res) => {
     await logAuditAttempt(pass._id, 'Verified', securityUser, `SUCCESS (${verificationMethod}): ${finalStatus}`, auditDetails);
     
     // --- 5. Response Formatting (DFD 5.6) ---
-    return res.status(200).json({
+    const response = {
         is_valid: true,
         display_status: finalStatus, // 'ENTRY GRANTED' or 'PASS USED'
         message: 'Pass validated successfully.',
@@ -337,5 +337,8 @@ exports.verifyPass = async (req, res) => {
             hod_approver_name: pass.hod_approver_id ? pass.hod_approver_id.fullName : 'N/A',
             date_valid_to: pass.date_valid_to
         }
-    });
+    };
+
+    req.io.emit('new-pass-verified', response);
+    return res.status(200).json(response);
 };

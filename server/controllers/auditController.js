@@ -124,12 +124,12 @@ exports.getDepartmentAuditLogs = async (req, res) => {
 
     // Find all audit logs where the associated pass (SpecialPass or GatePass) belongs to this department
     const departmentSpecialPassIds = await SpecialPass.find({ department: department }).distinct('_id'); // Query by 'department' field
-    const departmentGatePassIds = await GatePass.find({ department_id: department }).distinct('_id'); // Query by 'department_id' field
+        const departmentGatePassIds = await GatePass.find({ $where: `this.department_id == '${department}'` }).distinct('_id'); // Query by 'department_id' field
 
     const allDepartmentPassIds = [...departmentSpecialPassIds, ...departmentGatePassIds];
 
     const logs = await AuditLog.find({ pass_id: { $in: allDepartmentPassIds } })
-      .populate('actor_id', 'fullName role')
+      .populate('actor_id', 'fullName role email employeeId')
       .populate('pass_id', 'pass_type status') // Populate pass details
       .sort({ timestamp: -1 });
 

@@ -209,6 +209,17 @@ exports.facultyApproveGatePass = async (req, res) => {
         },
     });
 
+    // Emit Socket.IO event for frontend update
+    if (req.io && req.userSocketMap.has(pass.student_id._id.toString())) {
+        req.io.to(pass.student_id._id.toString()).emit('statusUpdate:gatePass', {
+            recordId: pass._id,
+            newStatus: pass.faculty_status,
+            userId: pass.student_id._id,
+            eventType: 'GATEPASS_FACULTY_APPROVED',
+            faculty_approver_id: req.user.id
+        });
+    }
+
     // Notify HOD if there is one assigned
     if (pass.hod_approver_id) {
         const hod = await Faculty.findById(pass.hod_approver_id);
@@ -264,6 +275,18 @@ exports.facultyRejectGatePass = async (req, res) => {
                 rejection_reason: req.body.rejectionReason || 'No reason provided',
             },
         });
+
+        // Emit Socket.IO event for frontend update
+        if (req.io && req.userSocketMap.has(pass.student_id._id.toString())) {
+            req.io.to(pass.student_id._id.toString()).emit('statusUpdate:gatePass', {
+                recordId: pass._id,
+                newStatus: pass.faculty_status,
+                userId: pass.student_id._id,
+                eventType: 'GATEPASS_FACULTY_REJECTED',
+                faculty_approver_id: req.user.id,
+                rejection_reason: req.body.rejectionReason
+            });
+        }
 
         await sendNotification(
             pass.student_id,
@@ -335,6 +358,19 @@ exports.hodApproveGatePass = async (req, res) => {
         },
     });
 
+    // Emit Socket.IO event for frontend update
+    if (req.io && req.userSocketMap.has(pass.student_id._id.toString())) {
+        req.io.to(pass.student_id._id.toString()).emit('statusUpdate:gatePass', {
+            recordId: pass._id,
+            newStatus: pass.hod_status,
+            userId: pass.student_id._id,
+            eventType: 'GATEPASS_HOD_APPROVED',
+            hod_approver_id: req.user.id,
+            qr_code_id: pass.qr_code_id,
+            one_time_pin: pass.one_time_pin
+        });
+    }
+
     // Send notification to student
     await sendNotification(
         pass.student_id._id,
@@ -387,6 +423,18 @@ exports.hodRejectGatePass = async (req, res) => {
             },
         });
 
+        // Emit Socket.IO event for frontend update
+        if (req.io && req.userSocketMap.has(pass.student_id._id.toString())) {
+            req.io.to(pass.student_id._id.toString()).emit('statusUpdate:gatePass', {
+                recordId: pass._id,
+                newStatus: pass.hod_status,
+                userId: pass.student_id._id,
+                eventType: 'GATEPASS_HOD_REJECTED',
+                hod_approver_id: req.user.id,
+                rejection_reason: req.body.rejectionReason
+            });
+        }
+
         await sendNotification(
             pass.student_id._id,
             `Your Gate Pass to ${pass.destination} has been REJECTED by the HOD.`, 
@@ -435,6 +483,19 @@ exports.logLateReturn = async (req, res) => {
                 expectedReturnTime: gatePass.date_valid_to,
             },
         });
+
+        // Emit Socket.IO event for frontend update
+        if (req.io && req.userSocketMap.has(gatePass.student_id._id.toString())) {
+            req.io.to(gatePass.student_id._id.toString()).emit('statusUpdate:gatePass', {
+                recordId: gatePass._id,
+                newStatus: 'LATE_RETURN',
+                userId: gatePass.student_id._id,
+                eventType: 'GATEPASS_LATE_RETURN',
+                security_id: securityId,
+                scan_location: scanLocation,
+                remarks: remarks
+            });
+        }
 
         // Notify the assigned HOD
         if (gatePass.hod_approver_id) {

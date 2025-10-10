@@ -3,22 +3,13 @@ import {
   Box,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   CircularProgress,
-  TextField,
   Button,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
   Stack,
   TablePagination,
   Container,
+  Grid,
+  Card,
 } from '@mui/material';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
@@ -44,7 +35,7 @@ const AuditTrail = () => {
     setLoading(true);
     setError('');
     try {
-      const response = await apiClient.get('/audit/logs', { params: filters });
+      const response = await apiClient.get('/audit/department-logs');
       setLogs(Array.isArray(response.data.data) ? response.data.data : []);
     } catch (err) {
       console.error("Failed to fetch audit logs:", err);
@@ -53,7 +44,7 @@ const AuditTrail = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, []);
 
   useEffect(() => {
     fetchAuditLogs();
@@ -102,96 +93,40 @@ const AuditTrail = () => {
           Audit Trail
         </Typography>
 
-        <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, mb: 4, borderRadius: 3 }}>
-          <Typography variant="h6" gutterBottom>Filters</Typography>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ mb: 2 }}>
-            <TextField
-              label="Student ID"
-              name="studentId"
-              value={filters.studentId}
-              onChange={handleFilterChange}
-              fullWidth
-            />
-            <FormControl fullWidth>
-              <InputLabel>Event Type</InputLabel>
-              <Select
-                label="Event Type"
-                name="eventType"
-                value={filters.eventType}
-                onChange={handleFilterChange}
-              >
-                <MenuItem value="">All</MenuItem>
-                <MenuItem value="Requested">Requested</MenuItem>
-                <MenuItem value="Approved">Approved</MenuItem>
-                <MenuItem value="Rejected">Rejected</MenuItem>
-                <MenuItem value="Verified">Verified</MenuItem>
-              </Select>
-            </FormControl>
-            <DatePicker
-              label="Start Date"
-              value={filters.startDate ? dayjs(filters.startDate) : null}
-              onChange={(date) => handleDateChange('startDate', date)}
-              renderInput={(params) => <TextField {...params} fullWidth />}
-            />
-            <DatePicker
-              label="End Date"
-              value={filters.endDate ? dayjs(filters.endDate) : null}
-              onChange={(date) => handleDateChange('endDate', date)}
-              renderInput={(params) => <TextField {...params} fullWidth />}
-            />
-          </Stack>
-          <Button variant="contained" onClick={fetchAuditLogs} sx={{ mr: 2 }}>Apply Filters</Button>
-          <Button variant="outlined" onClick={handleExport}>Export to CSV</Button>
-        </Paper>
-
         <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
-          <Typography variant="h6" gutterBottom>Audit Logs</Typography>
+          <Typography variant="h6" gutterBottom>Recent Department Activity</Typography>
           {loading ? (
             <Box sx={{ display: 'flex', justifyContent: 'center', my: 4 }}><CircularProgress /></Box>
           ) : error ? (
             <Typography color="error">{error}</Typography>
           ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Timestamp</TableCell>
-                    <TableCell>Event Type</TableCell>
-                    <TableCell>Actor</TableCell>
-                    <TableCell>Role</TableCell>
-                    <TableCell>Pass Type</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Details</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {paginatedLogs.length > 0 ? (
-                    paginatedLogs.map((log) => (
-                      <TableRow key={log._id}>
-                        <TableCell>{new Date(log.timestamp).toLocaleString()}</TableCell>
-                        <TableCell>{log.event_type}</TableCell>
-                        <TableCell>{log.actor_id?.fullName || 'N/A'}</TableCell>
-                        <TableCell>{log.actor_id?.role || 'N/A'}</TableCell>
-                        <TableCell>{log.pass_id?.pass_type || 'N/A'}</TableCell>
-                        <TableCell>{log.pass_id?.status || 'N/A'}</TableCell>
-                        <TableCell>{JSON.stringify(log.event_details)}</TableCell>
-                      </TableRow>
-                    ))
-                  ) : (
-                    <TableRow><TableCell colSpan={7} align="center">No audit logs found.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
-              <TablePagination
-                rowsPerPageOptions={[5, 10, 25]}
-                component="div"
-                count={logs.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
-              />
-            </TableContainer>
+            <Grid container spacing={3}>
+              {paginatedLogs.length > 0 ? (
+                paginatedLogs.map((log) => (
+                  <Grid item xs={12} sm={6} md={4} key={log._id}>
+                    <Card sx={{ p: 2, height: '100%' }}>
+                      <Typography variant="body2" color="text.secondary">
+                        {new Date(log.timestamp).toLocaleString()}
+                      </Typography>
+                      <Typography variant="h6" component="div">
+                        {log.event_type}
+                      </Typography>
+                      <Typography sx={{ mb: 1.5 }} color="text.secondary">
+                        {log.pass_id?.pass_type || 'N/A'} - {log.pass_id?.status || 'N/A'}
+                      </Typography>
+                      <Typography variant="body1">Actor: {log.actor_id?.fullName || 'N/A'}</Typography>
+                      <Typography variant="body2">Email: {log.actor_id?.email || 'N/A'}</Typography>
+                      <Typography variant="body2">Faculty ID: {log.actor_id?.employeeId || 'N/A'}</Typography>
+                      <Typography variant="body2">Details: {JSON.stringify(log.event_details)}</Typography>
+                    </Card>
+                  </Grid>
+                ))
+              ) : (
+                <Grid item xs={12}>
+                  <Typography align="center">No audit logs found.</Typography>
+                </Grid>
+              )}
+            </Grid>
           )}
         </Paper>
       </Container>

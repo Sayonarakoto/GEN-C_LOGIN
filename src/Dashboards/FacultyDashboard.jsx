@@ -217,7 +217,7 @@ const FacultyDashboard = () => {
               fontWeight={700}
               sx={{ color: "white", ml: { xs: 0, md: 2 }, fontSize: { xs: 18, md: 24 } }}
             >
-              Faculty Dashboard
+              {user?.role === 'HOD' ? 'HOD Dashboard' : 'Faculty Dashboard'}
             </Typography>
           </Box>
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>

@@ -80,14 +80,11 @@ exports.requestGatePass = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid approver designation.' });
         }
 
-        const now = new Date();
-        const [exitHours, exitMinutes] = exitTime.split(':');
-        const exitDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), exitHours, exitMinutes);
-
+        // FIX: Directly use ISO 8601 strings to create Date objects
+        const exitDate = new Date(exitTime);
         let returnDate = null;
         if (returnTime) {
-            const [returnHours, returnMinutes] = returnTime.split(':');
-            returnDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), returnHours, returnMinutes);
+            returnDate = new Date(returnTime);
         }
 
         const newPass = new GatePass({

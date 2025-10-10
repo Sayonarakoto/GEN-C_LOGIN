@@ -281,22 +281,16 @@ exports.unifiedLogin = async (req, res) => {
     if (role === 'faculty') {
       const { employeeId, facultyId, password } = req.body;
       const id = employeeId || facultyId;
-      console.log('Attempting faculty login for employeeId:', id);
       const faculty = await Faculty.findOne({ employeeId: id });
       if (!faculty) {
-        console.log('Faculty not found for employeeId:', id);
         return res.status(401).json({ message: "Invalid credentials" });
       }
-      console.log('Faculty found:', faculty.fullName);
       const ok = await bcrypt.compare(password, faculty.password);
       if (!ok) {
-        console.log('Password mismatch for employeeId:', id);
         return res.status(401).json({ message: "Invalid credentials" });
       }
-      console.log('Faculty login successful for employeeId:', id);
       const role = faculty.designation.toUpperCase() === 'HOD' ? 'HOD' : 'faculty';
       const token = generateToken({ id: faculty._id, role: role, fullName: faculty.fullName, department: faculty.department });
-      console.log('Generated token for faculty:', token, typeof token);
       const f = faculty.toObject(); delete f.password;
       return res.json({ token, user: { id: faculty._id, role: role, ...f }});
     }

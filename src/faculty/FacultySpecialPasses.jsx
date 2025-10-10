@@ -22,8 +22,10 @@ import {
   DialogContentText,
   DialogTitle,
   Modal,
+  TablePagination,
 } from '@mui/material';
 import apiClient from '../api/client';
+import { useAuth } from '../hooks/useAuth'; // Import useAuth
 
 // Component to show the list of pending requests
 const PendingRequests = () => {
@@ -147,9 +149,12 @@ const PendingRequests = () => {
 
 // Component for the Initiate Pass form
 const InitiatePass = () => {
+    const { user } = useAuth(); // Access the authenticated user
+    const hodDepartment = user?.department; // Get the HOD's department
+
     // --- A. New State Variables ---
     const [studentId, setStudentId] = useState('');
-    const [passType, setPassType] = useState('');
+    
     const [reason, setReason] = useState('');
     const [dateRequired, setDateRequired] = useState(''); // 🔑 CHANGE: Use single date field
     const [startTime, setStartTime] = useState('');     // 🔑 NEW: Start Time
@@ -157,6 +162,42 @@ const InitiatePass = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [createdPass, setCreatedPass] = useState(null);
+
+    // State for student table
+    const [students, setStudents] = useState([]);
+    const [studentTableLoading, setStudentTableLoading] = useState(true);
+    const [studentTableError, setStudentTableError] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [studentsPerPage] = useState(5);
+    const [totalStudents, setTotalStudents] = useState(0);
+
+    const fetchStudents = useCallback(async () => {
+        if (!hodDepartment) return; // Don't fetch if department is not available
+
+        setStudentTableLoading(true);
+        try {
+            const response = await apiClient.get('/api/faculty/students', {
+                params: {
+                    department: hodDepartment,
+                    search: searchQuery,
+                    page: currentPage,
+                    limit: studentsPerPage,
+                },
+            });
+            setStudents(response.data.students);
+            setTotalStudents(response.data.totalStudents);
+        } catch (err) {
+            setStudentTableError('Failed to fetch student data.');
+            console.error(err);
+        } finally {
+            setStudentTableLoading(false);
+        }
+    }, [hodDepartment, searchQuery, currentPage, studentsPerPage]);
+
+    useEffect(() => {
+        fetchStudents();
+    }, [fetchStudents]);
 
     // --- C. Submission Payload (Inside handleSubmit) ---
     const handleSubmit = async (e) => {
@@ -166,7 +207,7 @@ const InitiatePass = () => {
         try {
             const response = await apiClient.post('/api/hod/special-passes/initiate', {
                 student_id: studentId,
-                pass_type: passType,
+                
                 request_reason: reason,
                 // 🔑 CHANGE: Send the required components for date calculation
                 date_required: dateRequired,
@@ -202,25 +243,77 @@ const InitiatePass = () => {
         <Box>
             <form onSubmit={handleSubmit}>
                 <Grid container spacing={2}>
-                    <Grid item xs={12}><Typography variant="h6">Enter Pass Details</Typography></Grid>
-                    <Grid item xs={12} sm={6}><TextField fullWidth label="Student ID" value={studentId} onChange={e => setStudentId(e.target.value)} required /></Grid>
-                    <Grid item xs={12} sm={6}><TextField fullWidth label="Pass Type" value={passType} onChange={e => setPassType(e.target.value)} required /></Grid>
-                    <Grid item xs={12}><TextField fullWidth label="Reason" value={reason} onChange={e => setReason(e.target.value)} required /></Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid xs={12}><Typography variant="h6">Enter Pass Details</Typography></Grid>
+                    <Grid xs={12} sm={4}>
                         <TextField fullWidth type="date" label="Date Required" value={dateRequired} onChange={e => setDateRequired(e.target.value)} InputLabelProps={{ shrink: true }} required />
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid xs={12} sm={4}>
                         <TextField fullWidth type="time" label="Start Time" value={startTime} onChange={e => setStartTime(e.target.value)} InputLabelProps={{ shrink: true }} required />
                     </Grid>
-                    <Grid item xs={12} sm={4}>
+                    <Grid xs={12} sm={4}>
                         <TextField fullWidth type="time" label="End Time" value={endTime} onChange={e => setEndTime(e.target.value)} InputLabelProps={{ shrink: true }} required />
                     </Grid>
-                    <Grid item xs={12}>
+                    <Grid xs={12} sx={{ display: 'flex', justifyContent: 'center' }}>
                         <Button type="submit" variant="contained" disabled={loading}>{loading ? <CircularProgress size={24} /> : 'Initiate Pass'}</Button>
                     </Grid>
                 </Grid>
                 {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
             </form>
+
+            {/* Student Details Table */}
+            <Box sx={{ mt: 4 }}>
+                <Typography variant="h6" gutterBottom>Student Details</Typography>
+                <TextField
+                    fullWidth
+                    label="Search Students"
+                    variant="outlined"
+                    value={searchQuery}
+                    onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setCurrentPage(1); // Reset to first page on search
+                    }}
+                    sx={{ mb: 2 }}
+                />
+                <TableContainer component={Paper}>
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Student Name</TableCell>
+                                <TableCell>Student ID</TableCell>
+                                <TableCell>Department</TableCell>
+                                <TableCell>Year</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {studentTableLoading ? (
+                                <TableRow><TableCell colSpan={4} align="center"><CircularProgress /></TableCell></TableRow>
+                            ) : studentTableError ? (
+                                <TableRow><TableCell colSpan={4} align="center"><Typography color="error">{studentTableError}</Typography></TableCell></TableRow>
+                            ) : students.length > 0 ? (
+                                students.map((student) => (
+                                    <TableRow key={student._id}>
+                                        <TableCell>{student.fullName}</TableCell>
+                                        <TableCell>{student.studentId}</TableCell>
+                                        <TableCell>{student.department}</TableCell>
+                                        <TableCell>{student.year}</TableCell>
+                                    </TableRow>
+                                ))
+                            ) : (
+                                <TableRow><TableCell colSpan={4} align="center">No students found.</TableCell></TableRow>
+                            )}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+                <TablePagination
+                    component="div"
+                    count={totalStudents}
+                    page={currentPage - 1} // MUI pagination is 0-indexed
+                    onPageChange={(event, newPage) => setCurrentPage(newPage + 1)} // Convert back to 1-indexed
+                    rowsPerPage={studentsPerPage}
+                    rowsPerPageOptions={[5]} // Only 5 rows per page
+                    onRowsPerPageChange={() => {}} // No change in rows per page allowed
+                />
+            </Box>
             <PassModal pass={createdPass} onClose={() => setCreatedPass(null)} />
         </Box>
     );

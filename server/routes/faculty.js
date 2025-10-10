@@ -1,24 +1,27 @@
 const express = require('express');
 const router = express.Router();
-const { getDashboardStats, getDistinctDepartments, getFacultyByDepartment, getHODByDepartment, getAllFaculty, getDepartmentMembers } = require('../controllers/facultyController'); // Import getDepartmentMembers
+const facultyController = require('../controllers/facultyController'); // Import getDepartmentMembers
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 // Route to get dashboard stats
-router.get('/stats', requireAuth, requireRole('faculty'), getDashboardStats);
+router.get('/stats', requireAuth, requireRole('faculty'), facultyController.getDashboardStats);
 
 // Route to get distinct departments for faculty
-router.get('/departments/distinct', requireAuth, requireRole('faculty'), getDistinctDepartments);
+router.get('/departments/distinct', requireAuth, requireRole('faculty'), facultyController.getDistinctDepartments);
 
 // Route to get faculty by department
-router.get('/by-department/:department', requireAuth, getFacultyByDepartment);
+router.get('/by-department/:department', requireAuth, facultyController.getFacultyByDepartment);
 
 // New route to get HOD by department
-router.get('/hod/by-department/:department', requireAuth, getHODByDepartment);
+router.get('/hod/by-department/:department', requireAuth, facultyController.getHODByDepartment);
 
 // Route to get all faculty
-router.get('/all', requireAuth, getAllFaculty);
+router.get('/all', requireAuth, facultyController.getAllFaculty);
 
 // Route to get all faculty members (including HODs) in the current user's department
-router.get('/department-members', requireAuth, requireRole(['faculty', 'HOD']), getDepartmentMembers);
+router.get('/department-members', requireAuth, requireRole(['faculty', 'HOD']), facultyController.getDepartmentMembers);
+
+// Route to get students by department with search and pagination
+router.get('/students', requireAuth, requireRole(['faculty', 'HOD']), facultyController.getStudentsByDepartment);
 
 module.exports = router;

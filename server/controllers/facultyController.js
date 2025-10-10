@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const LateEntry = require('../models/LateEntry');
 const Faculty = require('../models/Faculty');
+const Student = require('../models/student'); // Import Student model
 
 // Controller to get dashboard statistics for faculty
 const getDashboardStats = async (req, res) => {
@@ -143,11 +144,11 @@ const getHODByDepartment = async (req, res) => {
     }
 
     // ✅ FIX 1: Department Regex (case-insensitive and exact match)
-    const departmentRegex = new RegExp(`^${department}$`, 'i'); 
+    const departmentRegex = new RegExp(`^${department}`, 'i'); 
     console.log(`[getHODByDepartment] Using department regex: ${departmentRegex}`); // DEBUG: Log regex
 
     // ✅ FIX 2: Designation Regex (case-insensitive and exact match)
-    const designationRegex = new RegExp('^HOD$', 'i');
+    const designationRegex = new RegExp('^HOD', 'i');
     
     const hod = await Faculty.findOne({
       department: departmentRegex,
@@ -200,4 +201,48 @@ const getDepartmentMembers = async (req, res) => {
   }
 };
 
-module.exports = { getDashboardStats, getDistinctDepartments, getFacultyByDepartment, getHODByDepartment, getAllFaculty, getDepartmentMembers };
+// @desc    Get students by department with search and pagination
+// @route   GET /api/faculty/students
+// @access  Private (Faculty, HOD)
+const getStudentsByDepartment = async (req, res) => {
+  try {
+    const { department, search, page = 1, limit = 5 } = req.query;
+
+    if (!department) {
+      return res.status(400).json({ success: false, message: 'Department is required.' });
+    }
+
+    const query = { department: department };
+
+    if (search) {
+      query.$or = [
+        { fullName: { $regex: search, $options: 'i' } },
+        { studentId: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const students = await Student.find(query)
+      .select('_id fullName studentId department year')
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const totalStudents = await Student.countDocuments(query);
+
+    res.json({ success: true, students, totalStudents });
+  } catch (error) {
+    console.error('Error fetching students by department:', error);
+    res.status(500).json({ success: false, message: 'Error fetching students' });
+  }
+};
+
+module.exports = { 
+  getDashboardStats, 
+  getDistinctDepartments, 
+  getFacultyByDepartment, 
+  getHODByDepartment, 
+  getAllFaculty, 
+  getDepartmentMembers, 
+  getStudentsByDepartment // Export the new function
+};

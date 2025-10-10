@@ -15,7 +15,7 @@ const AvatarContainer = styled('div')({
     display: 'inline-block',
 });
 
-const StyledAvatar = styled(Avatar)(({ theme }) => ({
+const StyledAvatar = styled(Avatar)(() => ({
     width: 120,
     height: 120,
     border: '4px solid white',
@@ -27,7 +27,7 @@ const StyledAvatar = styled(Avatar)(({ theme }) => ({
     color: 'white',
 }));
 
-const UploadButton = styled(IconButton)(({ theme }) => ({
+const UploadButton = styled(IconButton)(() => ({
     position: 'absolute',
     bottom: 8,
     right: 8,
@@ -107,7 +107,7 @@ const StudentProfile = () => {
             let profilePictureUrl = formData.profilePictureUrl;
             if (selectedFile) {
                 const uploadData = new FormData();
-                uploadData.append('profileImage', selectedFile);
+                uploadData.append('profileImage', selectedData);
                 const res = await apiClient.post('/api/student/upload-profile-picture', uploadData);
                 profilePictureUrl = res.data.filePath;
             }

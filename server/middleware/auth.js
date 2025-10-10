@@ -9,15 +9,18 @@ exports.requireAuth = (req, res, next) => {
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
   if (!token) {
+    console.log('requireAuth: No token provided.');
     return res.status(401).json({ message: 'Access token required' });
   }
 
   jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) {
+      console.log('requireAuth: Invalid or expired token.', err);
       return res.status(403).json({ message: 'Invalid or expired token' });
     }
 
     req.user = decoded;
+    console.log('requireAuth: Token decoded. req.user:', req.user);
     next();
   });
 };
@@ -28,8 +31,10 @@ exports.requireRole = (...roles) => {
 
     return (req, res, next) => {
         const userRole = req.user?.role;
+        console.log('requireRole: Checking roles. User role:', userRole, 'Required roles:', requiredRoles);
 
         if (!userRole) {
+            console.log('requireRole: Access denied. Role not defined for user.');
             return res.status(403).json({ message: 'Access denied. Role not defined.' });
         }
 
@@ -42,8 +47,10 @@ exports.requireRole = (...roles) => {
         });
 
         if (isAuthorized) {
+            console.log('requireRole: User is authorized.');
             next();
         } else {
+            console.log('requireRole: Access denied. Insufficient permissions for user role:', userRole, 'Required:', requiredRoles);
             res.status(403).json({ message: 'Access denied. Insufficient permissions.' });
         }
     };

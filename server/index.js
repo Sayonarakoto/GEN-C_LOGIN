@@ -25,7 +25,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
 app.use((req, res, next) => {
-  console.log('Request received by Express:', req.method, req.path);
+  req.io = io;
   next();
 });
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Changed this line
@@ -89,7 +89,17 @@ app.use((req, res) => {
   });
 });
 const PORT = process.env.PORT || 3001;
-const server = app.listen(PORT, () => {
+
+const server = require('http').createServer(app);
+const io = require('socket.io')(server, {
+  cors: {
+    origin: '*',
+  }
+});
+
+require('./socket')(io);
+
+server.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
 

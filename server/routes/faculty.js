@@ -4,7 +4,7 @@ const { getDashboardStats, getDistinctDepartments, getFacultyByDepartment, getHO
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 // Route to get dashboard stats
-router.get('/stats', requireAuth, requireRole('faculty'), getDashboardStats);
+router.get('/stats', requireAuth, requireRole(['faculty', 'HOD']), getDashboardStats);
 
 // Route to get distinct departments for faculty
 router.get('/departments/distinct', requireAuth, requireRole('faculty'), getDistinctDepartments);

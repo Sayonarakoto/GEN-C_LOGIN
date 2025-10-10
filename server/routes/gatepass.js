@@ -39,8 +39,8 @@ router.get('/student/history', requireAuth, getStudentGatePassHistory);
 
 // @route   GET /api/gatepass/faculty/pending
 // @desc    Get pending gate passes for a faculty member
-// @access  Private (Faculty)
-router.get('/faculty/pending', requireAuth, requireRole('faculty'), getPendingGatePasses);
+// @access  Private (Faculty, HOD)
+router.get('/faculty/pending', requireAuth, requireRole(['faculty', 'HOD']), getPendingGatePasses);
 
 // @route   GET /api/gatepass/faculty/history
 // @desc    Get gate pass history for a faculty member

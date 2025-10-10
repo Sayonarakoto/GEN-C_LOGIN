@@ -53,7 +53,7 @@ const Register = () => {
         formData.append('profilePhoto', file);
       }
 
-      const response = await api.post('/api/auth/register', formData, {
+      const response = await api.post('/auth/register', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
 

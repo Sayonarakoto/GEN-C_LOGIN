@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import api from '../api/client';
-import { Form, Button, Alert, Spinner } from 'react-bootstrap'; // Import Bootstrap components
+import { Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap'; // Import Bootstrap components
 
 import { useParams, useNavigate } from 'react-router-dom'; // Import useParams and useNavigate
 import useToastService from '../hooks/useToastService'; // Import ToastService
@@ -17,6 +17,16 @@ function ResetPassword() { // Renamed from Forgetpass to ResetPassword
   const [loading, setLoading] = useState(false); // Added loading state
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const toggleNewPasswordVisibility = () => {
+    setShowNewPassword(!showNewPassword);
+  };
+
+  const toggleConfirmPasswordVisibility = () => {
+    setShowConfirmPassword(!showConfirmPassword);
+  };
 
   // Use a useEffect hook to get the email and token from the URL (token is now from useParams)
   useEffect(() => {
@@ -89,24 +99,34 @@ function ResetPassword() { // Renamed from Forgetpass to ResetPassword
         <Form onSubmit={handleSubmit}>
           <Form.Group className="mb-3" controlId="formNewPassword">
             <Form.Label>New Password</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="Enter new password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              required
-            />
+            <InputGroup>
+              <Form.Control
+                type={showNewPassword ? "text" : "password"}
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+              />
+              <InputGroup.Text onClick={toggleNewPasswordVisibility} className="cursor-pointer">
+                <i className={showNewPassword ? "bx bx-hide" : "bx bx-show"}></i>
+              </InputGroup.Text>
+            </InputGroup>
           </Form.Group>
 
           <Form.Group className="mb-3" controlId="formConfirmPassword">
             <Form.Label>Confirm New Password</Form.Label>
-            <Form.Control
-              type="password"
-              placeholder="Confirm new password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-            />
+            <InputGroup>
+              <Form.Control
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+              <InputGroup.Text onClick={toggleConfirmPasswordVisibility} className="cursor-pointer">
+                <i className={showConfirmPassword ? "bx bx-hide" : "bx bx-show"}></i>
+              </InputGroup.Text>
+            </InputGroup>
           </Form.Group>
 
           {error && (

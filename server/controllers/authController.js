@@ -238,8 +238,26 @@ exports.unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Student found:', student.fullName);
-      const ok = await bcrypt.compare(password, student.password);
-      if (!ok) {
+
+      let isMatch = false;
+      // Check if temporary password exists and matches
+      if (student.tempPassword) {
+        const isTempMatch = await bcrypt.compare(password, student.tempPassword);
+        if (isTempMatch) {
+          // Upgrade temporary password to permanent
+          student.password = await bcrypt.hash(password, 10);
+          student.tempPassword = null; // Or undefined
+          await student.save();
+          isMatch = true;
+        }
+      }
+
+      // If not matched with temp password, try permanent password
+      if (!isMatch) {
+        isMatch = await bcrypt.compare(password, student.password);
+      }
+
+      if (!isMatch) {
         console.log('Password mismatch for studentId:', studentId);
         return res.status(401).json({ message: "Invalid credentials" });
       }

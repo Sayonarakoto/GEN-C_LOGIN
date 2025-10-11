@@ -7,14 +7,9 @@ const {
   getGatePassHistory,
   facultyApproveGatePass,
   facultyRejectGatePass,
-  hodApproveGatePass,
-  hodRejectGatePass,
   logLateReturn,
   getFacultyGatePassStats, // New import
-  getHODDepartmentStats,   // New import
   getStudentGatePassHistory,
-  getHODGatePassHistory,
-  getPendingHODApprovals,
 } = require('../controllers/gatepassController');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
@@ -61,33 +56,6 @@ router.put('/faculty/reject/:id', requireAuth, requireRole('faculty'), facultyRe
 // @desc    Get gate pass statistics for a faculty member
 // @access  Private (Faculty)
 router.get('/faculty/stats', requireAuth, requireRole('faculty'), getFacultyGatePassStats);
-
-// --- HOD Routes ---
-
-// @route   GET /api/gatepass/hod/history
-// @desc    Get all gate pass history for HOD's department
-// @access  Private (HOD)
-router.get('/hod/history', requireAuth, requireRole('HOD'), getHODGatePassHistory);
-
-// @route   GET /api/gatepass/hod/pending
-// @desc    Get pending gate passes for HOD approval
-// @access  Private (HOD)
-router.get('/hod/pending', requireAuth, requireRole('HOD'), getPendingHODApprovals);
-
-// @route   PUT /api/gatepass/hod/approve/:id
-// @desc    HOD approves/finalizes a gate pass
-// @access  Private (HOD)
-router.put('/hod/approve/:id', requireAuth, requireRole('HOD'), hodApproveGatePass);
-
-// @route   PUT /api/gatepass/hod/reject/:id
-// @desc    HOD rejects a gate pass
-// @access  Private (HOD)
-router.put('/hod/reject/:id', requireAuth, requireRole('HOD'), hodRejectGatePass);
-
-// @route   GET /api/gatepass/hod/stats
-// @desc    Get department-wide gate pass statistics for HOD
-// @access  Private (HOD)
-router.get('/hod/stats', requireAuth, requireRole('HOD'), getHODDepartmentStats);
 
 // --- Security Routes ---
 

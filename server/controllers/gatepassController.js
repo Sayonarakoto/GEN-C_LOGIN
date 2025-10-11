@@ -195,33 +195,46 @@ exports.facultyApproveGatePass = async (req, res) => {
     }
 
     pass.faculty_status = 'APPROVED';
-    await pass.save();
+    // No need to set date_valid_to here, it's set on request, but we should fix the logic that
+    // allows it to be null in the request if returnTime is not provided.
 
-    // Log faculty approval in AuditLog
-    await AuditLog.create({
-        pass_id: pass._id,
-        event_type: 'Approved',
-        actor_role: 'faculty',
-        actor_id: req.user.id,
-        event_details: {
-            status_change: 'faculty_status: PENDING -> APPROVED',
-            hod_notified: !!pass.hod_approver_id,
-        },
-    });
+    // CHECK FOR HOD FINALIZATION (Single-Tier Approval)
+    if (!pass.hod_approver_id || pass.faculty_approver_id.equals(pass.hod_approver_id)) { 
+        // Case: No HOD assigned (single tier) OR the Faculty who approved IS the HOD
+        
+        // Finalize HOD status
+        pass.hod_status = 'APPROVED'; 
+        
+        // CRITICAL STEP: Generate Credentials!
+        pass.qr_code_id = generateToken({ passId: pass._id }); 
+        pass.verification_otp = generateThreeDigitOTP();
 
-    // Emit Socket.IO event for frontend update
-    if (req.io && req.userSocketMap.has(pass.student_id._id.toString())) {
-        req.io.to(pass.student_id._id.toString()).emit('statusUpdate:gatePass', {
-            recordId: pass._id,
-            newStatus: pass.faculty_status,
-            userId: pass.student_id._id,
-            eventType: 'GATEPASS_FACULTY_APPROVED',
-            faculty_approver_id: req.user.id
-        });
-    }
+        // Emit status update and notification to Student (FINAL APPROVAL)
+        // This part needs to be adapted from hodApproveGatePass
+        if (req.io && req.userSocketMap.has(pass.student_id._id.toString())) {
+            req.io.to(pass.student_id._id.toString()).emit('statusUpdate:gatePass', {
+                recordId: pass._id,
+                newStatus: pass.hod_status,
+                userId: pass.student_id._id,
+                eventType: 'GATEPASS_HOD_APPROVED', // Changed to HOD_APPROVED as it's final
+                hod_approver_id: req.user.id,
+                qr_code_id: pass.qr_code_id,
+                one_time_pin: pass.verification_otp
+            });
+        }
+        await sendNotification(
+            pass.student_id._id,
+            `Your Gate Pass to ${pass.destination} has been APPROVED by ${req.user.fullName}. QR Code and OTP are available in your app. OTP: ${pass.verification_otp}`,
+            'Gate Pass Approved'
+        );
+    } 
+    // ...
 
-    // Notify HOD if there is one assigned
-    if (pass.hod_approver_id) {
+    await pass.save(); 
+
+    // If multi-tier, notify HOD
+    if (pass.hod_approver_id && !pass.faculty_approver_id.equals(pass.hod_approver_id)) {
+        // Notify HOD if one is separate
         const hod = await Faculty.findById(pass.hod_approver_id);
         if (hod) {
             await sendNotification(
@@ -231,6 +244,20 @@ exports.facultyApproveGatePass = async (req, res) => {
             );
         }
     }
+
+    // Log faculty approval in AuditLog (moved after save to ensure pass._id is available)
+    await AuditLog.create({
+        pass_id: pass._id,
+        event_type: 'Approved',
+        actor_role: 'faculty',
+        actor_id: req.user.id,
+        event_details: {
+            status_change: 'faculty_status: PENDING -> APPROVED',
+            hod_notified: !!pass.hod_approver_id,
+            qr_code_generated: !!pass.qr_code_id,
+            one_time_pin_generated: !!pass.verification_otp,
+        },
+    });
 
     res.status(200).json({ success: true, data: pass });
   } catch (error) {
@@ -262,6 +289,12 @@ exports.facultyRejectGatePass = async (req, res) => {
         }
 
         pass.faculty_status = 'REJECTED';
+        // CRITICAL FIX 1: Terminate the HOD's PENDING status immediately on faculty rejection.
+        // This ensures the student sees the final REJECTED status.
+        if (pass.hod_approver_id) {
+            pass.hod_status = 'REJECTED'; // Set HOD status to rejected as well
+        }
+
         await pass.save();
 
         // Log faculty rejection in AuditLog
@@ -563,15 +596,26 @@ exports.getHODGatePassHistory = async (req, res) => {
 // @access  Private (HOD)
 exports.getPendingHODApprovals = async (req, res) => {
   try {
-    const department = req.user.department;
-    if (!department) {
-      return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+    const hodId = req.user.id; // Get HOD's ID from the authenticated user
+    if (!hodId) {
+      return res.status(400).json({ success: false, message: 'HOD user ID not found.' });
     }
 
     const pendingPasses = await GatePass.find({
-      department_id: department,
-      faculty_status: 'APPROVED',
-      hod_status: 'PENDING',
+      $or: [
+        // Case 1: HOD is the secondary approver (multi-tier)
+        {
+          hod_approver_id: hodId,
+          faculty_status: 'APPROVED',
+          hod_status: 'PENDING',
+        },
+        // Case 2: HOD is the initial approver (single-tier)
+        {
+          faculty_approver_id: hodId,
+          hod_approver_id: null, // Explicitly check for null
+          faculty_status: 'PENDING', // HOD as faculty, still pending their approval
+        },
+      ],
     })
       .populate('student_id', 'fullName studentId')
       .populate('faculty_approver_id', 'fullName')

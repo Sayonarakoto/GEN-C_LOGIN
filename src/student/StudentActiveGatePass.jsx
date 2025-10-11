@@ -189,14 +189,29 @@ const StudentGatePass = () => {
         }
     };
 
-    const getStatusVariant = (status) => {
-        switch (status) {
-            case 'Approved': return 'success';
-            case 'OUT OF CAMPUS': return 'warning';
-            case 'Rejected': return 'danger';
-            case 'Pending': return 'info';
-            default: return 'secondary';
+    const getStatusVariant = (pass) => {
+        // 1. Check for any rejection first (Fixes the PENDING/REJECTED state conflict)
+        if (pass.faculty_status === 'REJECTED' || pass.hod_status === 'REJECTED') {
+            return 'danger'; // FINAL REJECTED
         }
+
+        // 2. Check for final approval (QR/OTP generated)
+        if (pass.hod_status === 'APPROVED') {
+            // Note: You need a final_status field from the DB to handle OUT OF CAMPUS/Used
+            // Assuming 'Approved' is the state where QR is visible:
+            return 'success'; 
+        }
+        
+        // 3. Check pending states
+        if (pass.faculty_status === 'APPROVED' && pass.hod_status === 'PENDING') {
+            return 'warning'; // Waiting for HOD (Forwarded to HOD)
+        }
+
+        if (pass.faculty_status === 'PENDING') {
+            return 'info'; // Waiting for initial Faculty
+        }
+
+        return 'secondary'; // Default/Unknown status
     };
 
     if (loading) {
@@ -222,7 +237,7 @@ const StudentGatePass = () => {
                 // --- Active Pass View ---
                 <Card className="shadow-sm rounded-3 border-0">
                     <Card.Body className="p-4">
-                        <div className={`w-100 text-center p-3 text-white rounded-3 mb-4 bg-${getStatusVariant(passData.status)}`}>
+                        <div className={`w-100 text-center p-3 text-white rounded-3 mb-4 bg-${getStatusVariant(passData)}`}>
                             <CheckCircleOutline className="me-2" />
                             <span className="fw-bold fs-5">{passData.status}</span>
                         </div>
@@ -281,15 +296,27 @@ const GatePassHistory = ({ history }) => {
         return null; // Don't render anything if there's no history
     }
 
-    const getStatusVariant = (status) => {
-        switch (status) {
-            case 'Approved': return 'success';
-            case 'Used': return 'secondary';
-            case 'Expired': return 'dark';
-            case 'Rejected': return 'danger';
-            case 'Pending': return 'info';
-            default: return 'secondary';
+    const getStatusVariant = (pass) => {
+        // 1. Check for any rejection first
+        if (pass.faculty_status === 'REJECTED' || pass.hod_status === 'REJECTED') {
+            return 'danger'; // FINAL REJECTED (Red)
         }
+
+        // 2. Check for final approval
+        if (pass.hod_status === 'APPROVED') {
+            return 'success'; // FINAL APPROVED (Green)
+        }
+
+        // 3. Check pending states
+        if (pass.faculty_status === 'APPROVED' && pass.hod_status === 'PENDING') {
+            return 'info'; // Waiting for HOD (Forwarded to HOD) (Blue)
+        }
+
+        if (pass.faculty_status === 'PENDING') {
+            return 'info'; // Waiting for initial Faculty (Blue)
+        }
+
+        return 'secondary'; // Default/Unknown status
     };
 
     return (
@@ -303,10 +330,14 @@ const GatePassHistory = ({ history }) => {
                                 <p className="h5 fw-bold text-dark mb-1">{pass.destination}</p>
                                 <p className="text-muted small mb-2">{new Date(pass.createdAt).toLocaleString()}</p>
                                 <p className="mb-0"><strong>Reason:</strong> {pass.reason}</p>
-                                <p><strong>Approved By:</strong> {pass.faculty_id?.fullName || 'N/A'}</p>
+                                <p><strong>Approved By:</strong> {
+                                    (pass.hod_approver_id?.fullName && pass.hod_status === 'APPROVED') ?
+                                    pass.hod_approver_id.fullName :
+                                    pass.faculty_approver_id?.fullName || 'N/A'
+                                }</p>
                             </Col>
                             <Col sm={4} className="text-sm-end">
-                                <Badge bg={getStatusVariant(pass.status)} className="fs-6">{pass.status}</Badge>
+                                <Badge bg={getStatusVariant(pass)} className="fs-6">{pass.status}</Badge>
                             </Col>
                         </Row>
                     </Card.Body>

@@ -89,6 +89,13 @@ const HistoryTable = ({ history, loading, error }) => {
         }
       };
 
+    const getFacultyViewStatus = (pass) => {
+        if (pass.hod_status === 'APPROVED') return 'FINAL APPROVED';
+        if (pass.hod_status === 'REJECTED' || pass.hod_status === 'REJECTED') return 'REJECTED';
+        if (pass.faculty_status === 'APPROVED' && pass.hod_approver_id) return 'Forwarded to HOD';
+        return pass.faculty_status; // Should be PENDING
+    };
+
   if (loading) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -117,7 +124,7 @@ const HistoryTable = ({ history, loading, error }) => {
               <tr key={item._id}>
                 <td>{item.student_id?.fullName}</td>
                 <td>{new Date(item.createdAt).toLocaleString()}</td>
-                <td>{getStatusBadge(item.status)}</td>
+                <td>{getStatusBadge(getFacultyViewStatus(item))}</td>
               </tr>
             ))
           ) : (

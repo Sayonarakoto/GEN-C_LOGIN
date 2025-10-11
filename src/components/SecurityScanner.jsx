@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeSupportedFormats } from 'html5-qrcode'; // Import Html5QrcodeSupportedFormats
 import { Box, Typography } from '@mui/material';
 import AlertMessage from './AlertMessage'; // Import the AlertMessage component
 
@@ -22,23 +22,28 @@ const SecurityScanner = ({ onScanSuccess, scanResult, isError }) => {
                 { 
                     fps: 10, 
                     qrbox: { width: 250, height: 250 },
-                    facingMode: "environment" 
+                    facingMode: "environment",
+                    formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE] // ADD THIS LINE
                 },
                 false
             );
 
             const handleSuccess = (decodedText) => {
+                console.log("QR Code Scanned - Raw decodedText:", decodedText); // Modified log
                 setErrorMessage(''); // Clear previous errors
-                scannerRef.current.clear().then(() => {
-                    if (decodedText) { // Ensure decodedText is not empty
+
+                if (decodedText && decodedText.trim() !== '') { // Only clear and call onScanSuccess if decodedText is valid
+                    scannerRef.current.clear().then(() => {
                         onScanSuccess(decodedText);
-                    } else {
-                        setErrorMessage("QR code decoded, but no text found.");
-                    }
-                }).catch(err => {
-                    console.error("Failed to stop scanner:", err);
-                    setErrorMessage("Failed to stop the scanner after a successful scan.");
-                });
+                    }).catch(err => {
+                        console.error("Failed to stop scanner after successful read:", err);
+                        setErrorMessage("Failed to stop the scanner after a successful scan.");
+                    });
+                } else {
+                    // If decodedText is empty or just whitespace, keep scanner open and show error
+                    setErrorMessage("QR code detected, but no valid text found. Please ensure the QR code is clear and try again.");
+                    // Do NOT call scannerRef.current.clear() here
+                }
             };
 
             scannerRef.current.render(handleSuccess);

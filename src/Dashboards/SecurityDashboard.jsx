@@ -32,17 +32,19 @@ const LiveLogTable = ({ logs, loading }) => {
       </Typography>
       <TableContainer>
         <Table>
-          <TableHead>
+                    <TableHead>
             <TableRow>
               <TableCell>Student Name</TableCell>
               <TableCell>Pass Type</TableCell>
-              <TableCell align="right">Time</TableCell>
+              <TableCell>Start Time</TableCell> {/* New column */}
+              <TableCell>End Time</TableCell>   {/* New column */}
+              <TableCell align="right">CheckoutTime</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={3} align="center">
+                <TableCell colSpan={5} align="center"> {/* Adjusted colspan */}
                   <CircularProgress />
                 </TableCell>
               </TableRow>
@@ -51,12 +53,22 @@ const LiveLogTable = ({ logs, loading }) => {
                 <TableRow key={log._id}>
                   <TableCell component="th" scope="row">{log.event_details?.student_name || 'N/A'}</TableCell>
                   <TableCell>{log.event_details?.pass_type || 'N/A'}</TableCell>
+                  <TableCell>
+                    {log.event_details?.pass_start_time
+                      ? new Date(log.event_details.pass_start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                      : 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    {log.event_details?.pass_end_time
+                      ? new Date(log.event_details.pass_end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                      : 'N/A'}
+                  </TableCell>
                   <TableCell align="right">{new Date(log.timestamp).toLocaleTimeString()}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={3} align="center">
+                <TableCell colSpan={5} align="center"> {/* Adjusted colspan */}
                   No check-ins recorded yet.
                 </TableCell>
               </TableRow>

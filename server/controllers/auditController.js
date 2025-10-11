@@ -103,7 +103,19 @@ exports.getSecurityVerificationLogs = async (req, res) => {
     .sort({ timestamp: -1 }) // Show newest first
     .limit(50); // Limit to the last 50 verified passes for performance
     
-    res.status(200).json({ success: true, data: logs });
+    // Map logs to ensure event_details contains student_name and pass_type
+    const formattedLogs = logs.map(log => ({
+      ...log.toObject(), // Convert Mongoose document to plain JavaScript object
+      event_details: {
+        ...log.event_details,
+        student_name: log.event_details.student_name || 'N/A',
+        pass_type: log.event_details.pass_type || 'N/A',
+        pass_start_time: log.event_details.pass_start_time || null, // Include pass start time
+        pass_end_time: log.event_details.pass_end_time || null,     // Include pass end time
+      }
+    }));
+
+    res.status(200).json({ success: true, data: formattedLogs });
 
   } catch (error) {
     console.error('Error fetching security verification logs:', error);

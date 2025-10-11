@@ -319,7 +319,9 @@ exports.verifyPass = async (req, res) => {
     // --- 4. Log Success (DFD 5.4) ---
     const auditDetails = {
         student_name: pass.student_id ? pass.student_id.fullName : 'N/A',
-        pass_type: pass.pass_type
+        pass_type: pass.pass_type,
+        pass_start_time: pass.date_valid_from, // Add pass start time
+        pass_end_time: pass.date_valid_to,   // Add pass end time
     };
     await logAuditAttempt(pass._id, 'Verified', securityUser, `SUCCESS (${verificationMethod}): ${finalStatus}`, auditDetails);
     

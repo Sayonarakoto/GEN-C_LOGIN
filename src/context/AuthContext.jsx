@@ -24,6 +24,8 @@ export const AuthProvider = ({ children }) => {
       studentId: decoded.studentId,
       email: decoded.email,
       profilePictureUrl: decoded.profilePictureUrl,
+      facultyId: decoded.facultyId || decoded.employeeId, // Use employeeId as fallback for facultyId
+      designation: decoded.designation, // ADD THIS LINE
       departmentId: decoded.departmentId || decoded.department,
       exp: decoded.exp
     };

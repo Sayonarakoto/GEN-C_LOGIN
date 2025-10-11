@@ -216,8 +216,8 @@ exports.initiateSpecialPass = async (req, res) => { // This is the function for 
         }
 
         // 🔑 STEP 2: Calculate Valid Dates (Copied from the working logic)
-        const dateValidFrom = new Date(`${date_required}T${start_time}:00.000Z`);
-        const dateValidTo = new Date(`${date_required}T${end_time}:00.000Z`);
+        const dateValidFrom = new Date(`${date_required}T${start_time}:00`);
+        const dateValidTo = new Date(`${date_required}T${end_time}:00`);
 
         if (isNaN(dateValidFrom.getTime()) || isNaN(dateValidTo.getTime()) || dateValidFrom >= dateValidTo) {
              return res.status(400).json({ success: false, message: 'Invalid date or time slot calculation.' });

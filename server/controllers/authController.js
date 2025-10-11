@@ -131,7 +131,8 @@ exports.facultyLogin = async (req, res) => {
       fullName: faculty.fullName,
       department: faculty.department,
       email: faculty.email,         // Add email
-      employeeId: faculty.employeeId // Add employeeId
+      employeeId: faculty.employeeId, // Add employeeId
+      designation: faculty.designation // ADD THIS LINE
     });
 
     const facultyData = faculty.toObject();
@@ -292,7 +293,7 @@ exports.unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       const role = faculty.designation.toUpperCase() === 'HOD' ? 'HOD' : 'faculty';
-      const token = generateToken({ id: faculty._id, role: role, fullName: faculty.fullName, department: faculty.department, email: faculty.email, employeeId: faculty.employeeId });
+      const token = generateToken({ id: faculty._id, role: role, fullName: faculty.fullName, department: faculty.department, email: faculty.email, employeeId: faculty.employeeId, designation: faculty.designation }); // ADD designation
       const f = faculty.toObject(); delete f.password;
       return res.json({ token, user: { id: faculty._id, role: role, ...f }});
     }

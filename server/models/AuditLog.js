@@ -14,7 +14,7 @@ const auditLogSchema = new mongoose.Schema({
   event_type: {
     type: String,
     required: true,
-    enum: ['Request', 'Approved', 'Verified', 'Rejected', 'Revoked', 'LatenessLogged'] // Added LatenessLogged
+    enum: ['Request', 'Approved', 'Verified', 'Rejected', 'Revoked', 'LatenessLogged', 'Initiated'] // Added Initiated
   },
   actor_role: {
     type: String,

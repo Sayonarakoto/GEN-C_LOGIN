@@ -42,8 +42,8 @@ async function generateWatermarkedPDF(passData, hodName) {
            .text(`Pass Type: ${passData.pass_type}`)
            .text(`Reason: ${passData.request_reason}`)
            .text(`Valid Date: ${new Date(passData.date_valid_from).toLocaleDateString('en-GB', { dateStyle: 'short' })}`)
-           .text(`Start Time: ${new Date(passData.date_valid_from).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`)
-           .text(`End Time: ${new Date(passData.date_valid_to).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}`);
+           .text(`Start Time (IST): ${new Date(passData.date_valid_from).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}`)
+           .text(`End Time (IST): ${new Date(passData.date_valid_to).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}`);
            
         doc.moveDown(2);
         

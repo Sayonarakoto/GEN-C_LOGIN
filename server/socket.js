@@ -52,6 +52,8 @@ function sendSocketNotification(recipientId, subject, message) {
         const socketId = userSocketMap.get(recipientId);
         io.to(socketId).emit('newNotification', { subject, message });
         console.log(`Sent notification to ${recipientId} on socket ${socketId}`);
+    } else {
+        console.warn(`Recipient ${recipientId} not found in userSocketMap. Notification not sent.`);
     }
 }
 

@@ -193,10 +193,12 @@ exports.rejectSpecialPass = async (req, res) => {
 };
 
 exports.initiateSpecialPass = async (req, res) => { // This is the function for the /initiate endpoint
+    console.log('DEBUG: initiateSpecialPass - Start');
+    console.log('DEBUG: req.body:', req.body);
     // 🔑 STEP 1: Destructure the expected fields from the HOD form
     const {
         student_id,
-        pass_type,
+        pass_type = 'HOD Initiated', // Provide a default value for now
         request_reason,
         date_required,
         start_time,
@@ -206,8 +208,9 @@ exports.initiateSpecialPass = async (req, res) => { // This is the function for 
     const hodId = req.user.id; // The HOD is the one initiating and approving
 
     try {
-        // Find the student by their human-readable ID
-        const student = await Student.findOne({ studentId: student_id });
+        console.log('DEBUG: initiateSpecialPass - Before Student.findById');
+        // Find the student by their MongoDB _id
+        const student = await Student.findById(student_id);
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student not found.' });
         }
@@ -235,6 +238,9 @@ exports.initiateSpecialPass = async (req, res) => { // This is the function for 
             requested_at: new Date(),
             approved_at: new Date()
         });
+
+        // Populate student_id to ensure studentId is available for PDF generation
+        await newPass.populate('student_id', 'studentId fullName');
 
         // 🔑 STEP 4: Generate QR/OTP (Crucial Step!)
         const qrCodeJwt = generateToken(

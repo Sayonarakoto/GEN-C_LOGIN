@@ -23,6 +23,7 @@ import {
   DialogTitle,
   Modal,
   TablePagination,
+  Checkbox, // Import Checkbox
 } from '@mui/material';
 import apiClient from '../api/client';
 import { useAuth } from '../hooks/useAuth'; // Import useAuth
@@ -154,6 +155,7 @@ const InitiatePass = () => {
 
     // --- A. New State Variables ---
     const [studentId, setStudentId] = useState('');
+    const [selectedStudents, setSelectedStudents] = useState([]); // New state for selected students
     
     const [reason, setReason] = useState('');
     const [dateRequired, setDateRequired] = useState(''); // 🔑 CHANGE: Use single date field
@@ -171,6 +173,34 @@ const InitiatePass = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [studentsPerPage] = useState(5);
     const [totalStudents, setTotalStudents] = useState(0);
+
+    const handleSelectAllClick = (event) => {
+        if (event.target.checked) {
+            const newSelecteds = students.map((n) => n._id);
+            setSelectedStudents(newSelecteds);
+            return;
+        }
+        setSelectedStudents([]);
+    };
+
+    const handleStudentSelect = (event, id) => {
+        const selectedIndex = selectedStudents.indexOf(id);
+        let newSelected = [];
+
+        if (selectedIndex === -1) {
+            newSelected = newSelected.concat(selectedStudents, id);
+        } else if (selectedIndex === 0) {
+            newSelected = newSelected.concat(selectedStudents.slice(1));
+        } else if (selectedIndex === selectedStudents.length - 1) {
+            newSelected = newSelected.concat(selectedStudents.slice(0, -1));
+        } else if (selectedIndex > 0) {
+            newSelected = newSelected.concat(
+                selectedStudents.slice(0, selectedIndex),
+                selectedStudents.slice(selectedIndex + 1),
+            );
+        }
+        setSelectedStudents(newSelected);
+    };
 
     const fetchStudents = useCallback(async () => {
         if (!hodDepartment) return; // Don't fetch if department is not available
@@ -202,21 +232,26 @@ const InitiatePass = () => {
     // --- C. Submission Payload (Inside handleSubmit) ---
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (selectedStudents.length === 0) {
+            setError('Please select at least one student to initiate a pass.');
+            return;
+        }
         setLoading(true);
         setError('');
         try {
-            const response = await apiClient.post('/api/hod/special-passes/initiate', {
-                student_id: studentId,
-                
-                request_reason: reason,
-                // 🔑 CHANGE: Send the required components for date calculation
-                date_required: dateRequired,
-                start_time: startTime,
-                end_time: endTime,
-            });
-            setCreatedPass(response.data);
+            for (const student_id of selectedStudents) {
+                await apiClient.post('/api/hod/special-passes/initiate', {
+                    student_id,
+                    request_reason: reason,
+                    date_required: dateRequired,
+                    start_time: startTime,
+                    end_time: endTime,
+                });
+            }
+            setCreatedPass({ message: 'Passes initiated successfully for selected students.' }); // Dummy pass for modal
+            setSelectedStudents([]); // Clear selections after initiating passes
         } catch (err) {
-            setError(err.response?.data?.message || 'Failed to initiate pass.');
+            setError(err.response?.data?.message || 'Failed to initiate pass for one or more students.');
             console.error(err);
         } finally {
             setLoading(false);
@@ -225,14 +260,12 @@ const InitiatePass = () => {
 
     const PassModal = ({ pass, onClose }) => {
         if (!pass) return null;
-        const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pass.qr_token)}`;
+        // Simplified modal for multiple passes, no QR code for now
         return (
             <Modal open={!!pass} onClose={onClose}>
                 <Paper sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, p: 4, textAlign: 'center' }}>
-                    <Typography variant="h5" gutterBottom>Pass Initiated Successfully</Typography>
-                    <img src={qrCodeUrl} alt="QR Code" />
-                    <Typography variant="body1" mt={2}>Student: {pass.student_id?.fullName}</Typography>
-                    <Typography variant="body1">Pass Type: {pass.pass_type}</Typography>
+                    <Typography variant="h5" gutterBottom>Passes Initiated</Typography>
+                    <Typography variant="body1" mt={2}>{pass.message}</Typography>
                     <Button onClick={onClose} sx={{ mt: 2 }}>Close</Button>
                 </Paper>
             </Modal>
@@ -253,8 +286,20 @@ const InitiatePass = () => {
                     <Grid xs={12} sm={4}>
                         <TextField fullWidth type="time" label="End Time" value={endTime} onChange={e => setEndTime(e.target.value)} InputLabelProps={{ shrink: true }} required />
                     </Grid>
+                    <Grid xs={12}>
+                        <TextField
+                            fullWidth
+                            label="Reason for Pass"
+                            value={reason}
+                            onChange={e => setReason(e.target.value)}
+                            multiline
+                            rows={3}
+                            required
+                            sx={{ mt: 2 }}
+                        />
+                    </Grid>
                     <Grid xs={12} sx={{ display: 'flex', justifyContent: 'center' }}>
-                        <Button type="submit" variant="contained" disabled={loading}>{loading ? <CircularProgress size={24} /> : 'Initiate Pass'}</Button>
+                        <Button type="submit" variant="contained" disabled={loading || selectedStudents.length === 0 || !reason.trim()}>{loading ? <CircularProgress size={24} /> : 'Initiate Pass for Selected Students'}</Button>
                     </Grid>
                 </Grid>
                 {error && <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>}
@@ -278,6 +323,13 @@ const InitiatePass = () => {
                     <Table>
                         <TableHead>
                             <TableRow>
+                                <TableCell padding="checkbox">
+                                    <Checkbox
+                                        indeterminate={selectedStudents.length > 0 && selectedStudents.length < students.length}
+                                        checked={students.length > 0 && selectedStudents.length === students.length}
+                                        onChange={handleSelectAllClick}
+                                    />
+                                </TableCell>
                                 <TableCell>Student Name</TableCell>
                                 <TableCell>Student ID</TableCell>
                                 <TableCell>Department</TableCell>
@@ -290,14 +342,23 @@ const InitiatePass = () => {
                             ) : studentTableError ? (
                                 <TableRow><TableCell colSpan={4} align="center"><Typography color="error">{studentTableError}</Typography></TableCell></TableRow>
                             ) : students.length > 0 ? (
-                                students.map((student) => (
-                                    <TableRow key={student._id}>
-                                        <TableCell>{student.fullName}</TableCell>
-                                        <TableCell>{student.studentId}</TableCell>
-                                        <TableCell>{student.department}</TableCell>
-                                        <TableCell>{student.year}</TableCell>
-                                    </TableRow>
-                                ))
+                                students.map((student) => {
+                                    const isItemSelected = selectedStudents.indexOf(student._id) !== -1;
+                                    return (
+                                        <TableRow key={student._id} selected={isItemSelected}>
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    checked={isItemSelected}
+                                                    onChange={(event) => handleStudentSelect(event, student._id)}
+                                                />
+                                            </TableCell>
+                                            <TableCell>{student.fullName}</TableCell>
+                                            <TableCell>{student.studentId}</TableCell>
+                                            <TableCell>{student.department}</TableCell>
+                                            <TableCell>{student.year}</TableCell>
+                                        </TableRow>
+                                    );
+                                })
                             ) : (
                                 <TableRow><TableCell colSpan={4} align="center">No students found.</TableCell></TableRow>
                             )}

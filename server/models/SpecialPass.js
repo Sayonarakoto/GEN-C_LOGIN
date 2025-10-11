@@ -4,7 +4,7 @@ const specialPassSchema = new mongoose.Schema({
   pass_type: {
     type: String,
     required: true,
-    enum: ['Lab Entry', 'Late Entry', 'Mosque Pass', 'ID Lost', 'Improper Uniform', 'Other', 'Event Pass'] // Example types
+    enum: ['Lab Entry', 'Late Entry', 'Mosque Pass', 'ID Lost', 'Improper Uniform', 'Other', 'Event Pass', 'HOD Initiated'] // Example types
   },
   student_id: {
     type: mongoose.Schema.Types.ObjectId,

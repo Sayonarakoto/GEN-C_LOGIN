@@ -30,8 +30,8 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
         event.preventDefault();
         const formData = new FormData(event.target);
         const data = Object.fromEntries(formData.entries());
-        data.exitTime = exitTime ? dayjs(exitTime).format('HH:mm') : '';
-        data.returnTime = returnTime ? dayjs(returnTime).format('HH:mm') : '';
+        data.exitTime = exitTime ? exitTime.format('HH:mm') : '';
+        data.returnTime = returnTime ? returnTime.format('HH:mm') : '';
         onSubmit(data);
     };
 

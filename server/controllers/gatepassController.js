@@ -81,10 +81,25 @@ exports.requestGatePass = async (req, res) => {
         }
 
         // FIX: Directly use ISO 8601 strings to create Date objects
-        const exitDate = new Date(exitTime);
+        const now = new Date();
+        let exitDate;
+        if (exitTime && exitTime.match(/^\d{2}:\d{2}$/)) { // Validate HH:mm format
+            const [exitHours, exitMinutes] = exitTime.split(':');
+            exitDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(exitHours), parseInt(exitMinutes));
+            if (isNaN(exitDate.getTime())) { // Check if date is valid
+                return res.status(400).json({ success: false, message: 'Invalid exit time provided.' });
+            }
+        } else {
+            return res.status(400).json({ success: false, message: 'Exit time is required and must be in HH:mm format.' });
+        }
+
         let returnDate = null;
-        if (returnTime) {
-            returnDate = new Date(returnTime);
+        if (returnTime && returnTime.match(/^\d{2}:\d{2}$/)) { // Validate HH:mm format if provided
+            const [returnHours, returnMinutes] = returnTime.split(':');
+            returnDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(returnHours), parseInt(returnMinutes));
+            if (isNaN(returnDate.getTime())) { // Check if date is valid
+                return res.status(400).json({ success: false, message: 'Invalid return time provided.' });
+            }
         }
 
         const newPass = new GatePass({

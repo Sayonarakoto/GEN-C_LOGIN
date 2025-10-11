@@ -27,6 +27,7 @@ const getDashboardStats = async (req, res) => {
     } else if (role === 'HOD') {
         // HOD's pending queue
         pendingFilter.status = 'Pending HOD';
+        pendingFilter.HODId = new mongoose.Types.ObjectId(id); // Add this line
     } else {
         // Student or other roles shouldn't be here, but handle defensively
         pendingFilter.status = 'N/A';

@@ -55,7 +55,7 @@ app.post('/api/forgot-password', forgotPassword);
 app.post('/api/reset-password/:token', resetPassword);
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', FacultyRoutes);
-app.use('/api/student', studentRoutes); // Register student routes
+app.use('/api/students', studentRoutes); // Register student routes - Changed from /api/student
 app.use('/api/special-passes', specialPassRoutes);
 app.use('/api/hod/special-passes', hodSpecialPassRoutes); // Register HOD Special Passes routes
 app.use('/api/audit', auditRoutes); // Register Audit routes
@@ -67,11 +67,11 @@ app.use('/api/security', securityRoutes);
 app.use('/GEN-C_LOGIN', express.static(path.join(__dirname, '..', 'dist')));
 
 // For any other requests, serve the index.html of the React app
-app.get('/{*path}', (req, res, next) => {
+app.get(/.*/, (req, res, next) => {
   // Check if the request is for an API route. If so, let it fall through
   // to the 404 handler, otherwise serve the index.html.
   if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/auth') || req.originalUrl.startsWith('/static/uploads')) { // Added /static/uploads
-    // Let the 404 handler below manage this.
+    // Let the 404 handler below manage this. 
     // This is optional but can make the intent clearer.
     return next();
   }

@@ -26,8 +26,7 @@ const getDashboardStats = async (req, res) => {
         pendingFilter.status = { $in: ['Pending Faculty', 'Resubmitted'] };
     } else if (role === 'HOD') {
         // HOD's pending queue
-        pendingFilter.status = 'Pending HOD';
-        pendingFilter.HODId = new mongoose.Types.ObjectId(id); // Add this line
+        pendingFilter.status = { $in: ['Pending HOD', 'Pending Faculty', 'Resubmitted'] };
     } else {
         // Student or other roles shouldn't be here, but handle defensively
         pendingFilter.status = 'N/A';

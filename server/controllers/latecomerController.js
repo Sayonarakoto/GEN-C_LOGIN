@@ -84,8 +84,7 @@ exports.getHODPending = async (req, res) => {
     const query = {
         // Ensure department is used here!
         department: department, 
-        status: 'Pending HOD',
-        HODId: new mongoose.Types.ObjectId(hodId) // This is a specific check, but the department filter is necessary
+        status: { $in: ['Pending HOD', 'Pending Faculty', 'Resubmitted'] }
     };
 
     console.log('DEBUG: getHODPending - Executing database query:', JSON.stringify(query, null, 2));

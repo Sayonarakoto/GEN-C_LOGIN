@@ -44,5 +44,8 @@ router.post('/upload-profile-picture', requireAuth, upload, studentController.up
 
 router.put('/profile', requireAuth, studentController.updateStudentProfile);
 
+router.get('/:studentId/activity-report', requireAuth, studentController.getStudentActivityReport);
+router.get('/:studentId/activity-report/download-pdf', requireAuth, studentController.downloadStudentActivityReportPDF);
+
 
 module.exports = router;

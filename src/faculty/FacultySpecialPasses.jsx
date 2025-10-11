@@ -380,6 +380,87 @@ const InitiatePass = () => {
     );
 };
 
+// Component to show the history of approved/rejected requests
+const HistoryTable = () => {
+  const [passes, setPasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const fetchHistoryPasses = useCallback(async () => {
+    setLoading(true);
+    try {
+      const response = await apiClient.get('/api/hod/special-passes/history');
+      setPasses(Array.isArray(response.data.data) ? response.data.data : []);
+    } catch (err) {
+      setError('Failed to fetch pass history.');
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHistoryPasses();
+  }, [fetchHistoryPasses]);
+
+  if (loading) {
+    return <CircularProgress />;
+  }
+
+  if (error) {
+    return <Typography color="error">{error}</Typography>;
+  }
+
+  return (
+    <TableContainer component={Paper}>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Student Name</TableCell>
+            <TableCell>Pass Type</TableCell>
+            <TableCell>Reason</TableCell>
+            <TableCell>Dates</TableCell>
+            <TableCell>Status</TableCell>
+            <TableCell>HOD Comment</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {passes.length > 0 ? (
+            passes.map((pass) => (
+              <TableRow key={pass._id}>
+                <TableCell>{pass.student_id?.fullName || 'N/A'}</TableCell>
+                <TableCell>{pass.pass_type}</TableCell>
+                <TableCell>{pass.request_reason}</TableCell>
+                <TableCell>
+                  {pass.date_valid_from && pass.date_valid_to
+                    ? `${new Date(pass.date_valid_from).toLocaleDateString()} - ${new Date(pass.date_valid_to).toLocaleDateString()}`
+                    : 'N/A'
+                  }
+                </TableCell>
+                <TableCell>
+                    <Typography
+                        sx={{
+                            color: pass.status === 'Approved' ? 'green' : 'red',
+                            fontWeight: 'bold',
+                        }}
+                    >
+                        {pass.status}
+                    </Typography>
+                </TableCell>
+                <TableCell>{pass.hod_comment || 'N/A'}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} align="center">No historical records found.</TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  );
+};
+
 export default function FacultySpecialPasses() {
   const [tabIndex, setTabIndex] = useState(0);
 
@@ -396,10 +477,12 @@ export default function FacultySpecialPasses() {
         <Tabs value={tabIndex} onChange={handleTabChange} centered>
           <Tab label="Pending Requests" />
           <Tab label="Initiate Pass" />
+          <Tab label="History" />
         </Tabs>
         <Box sx={{ p: 3 }}>
           {tabIndex === 0 && <PendingRequests />}
           {tabIndex === 1 && <InitiatePass />}
+          {tabIndex === 2 && <HistoryTable />}
         </Box>
       </Paper>
     </Container>

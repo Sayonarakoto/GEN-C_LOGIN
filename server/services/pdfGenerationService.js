@@ -78,4 +78,83 @@ async function generateWatermarkedPDF(passData, hodName) {
     });
 }
 
-module.exports = { generateWatermarkedPDF };
+/**
+ * @function generateStudentActivityReportPDF
+ * @description Generates a PDF document for a student's activity report, including special passes, late entries, and gate passes.
+ * @param {object} studentDetails - Details of the student (e.g., fullName, studentId, department, year).
+ * @param {object} reportData - An object containing arrays of specialPasses, lateEntries, and gatePasses.
+ * @param {string} startDate - The start date of the report period (YYYY-MM-DD).
+ * @param {string} endDate - The end date of the report period (YYYY-MM-DD).
+ * @returns {Promise<string>} A promise that resolves with the path to the generated PDF file.
+ */
+async function generateStudentActivityReportPDF(studentDetails, reportData, startDate, endDate) {
+    const uploadDir = path.join(__dirname, '..', 'generated_pdfs');
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    const PDF_PATH = path.join(uploadDir, `activity_report_${studentDetails.studentId}_${Date.now()}.pdf`);
+
+    return new Promise((resolve, reject) => {
+        const doc = new PDFDocument();
+        doc.pipe(fs.createWriteStream(PDF_PATH));
+
+        doc.fontSize(20).text('Student Activity Report', { align: 'center' });
+        doc.moveDown();
+
+        // Student Details Section
+        doc.fontSize(14).text('Student Details:', { underline: true });
+        doc.fontSize(12)
+           .text(`Name: ${studentDetails.fullName}`)
+           .text(`Student ID: ${studentDetails.studentId}`)
+           .text(`Department: ${studentDetails.department}`)
+           .text(`Year: ${studentDetails.year}`);
+        doc.moveDown();
+
+        // Report Period
+        doc.fontSize(12).text(`Report Period: ${startDate || 'N/A'} to ${endDate || 'N/A'}`);
+        doc.moveDown();
+
+        // Approved Special Passes Section
+        doc.fontSize(14).text('Approved Special Passes:', { underline: true });
+        if (reportData.specialPasses && reportData.specialPasses.length > 0) {
+            reportData.specialPasses.forEach(pass => {
+                doc.fontSize(10)
+                   .text(`  - Pass Type: ${pass.pass_type}, Reason: ${pass.request_reason}, Approved By: ${pass.hod_approver_id?.fullName || 'N/A'}, Approved At: ${new Date(pass.approved_at).toLocaleString()}`);
+            });
+        } else {
+            doc.fontSize(10).text('  No approved special passes found for the selected period.');
+        }
+        doc.moveDown();
+
+        // Late Entries Section
+        doc.fontSize(14).text('Late Entries:', { underline: true });
+        if (reportData.lateEntries && reportData.lateEntries.length > 0) {
+            reportData.lateEntries.forEach(entry => {
+                doc.fontSize(10)
+                   .text(`  - Date: ${new Date(entry.date).toLocaleDateString()}, Reason: ${entry.reason}, Status: ${entry.status}, Faculty: ${entry.facultyId?.fullName || 'N/A'}, HOD: ${entry.HODId?.fullName || 'N/A'}`);
+            });
+        } else {
+            doc.fontSize(10).text('  No late entries found for the selected period.');
+        }
+        doc.moveDown();
+
+        // Gate Passes Section
+        doc.fontSize(14).text('Gate Passes:', { underline: true });
+        if (reportData.gatePasses && reportData.gatePasses.length > 0) {
+            reportData.gatePasses.forEach(pass => {
+                doc.fontSize(10)
+                   .text(`  - Destination: ${pass.destination}, Reason: ${pass.reason}, Faculty Status: ${pass.faculty_status}, HOD Status: ${pass.hod_status}, From: ${new Date(pass.date_valid_from).toLocaleString()}, To: ${new Date(pass.date_valid_to).toLocaleString()}`);
+            });
+        } else {
+            doc.fontSize(10).text('  No gate passes found for the selected period.');
+        }
+        doc.moveDown();
+
+        doc.end();
+
+        doc.on('end', () => resolve(PDF_PATH));
+        doc.on('error', (err) => reject(err));
+    });
+}
+
+module.exports = { generateWatermarkedPDF, generateStudentActivityReportPDF };

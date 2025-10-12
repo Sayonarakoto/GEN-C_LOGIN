@@ -79,24 +79,19 @@ exports.requestGatePass = async (req, res) => {
             faculty_approver_id = null; // No faculty advisor in this path
             hod_status = 'PENDING';
             faculty_status = 'APPROVED'; // Bypassing faculty advisor
-        } else { // Default to 'Faculty'
-            // Student chose Faculty Advisor
+            notificationRecipientId = hod_approver_id; // Notify HOD
+            notificationMessage = `A new Gate Pass request from ${student.fullName} is awaiting your approval.`;
+        } else if (approverRole === 'Faculty') { // Student chose Faculty Advisor
             faculty_approver_id = selectedApproverId;
             const hod = await Faculty.findOne({ department: student.department, designation: 'HOD' });
             if (!hod) {
                 return res.status(404).json({ success: false, message: `No HOD found for ${student.department} department.` });
             }
             hod_approver_id = hod._id;
-            notificationRecipientId = faculty_approver_id;
-            notificationMessage = `A new Gate Pass request from ${student.fullName} is awaiting your approval.`;
-        } else if (selectedApprover.designation === 'HOD') {
-            faculty_approver_id = selectedApproverId; // HOD acts as the initial approver
-            hod_approver_id = null; // Single-tier approval, HOD is the only approver
-            faculty_status = 'APPROVED'; // Bypassed faculty approval
-            notificationRecipientId = faculty_approver_id;
+            notificationRecipientId = faculty_approver_id; // Notify Faculty
             notificationMessage = `A new Gate Pass request from ${student.fullName} is awaiting your approval.`;
         } else {
-            return res.status(400).json({ success: false, message: 'Invalid approver designation.' });
+            return res.status(400).json({ success: false, message: 'Invalid approver role provided.' });
         }
 
         // Convert ISO strings to Date objects

@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }) => {
 
     console.log('AuthContext: Setting loading to false (FINAL).');
     setLoading(false);
-  }, [logout]); // Added logout to dependencies for stability, though it's wrapped in useCallback
+  }, []); // Removed logout from dependencies as it's wrapped in useCallback and doesn't need to trigger re-run
 
   const login = (newToken, userDataFromAPI) => { // Accept the user object from the API
     console.log('AuthContext: login function called.');

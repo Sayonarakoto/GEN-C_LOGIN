@@ -17,8 +17,7 @@ exports.getPendingSpecialPasses = async (req, res) => {
 
     try {
         const pendingPasses = await SpecialPass.find({
-            // Check if the department property is actually present on the pass document
-            department: department, 
+            department: new RegExp(`^${department}$`, 'i'), 
             status: 'Pending'
         })
         .populate('student_id', 'studentId fullName year')
@@ -294,5 +293,57 @@ exports.initiateSpecialPass = async (req, res) => { // This is the function for 
     } catch (error) {
         console.error('Error initiating special pass (HOD):', error);
         res.status(500).json({ success: false, message: 'Internal server error.' });
+    }
+};
+
+exports.getSpecialPassHistory = async (req, res) => {
+    const department = req.user.department;
+    console.log(`DEBUG: HOD Special Pass History - Searching for Dept: '${department}', Status: ['Approved', 'Rejected']`);
+
+    try {
+        const historyPasses = await SpecialPass.find({
+            department: department,
+            status: { $in: ['Approved', 'Rejected'] }
+        })
+        .populate('student_id', 'studentId fullName year')
+        .populate('hod_approver_id', 'fullName')
+        .sort({ approved_at: -1, requested_at: -1 });
+
+        console.log(`DEBUG: HOD Special Pass History - Found ${historyPasses.length} requests.`);
+
+        res.status(200).json({ success: true, data: historyPasses });
+    } catch (error) {
+        console.error('CRITICAL ERROR fetching HOD special pass history:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch pass history.' });
+    }
+};
+
+module.exports = {
+    getPendingSpecialPasses: exports.getPendingSpecialPasses,
+    approveSpecialPass: exports.approveSpecialPass,
+    rejectSpecialPass: exports.rejectSpecialPass,
+    initiateSpecialPass: exports.initiateSpecialPass,
+    getSpecialPassHistory: exports.getSpecialPassHistory
+};
+
+exports.getSpecialPassHistory = async (req, res) => {
+    const department = req.user.department;
+    console.log(`DEBUG: HOD Special Pass History - Searching for Dept: '${department}', Status: ['Approved', 'Rejected']`);
+
+    try {
+        const historyPasses = await SpecialPass.find({
+            department: department,
+            status: { $in: ['Approved', 'Rejected'] }
+        })
+        .populate('student_id', 'studentId fullName year')
+        .populate('hod_approver_id', 'fullName')
+        .sort({ approved_at: -1, requested_at: -1 });
+
+        console.log(`DEBUG: HOD Special Pass History - Found ${historyPasses.length} requests.`);
+
+        res.status(200).json({ success: true, data: historyPasses });
+    } catch (error) {
+        console.error('CRITICAL ERROR fetching HOD special pass history:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch pass history.' });
     }
 };

@@ -108,6 +108,7 @@ const FacultyDashboard = () => {
     const secondaryAccent = "#3b82f6"; // From template
     const color = active ? secondaryAccent : "#6b7280";
     const fontWeight = active ? 600 : 500;
+    const iconClass = icon.startsWith('bxs-') ? `bx ${icon}` : `bx bx-${icon}`;
     return (
       <Box
         onClick={onClick}
@@ -126,7 +127,7 @@ const FacultyDashboard = () => {
           }
         }}
       >
-        <i className={`bx bx-${icon}`} style={{ fontSize: 24, marginRight: 14, color }} />
+        <i className={iconClass} style={{ fontSize: 24, marginRight: 14, color }} />
         <Typography sx={{ color, fontWeight }}>{text}</Typography>
       </Box>
     );
@@ -147,7 +148,7 @@ const FacultyDashboard = () => {
     { key: 'lateEntries', icon: 'time', label: 'All Late Entries' },
     { key: 'uploadStudents', icon: 'upload', label: 'Upload Students' },
     { key: 'manageStudents', icon: 'group', label: 'Manage Students' },
-    { key: 'specialPasses', icon: 'ticket', label: 'Special Passes' },
+    { key: 'specialPasses', icon: 'bxs-purchase-tag', label: 'Special Passes' },
     { key: 'gatePass', icon: 'exit', label: 'Gate Pass' },
     { key: 'auditLogs', icon: 'list-ul', label: 'Audit Logs' },
     { key: 'profile', icon: 'user', label: 'Profile' }, // New menu item

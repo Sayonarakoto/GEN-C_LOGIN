@@ -52,4 +52,16 @@ router.post(
   hodSpecialPassController.initiateSpecialPass
 );
 
+/**
+ * @route   GET /api/hod/special-passes/history
+ * @desc    Get all approved/rejected special passes for the HOD's department
+ * @access  Private (HOD)
+ */
+router.get(
+    '/history',
+    requireAuth,
+    requireHOD,
+    hodSpecialPassController.getSpecialPassHistory
+);
+
 module.exports = router;

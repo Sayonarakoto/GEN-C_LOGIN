@@ -35,4 +35,8 @@ const auditLogSchema = new mongoose.Schema({
   }
 });
 
+auditLogSchema.index({ pass_id: 1, timestamp: -1 });
+auditLogSchema.index({ gatepass_id: 1, timestamp: -1 });
+auditLogSchema.index({ actor_id: 1, timestamp: -1 });
+
 module.exports = mongoose.model('AuditLog', auditLogSchema);

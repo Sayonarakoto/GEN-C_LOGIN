@@ -12,6 +12,7 @@ import {
 } from 'react-bootstrap';
 import apiClient from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import StatsFetcher from '../components/StatsFetcher';
 
 const PendingRequests = ({ pendingRequests, onApprove, onReject, loading, error }) => {
   if (loading) {
@@ -204,6 +205,7 @@ const FacultyGatePass = () => {
 
   return (
     <Container fluid className="py-4">
+      <StatsFetcher featureType="gatepass" />
       <h1 className="h4 mb-4">Gate Pass Management</h1>
       <Card>
         <Card.Header>

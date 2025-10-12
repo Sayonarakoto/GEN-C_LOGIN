@@ -30,45 +30,12 @@ import FacultyProfile from "../faculty/FacultyProfile"; // Import FacultyProfile
 const FacultyDashboard = () => {
   const [selectedKey, setSelectedKey] = useState("approvals");
   const [allStudents, setAllStudents] = useState([]);
-  const [stats, setStats] = useState({ pending: 0, lateToday: 0, approved: 0, alerts: 0 });
   const [showOffcanvas, setShowOffcanvas] = useState(false); // State for Offcanvas visibility
 
   const { user, loading, logout } = useAuth();
   const { theme } = useTheme(); // theme will be 'light' or 'dark'
   const navigate = useNavigate();
   const toast = useToastService();
-
-  const refreshStats = useCallback(async () => {
-      try {
-        const facultyStatsResponse = await api.get('/api/faculty/stats');
-        let hodGatePassPending = 0;
-
-        if (user?.role === 'HOD') {
-          const hodGatePassStatsResponse = await api.get('/api/gatepass/hod/stats');
-          if (hodGatePassStatsResponse.data && hodGatePassStatsResponse.data.success) {
-            hodGatePassPending = hodGatePassStatsResponse.data.data.totalPendingHODApproval;
-          }
-        }
-
-        if (facultyStatsResponse.data && facultyStatsResponse.data.success) {
-          setStats(prevStats => ({
-            ...prevStats,
-            pending: hodGatePassPending > 0 ? hodGatePassPending : facultyStatsResponse.data.data.pending, // Prioritize HOD pending if available
-            approved: facultyStatsResponse.data.data.approved,
-            lateToday: facultyStatsResponse.data.data.todayEntry,
-            alerts: facultyStatsResponse.data.data.alerts,
-          }));
-        }
-    } catch (error) {
-      console.error("Failed to fetch stats:", error);
-      toast.error('Failed to refresh dashboard stats.');
-    }
-  }, [toast, user]);
-
-  useEffect(() => {
-    if (loading || !user) return; // CRITICAL CHECK
-    refreshStats();
-  }, [refreshStats, loading, user]);
 
   const fetchAllStudents = useCallback(async () => {
     try {
@@ -133,16 +100,6 @@ const FacultyDashboard = () => {
     );
   };
 
-  // Helper component for Dashboard Stat Card
-  const DashboardStatCard = ({ title, value, color }) => {
-    return (
-      <Card sx={{ borderRadius: 3, p: 5, bgcolor: "#fff", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)" }}>
-        <Typography fontSize={14} color="#64748b" gutterBottom fontWeight={500}>{title}</Typography>
-        <Typography fontSize={32} fontWeight={700} sx={{ mt: 1, color }}>{value}</Typography>
-      </Card>
-    );
-  };
-
   const baseMenuItems = [
     { key: 'approvals', icon: 'check-circle', label: 'Approvals' },
     { key: 'lateEntries', icon: 'time', label: 'All Late Entries' },
@@ -159,7 +116,7 @@ const FacultyDashboard = () => {
   const renderContent = () => {
     switch (selectedKey) {
       case 'approvals':
-        return <LateEntriesApprovals onActionComplete={refreshStats} />;
+        return <LateEntriesApprovals onActionComplete={() => {}} />;
       case 'lateEntries':
         return <FacultyLateEntries />;
       case 'uploadStudents':
@@ -256,22 +213,6 @@ const FacultyDashboard = () => {
 
         {/* Main content layout */}
         <Container fluid sx={{ background: "#f3f4f6", flex: 1, p: { xs: 2, md: 6 } }}>
-          {/* Top summary cards */}
-          <Row className="mb-4">
-            <Col md={3} xs={12} className="mb-3">
-              <DashboardStatCard title="Pending Requests" value={stats.pending} color="#f59e42" />
-            </Col>
-            <Col md={3} xs={12} className="mb-3">
-              <DashboardStatCard title="Late Entries Today" value={stats.lateToday} color="#22c55e" />
-            </Col>
-            <Col md={3} xs={12} className="mb-3">
-              <DashboardStatCard title="Approved Late Entries" value={stats.approved} color="#3b82f6" />
-            </Col>
-            <Col md={3} xs={12} className="mb-3">
-              <DashboardStatCard title="Alerts" value={stats.alerts} color="#ef4444" />
-            </Col>
-          </Row>
-
           {/* Dynamic Content based on selectedKey */}
           <Card sx={{ borderRadius: 3, p: { xs: 3, md: 6 }, bgcolor: "#fff", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)" }}>
             {renderContent()}

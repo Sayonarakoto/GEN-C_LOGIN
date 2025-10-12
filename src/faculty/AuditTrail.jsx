@@ -100,6 +100,41 @@ const AuditTrail = () => {
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (!selectedStudent) {
+      setError('Please select a student to download the report.');
+      return;
+    }
+
+    try {
+      const params = {
+        startDate: filters.startDate ? dayjs(filters.startDate).format('YYYY-MM-DD') : null,
+        endDate: filters.endDate ? dayjs(filters.endDate).format('YYYY-MM-DD') : null,
+      };
+      const queryString = new URLSearchParams(params).toString();
+      const url = `/api/students/${selectedStudent}/activity-report/download-pdf?${queryString}`;
+
+      const response = await apiClient.get(url, {
+        responseType: 'blob', // Important: responseType must be 'blob'
+      });
+
+      // Create a blob URL and trigger download
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `Student_Activity_Report_${selectedStudentDetails.studentId}.pdf`); // Set the download file name
+      document.body.appendChild(link);
+      link.click();
+      link.remove(); // Clean up the DOM
+      window.URL.revokeObjectURL(downloadUrl); // Release the object URL
+
+    } catch (err) {
+      console.error("Failed to download PDF report:", err);
+      setError('Failed to download PDF report.');
+    }
+  };
+
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <Container maxWidth="xl" sx={{ py: 4 }}>
@@ -109,7 +144,7 @@ const AuditTrail = () => {
 
         <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3 }}>
           <Typography variant="h6" gutterBottom>Select Student and Date Range</Typography>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 3 }}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ my: 3 }}>
             <TextField
               fullWidth
               label="Search Students"
@@ -197,6 +232,13 @@ const AuditTrail = () => {
               }}
             />
             <Button variant="contained" onClick={handleFetchReport}>Fetch Report</Button>
+            <Button
+              variant="outlined"
+              onClick={handleDownloadPdf}
+              disabled={!selectedStudent}
+            >
+              Download PDF
+            </Button>
           </Stack>
 
           {reportData && (

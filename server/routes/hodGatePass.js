@@ -52,10 +52,6 @@ router.put('/reject/:id', HOD_ACCESS, hodRejectGatePass);
 // FIX: Removed redundant '/hod' from the route path
 router.get('/history', HOD_ACCESS, getHODGatePassHistory);
 
-// @route GET /api/gatepass/hod/stats
-// @desc    Get department-wide gate pass statistics for HOD
-// @access  Private (HOD)
-// FIX: Removed redundant '/hod' from the route path
-router.get('/stats', HOD_ACCESS, getHODDepartmentStats);
+
 
 module.exports = router;

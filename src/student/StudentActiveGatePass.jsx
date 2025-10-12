@@ -31,8 +31,13 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
         event.preventDefault();
         const formData = new FormData(event.target);
         const data = Object.fromEntries(formData.entries());
-        data.exitTime = exitTime ? exitTime.format('HH:mm') : '';
-        data.returnTime = returnTime ? returnTime.format('HH:mm') : '';
+        // Combine selected times with today's date to form full ISO date strings
+        const today = dayjs();
+        data.date_valid_from = exitTime ? today.hour(exitTime.hour()).minute(exitTime.minute()).second(0).millisecond(0).toISOString() : '';
+        data.date_valid_to = returnTime ? today.hour(returnTime.hour()).minute(returnTime.minute()).second(0).millisecond(0).toISOString() : '';
+        // Remove old exitTime and returnTime fields if they are no longer needed by the backend
+        delete data.exitTime;
+        delete data.returnTime;
         onSubmit(data);
     };
 

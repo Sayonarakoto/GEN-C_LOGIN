@@ -208,7 +208,7 @@ async function generateStudentActivityReportPDF(studentDetails, reportData, star
     addText('Gate Passes:', 14, true);
     if (reportData.gatePasses && reportData.gatePasses.length > 0) {
         for (const pass of reportData.gatePasses) {
-            const passText = `  - Destination: ${pass.destination}, Reason: ${pass.reason}, Faculty Status: ${pass.faculty_status}, HOD Status: ${pass.hod_status}, From: ${new Date(pass.date_valid_from).toLocaleString()}, To: ${new Date(pass.date_valid_to).toLocaleString()}`;
+            const passText = `  - Destination: ${pass.destination}, Reason: ${pass.reason}, Faculty: ${pass.faculty_approver_id?.fullName || 'N/A'}, HOD: ${pass.hod_approver_id?.fullName || 'N/A'}, From: ${new Date(pass.date_valid_from).toLocaleString()}, To: ${new Date(pass.date_valid_to).toLocaleString()}`;
             checkPageBreak(lineHeight + itemSpacing);
             addText(passText, 10);
             currentY -= itemSpacing;

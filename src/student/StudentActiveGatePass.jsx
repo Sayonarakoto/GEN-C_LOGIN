@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Card, Row, Col, Image, Badge, Form, Button, InputGroup, Alert, Spinner } from 'react-bootstrap';
-import { CheckCircleOutline, Key, CalendarToday, Place, Comment, PersonPin, QrCode2, Send } from '@mui/icons-material';
+import { CheckCircleOutline, Key, CalendarToday, Place, Comment, PersonPin, QrCode2, Send, ArrowBack } from '@mui/icons-material';
 import apiClient from '../api/client'; // Assuming apiClient is in this path
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
@@ -8,6 +8,7 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { TextField } from '@mui/material';
 import dayjs from 'dayjs';
 import { useToast } from '../hooks/useToast';
+
 
 // --- Reusable Detail Row Component ---
 const DetailRow = ({ icon, label, value, className = '' }) => (
@@ -118,7 +119,41 @@ const StudentGatePass = () => {
     const [liveTime, setLiveTime] = useState(new Date());
     const [faculty, setFaculty] = useState([]);
     const [submitLoading, setSubmitLoading] = useState(false);
+    const [downloadingPdf, setDownloadingPdf] = useState(false); // New state
     const { showToast } = useToast();
+
+    
+    // New state for Gate Pass Form visibility
+    const [showGatePassForm, setShowGatePassForm] = useState(false);
+
+    // New function
+    const handleDownloadPDF = async (passId) => {
+        setDownloadingPdf(true);
+        try {
+            const response = await apiClient.get(`/api/gatepass/download-pdf/${passId}`, {
+                responseType: 'blob', // Important for downloading files
+            });
+
+            // Create a blob URL and trigger download
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `gatepass_${passId}.pdf`); // Set the filename
+            document.body.appendChild(link);
+            link.click();
+            link.parentNode.removeChild(link);
+            window.URL.revokeObjectURL(url); // Clean up the blob URL
+
+            showToast('PDF downloaded successfully!', 'success');
+        } catch (err) {
+            console.error('Error downloading PDF:', err);
+            showToast(err.response?.data?.message || 'Failed to download PDF.', 'error');
+        } finally {
+            setDownloadingPdf(false);
+        }
+    };
+
+    
 
 
     const fetchActiveGatePass = useCallback(async () => {
@@ -164,6 +199,7 @@ const StudentGatePass = () => {
         fetchActiveGatePass();
         fetchFaculty();
         fetchHistory();
+        setShowGatePassForm(false); // Reset gate pass form visibility on mount
     }, [fetchActiveGatePass, fetchFaculty, fetchHistory]);
 
     useEffect(() => {
@@ -218,7 +254,7 @@ const StudentGatePass = () => {
         return (
             <div className="d-flex justify-content-center align-items-center" style={{ height: '80vh' }}>
                 <Spinner animation="border" variant="primary" />
-                <p className="ms-3">Loading your gate pass status...</p>
+                <p className="ms-3">Loading your pass status...</p>
             </div>
         );
     }
@@ -233,116 +269,167 @@ const StudentGatePass = () => {
                 <i className='bx bxs-institution text-primary me-3'></i> Gate Pass
             </h1>
 
-            {passData ? (
-                // --- Active Pass View ---
-                <Card className="shadow-sm rounded-3 border-0">
-                    <Card.Body className="p-4">
-                        <div className={`w-100 text-center p-3 text-white rounded-3 mb-4 bg-${getStatusVariant(passData)}`}>
-                            <CheckCircleOutline className="me-2" />
-                            <span className="fw-bold fs-5">{passData.status}</span>
-                        </div>
-                        <Row>
-                            <Col md={8} className="pe-md-4">
-                                <div className="d-flex align-items-center mb-4 border-bottom pb-3">
-                                    <Image src={passData.student_id?.photoUrl || 'https://placehold.co/64x64/3b82f6/ffffff?text=STUDENT'} alt="Student" roundedCircle style={{ width: '64px', height: '64px', border: '2px solid var(--bs-primary)' }} />
-                                    <div className="ms-3">
-                                        <p className="h5 fw-bold text-dark mb-0">{passData.student_id?.fullName}</p>
-                                        <p className="text-muted mb-0">{passData.student_id?.studentId}</p>
+            <>
+                {showGatePassForm || !passData ? (
+                    <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        {passData && ( // Only show "Back to Active Pass" button if there's an active pass to go back to
+                            <div className="d-flex justify-content-start mb-3">
+                                <Button variant="outline-secondary" onClick={() => setShowGatePassForm(false)}>
+                                    <ArrowBack className="me-2" /> Back to Active Pass
+                                </Button>
+                            </div>
+                        )}
+                        <GatePassRequestForm onSubmit={handleRequestSubmit} loading={submitLoading} facultyList={faculty} />
+                    </LocalizationProvider>
+                ) : (
+                    // --- Active Gate Pass View ---
+                    <Card className="shadow-sm rounded-3 border-0">
+                        <Card.Body className="p-4">
+                            <div className={`w-100 text-center p-3 text-white rounded-3 mb-4 bg-${getStatusVariant(passData)}`}>
+                                <CheckCircleOutline className="me-2" />
+                                <span className="fw-bold fs-5">{passData.status}</span>
+                            </div>
+                            <Row>
+                                <Col md={8} className="pe-md-4">
+                                    <div className="d-flex align-items-center mb-4 border-bottom pb-3">
+                                        <Image src={passData.student_id?.photoUrl || 'https://placehold.co/64x64/3b82f6/ffffff?text=STUDENT'} alt="Student" roundedCircle style={{ width: '64px', height: '64px', border: '2px solid var(--bs-primary)' }} />
+                                        <div className="ms-3">
+                                            <p className="h5 fw-bold text-dark mb-0">{passData.student_id?.fullName}</p>
+                                            <p className="text-muted mb-0">{passData.student_id?.studentId}</p>
+                                        </div>
                                     </div>
-                                </div>
-                                <div className="d-flex flex-column">
-                                    <DetailRow icon={<Key fontSize="small" />} label="Pass ID:" value={<Badge bg="light" text="dark" className="fs-5 font-monospace">{passData._id.slice(-6)}</Badge>} />
-                                    <DetailRow icon={<CalendarToday fontSize="small" />} label="Issued Date/Time:" value={new Date(passData.createdAt).toLocaleString()} />
-                                    <DetailRow icon={<Place fontSize="small" />} label="Destination:" value={passData.destination} />
-                                    <DetailRow icon={<Comment fontSize="small" />} label="Purpose:" value={passData.reason} />
-                                    <DetailRow icon={<PersonPin fontSize="small" />} label="Approved By:" value={passData.faculty_id?.fullName || 'N/A'} className="border-bottom-0" />
-                                </div>
-                                <div className="mt-4 p-3 rounded-3 bg-success-subtle text-success-emphasis fw-bold text-center">
-                                    <p className="fs-5 mb-0">Valid Until: {new Date(passData.date_valid_to).toLocaleString()}</p>
-                                    <p className="small text-muted mt-1 mb-0">Live Timestamp: <span className="fw-medium">{liveTime.toLocaleTimeString()}</span></p>
-                                </div>
-                            </Col>
-                            <Col md={4} className="d-flex flex-column align-items-center justify-content-center mt-4 mt-md-0">
-                                <div className="p-2 bg-white border rounded-3 shadow-sm">
-                                    {passData.qr_token ? (
-                                        <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(passData.qr_token)}`} alt="QR Code" />
-                                    ) : (
-                                        <QrCode2 style={{ fontSize: '10rem' }} />
+                                    <div className="d-flex flex-column">
+                                        
+                                        <DetailRow icon={<CalendarToday fontSize="small" />} label="Issued Date/Time:" value={new Date(passData.createdAt).toLocaleString()} />
+                                        <DetailRow icon={<Place fontSize="small" />} label="Destination:" value={passData.destination} />
+                                        <DetailRow icon={<Comment fontSize="small" />} label="Purpose:" value={passData.reason} />
+                                        <DetailRow icon={<PersonPin fontSize="small" />} label="Approved By:" value={passData.faculty_id?.fullName || 'N/A'} className="border-bottom-0" />
+                                    </div>
+                                    <div className="mt-4 p-3 rounded-3 bg-success-subtle text-success-emphasis fw-bold text-center">
+                                        <p className="fs-5 mb-0">Valid Until: {new Date(passData.date_valid_to).toLocaleString()}</p>
+                                        <p className="small text-muted mt-1 mb-0">Live Timestamp: <span className="fw-medium">{liveTime.toLocaleTimeString()}</span></p>
+                                    </div>
+                                </Col>
+                                <Col md={4} className="d-flex flex-column align-items-center justify-content-center mt-4 mt-md-0">
+                                    <div className="p-2 bg-white border rounded-3 shadow-sm">
+                                        {passData.qr_code_id ? (
+                                            <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(passData.qr_code_id)}`} alt="QR Code" />
+                                        ) : (
+                                            <QrCode2 style={{ fontSize: '10rem' }} />
+                                        )}
+                                    </div>
+                                    {passData.one_time_pin && (
+                                        <p className="text-muted small mt-2">OTP: <span className="fw-bold text-primary">{passData.one_time_pin}</span></p>
                                     )}
-                                </div>
-                                {passData.verification_otp && (
-                                    <p className="text-muted small mt-2">OTP: <span className="fw-bold text-primary">{passData.verification_otp}</span></p>
-                                )}
-                                <p className="text-muted small mt-2">Scan at security checkpoint</p>
-                            </Col>
-                        </Row>
-                    </Card.Body>
-                </Card>
-            ) : (
-                // --- Form View ---
-                <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <GatePassRequestForm onSubmit={handleRequestSubmit} loading={submitLoading} facultyList={faculty} />
-                </LocalizationProvider>
-            )}
-            
-            <GatePassHistory history={history} />
+                                    {passData.pdf_path && (
+                                        <Button variant="primary" onClick={() => handleDownloadPDF(passData._id)} disabled={downloadingPdf} className="mt-3">
+                                            {downloadingPdf ? <Spinner animation="border" size="sm" className="me-2" /> : <i className='bx bxs-file-pdf me-2'></i>} Download Pass
+                                        </Button>
+                                    )}
+                                    <p className="text-muted small mt-2">Scan at security checkpoint</p>
+                                </Col>
+                            </Row>
+                        </Card.Body>
+                        {/* New button to request another gate pass */}
+                        <Card.Footer className="text-center">
+                            <Button
+                                variant="primary"
+                                onClick={() => setShowGatePassForm(true)}
+                            >
+                                Request Another Gate Pass
+                            </Button>
+                        </Card.Footer>
+                    </Card>
+                )}
+
+                <GatePassHistory history={history} handleDownloadPDF={handleDownloadPDF} downloadingPdf={downloadingPdf} />
+            </>
         </div>
     );
 };
 
 // --- Gate Pass History Component ---
-const GatePassHistory = ({ history }) => {
-    if (history.length === 0) {
-        return null; // Don't render anything if there's no history
+const GatePassHistory = ({ history, handleDownloadPDF, downloadingPdf = false }) => {
+    if (!history || history.length === 0) {
+        return (
+            <div className="mt-5 text-center text-muted">
+                <i className='bx bx-history fs-2'></i>
+                <p>Your gate pass history will appear here.</p>
+            </div>
+        ); // Don't render anything if there's no history
     }
 
-    const getStatusVariant = (pass) => {
-        // 1. Check for any rejection first
+    const getHistoryStatusInfo = (pass) => {
+        const now = new Date();
+        const validTo = new Date(pass.date_valid_to);
+
+        // 1. Final Rejected State
         if (pass.faculty_status === 'REJECTED' || pass.hod_status === 'REJECTED') {
-            return 'danger'; // FINAL REJECTED (Red)
+            return { variant: 'danger', text: 'REJECTED' };
         }
 
-        // 2. Check for final approval
+        // 2. Final Approved State (and its sub-states like Used/Expired)
         if (pass.hod_status === 'APPROVED') {
-            return 'success'; // FINAL APPROVED (Green)
+            // Check for 'Used' status if the backend provides it
+            if (pass.status === 'Used') {
+                return { variant: 'secondary', text: 'USED' };
+            }
+            // NOW check for expiry, only if it was approved
+            if (pass.date_valid_to && validTo < now) {
+                return { variant: 'dark', text: 'FINAL APPROVED (EXPIRED)' };
+            }
+            // Otherwise, it's just approved and valid
+            return { variant: 'success', text: 'FINAL APPROVED' };
         }
-
-        // 3. Check pending states
-        if (pass.faculty_status === 'APPROVED' && pass.hod_status === 'PENDING') {
-            return 'info'; // Waiting for HOD (Forwarded to HOD) (Blue)
+        
+        // 3. Pending States (These take precedence over expiry)
+        if (pass.hod_status === 'PENDING' && pass.faculty_status === 'APPROVED') { 
+            return { variant: 'warning', text: 'FORWARDED TO HOD' };
         }
-
         if (pass.faculty_status === 'PENDING') {
-            return 'info'; // Waiting for initial Faculty (Blue)
+            return { variant: 'info', text: 'PENDING FACULTY' };
         }
 
-        return 'secondary'; // Default/Unknown status
+        // 4. Default fallback
+        return { variant: 'light', text: 'UNKNOWN' };
     };
+
 
     return (
         <div className="mt-5">
             <h2 className="h4 fw-bold text-dark mb-3">Gate Pass History</h2>
-            {history.map(pass => (
-                <Card key={pass._id} className="mb-3 shadow-sm rounded-3 border-0">
-                    <Card.Body>
-                        <Row>
-                            <Col sm={8}>
-                                <p className="h5 fw-bold text-dark mb-1">{pass.destination}</p>
-                                <p className="text-muted small mb-2">{new Date(pass.createdAt).toLocaleString()}</p>
-                                <p className="mb-0"><strong>Reason:</strong> {pass.reason}</p>
-                                <p><strong>Approved By:</strong> {
-                                    (pass.hod_approver_id?.fullName && pass.hod_status === 'APPROVED') ?
-                                    pass.hod_approver_id.fullName :
-                                    pass.faculty_approver_id?.fullName || 'N/A'
-                                }</p>
-                            </Col>
-                            <Col sm={4} className="text-sm-end">
-                                <Badge bg={getStatusVariant(pass)} className="fs-6">{pass.status}</Badge>
-                            </Col>
-                        </Row>
-                    </Card.Body>
-                </Card>
-            ))}
+            {history.map(pass => {
+                const status = getHistoryStatusInfo(pass);
+                return (
+                    <Card key={pass._id} className="mb-3 shadow-sm rounded-3 border-0">
+                        <Card.Body>
+                            <Row className="align-items-center">
+                                <Col sm={8}>
+                                    <p className="h5 fw-bold text-dark mb-1">{pass.destination}</p>
+                                    <p className="text-muted small mb-2">{new Date(pass.createdAt).toLocaleString()}</p>
+                                    <p className="mb-0"><strong>Reason:</strong> {pass.reason}</p>
+                                    <p className="mb-0"><strong>Approved By:</strong> {
+                                        (pass.hod_status === 'APPROVED' && pass.hod_approver_id?.fullName && pass.faculty_status === 'APPROVED' && pass.faculty_approver_id?.fullName) ?
+                                        `Faculty: ${pass.faculty_approver_id.fullName}, HOD: ${pass.hod_approver_id.fullName}` :
+                                        (pass.hod_status === 'APPROVED' && pass.hod_approver_id?.fullName) ?
+                                        `HOD: ${pass.hod_approver_id.fullName}` :
+                                        (pass.faculty_status === 'APPROVED' && pass.faculty_approver_id?.fullName) ?
+                                        `Faculty: ${pass.faculty_approver_id.fullName}` : 'Pending'
+                                    }</p>
+                                </Col>
+                                <Col sm={4} className="text-sm-end mt-2 mt-sm-0">
+                                    <Badge bg={status.variant} className="fs-6 px-2 py-1">{status.text}</Badge>
+                                    {pass.pdf_path && pass.hod_status === 'APPROVED' && (
+                                        <Button variant="outline-primary" onClick={() => handleDownloadPDF(pass._id)} disabled={downloadingPdf} className="ms-2 mt-2 mt-sm-0">
+                                            {downloadingPdf ? <Spinner animation="border" size="sm" className="me-2" /> : <i className='bx bxs-download'></i>} PDF
+                                        </Button>
+                                    )}
+                                </Col>
+                            </Row>
+                        </Card.Body>
+                    </Card>
+                )
+            })}
         </div>
     );
 };

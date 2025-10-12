@@ -1,3 +1,4 @@
+const path = require('path');
 const GatePass = require('../models/GatePass');
 const Student = require('../models/student');
 const Faculty = require('../models/Faculty'); // Needed to check faculty role
@@ -5,6 +6,9 @@ const AuditLog = require('../models/AuditLog'); // New import
 const { generateToken } = require('../config/jwt');
 const { generateThreeDigitOTP } = require('../utils/otpUtils');
 const { sendNotification } = require('../services/notificationService');
+const { generateWatermarkedPDF } = require('../services/pdfGenerationService'); // New import
+const { verifyOTPPass, verifyQRPass } = require('../services/verificationService'); // Import verification services
+const { logAuditAttempt } = require('../services/auditService'); // Import audit service
 
 // @desc    Get active gate pass for a student
 // @route   GET /api/gatepass/student/active
@@ -18,7 +22,7 @@ exports.getActiveGatePass = async (req, res) => {
       faculty_status: 'APPROVED',
       hod_status: 'APPROVED',
       date_valid_to: { $gte: new Date() }
-    }).populate('student_id', 'fullName studentId department');
+    }).populate('student_id', 'fullName studentId department').select('+pdf_path');
 
     if (!activePass) {
       return res.status(404).json({ success: false, message: 'No active gate pass found.' });
@@ -85,7 +89,13 @@ exports.requestGatePass = async (req, res) => {
         let exitDate;
         if (exitTime && exitTime.match(/^\d{2}:\d{2}$/)) { // Validate HH:mm format
             const [exitHours, exitMinutes] = exitTime.split(':');
-            exitDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(exitHours), parseInt(exitMinutes));
+            // Create a Date object for today, in IST timezone
+            const today = new Date();
+            // Set the date to today, and the time to the provided HH:mm in IST
+            exitDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(exitHours), parseInt(exitMinutes));
+            // Adjust for IST offset (UTC+5:30)
+            exitDate.setUTCHours(parseInt(exitHours) - 5, parseInt(exitMinutes) - 30, 0, 0);
+
             if (isNaN(exitDate.getTime())) { // Check if date is valid
                 return res.status(400).json({ success: false, message: 'Invalid exit time provided.' });
             }
@@ -96,7 +106,11 @@ exports.requestGatePass = async (req, res) => {
         let returnDate = null;
         if (returnTime && returnTime.match(/^\d{2}:\d{2}$/)) { // Validate HH:mm format if provided
             const [returnHours, returnMinutes] = returnTime.split(':');
-            returnDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), parseInt(returnHours), parseInt(returnMinutes));
+            const today = new Date();
+            returnDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(returnHours), parseInt(returnMinutes));
+            // Adjust for IST offset (UTC+5:30)
+            returnDate.setUTCHours(parseInt(returnHours) - 5, parseInt(returnMinutes) - 30, 0, 0);
+
             if (isNaN(returnDate.getTime())) { // Check if date is valid
                 return res.status(400).json({ success: false, message: 'Invalid return time provided.' });
             }
@@ -106,6 +120,7 @@ exports.requestGatePass = async (req, res) => {
             student_id: studentId,
             destination,
             reason,
+            pass_type: 'Gate Pass', // Added pass_type
             faculty_approver_id,
             hod_approver_id,
             department_id: student.department,
@@ -222,7 +237,7 @@ exports.facultyApproveGatePass = async (req, res) => {
         
         // CRITICAL STEP: Generate Credentials!
         pass.qr_code_id = generateToken({ passId: pass._id }); 
-        pass.verification_otp = generateThreeDigitOTP();
+        pass.one_time_pin = generateThreeDigitOTP();
 
         // Emit status update and notification to Student (FINAL APPROVAL)
         // This part needs to be adapted from hodApproveGatePass
@@ -234,12 +249,12 @@ exports.facultyApproveGatePass = async (req, res) => {
                 eventType: 'GATEPASS_HOD_APPROVED', // Changed to HOD_APPROVED as it's final
                 hod_approver_id: req.user.id,
                 qr_code_id: pass.qr_code_id,
-                one_time_pin: pass.verification_otp
+                one_time_pin: pass.one_time_pin
             });
         }
         await sendNotification(
             pass.student_id._id,
-            `Your Gate Pass to ${pass.destination} has been APPROVED by ${req.user.fullName}. QR Code and OTP are available in your app. OTP: ${pass.verification_otp}`,
+            `Your Gate Pass to ${pass.destination} has been APPROVED by ${req.user.fullName}. QR Code and OTP are available in your app. OTP: ${pass.one_time_pin}`,
             'Gate Pass Approved'
         );
     } 
@@ -270,7 +285,7 @@ exports.facultyApproveGatePass = async (req, res) => {
             status_change: 'faculty_status: PENDING -> APPROVED',
             hod_notified: !!pass.hod_approver_id,
             qr_code_generated: !!pass.qr_code_id,
-            one_time_pin_generated: !!pass.verification_otp,
+            one_time_pin_generated: !!pass.one_time_pin,
         },
     });
 
@@ -393,6 +408,18 @@ exports.hodApproveGatePass = async (req, res) => {
 
     await pass.save();
 
+    // Generate PDF and save path
+    const hod = await Faculty.findById(req.user.id); // The HOD approving
+    if (hod) {
+        const pdfResult = await generateWatermarkedPDF(pass, hod.fullName);
+        if (pdfResult.success) {
+            pass.pdf_path = pdfResult.filePath;
+            await pass.save(); // Save again to persist pdf_path
+        } else {
+            console.error('Failed to generate PDF for gate pass:', pdfResult.error);
+        }
+    }
+
     // Log HOD approval and credential generation in AuditLog
     await AuditLog.create({
         pass_id: pass._id,
@@ -403,6 +430,7 @@ exports.hodApproveGatePass = async (req, res) => {
             status_change: 'hod_status: PENDING -> APPROVED',
             qr_code_generated: true,
             one_time_pin_generated: true,
+            pdf_generated: !!pass.pdf_path, // Added pdf_generated status
         },
     });
 
@@ -496,6 +524,228 @@ exports.hodRejectGatePass = async (req, res) => {
     }
 };
 
+// @desc    Verify a gate pass using Student ID and OTP
+// @route   POST /api/gatepass/verify-otp
+// @access  Private (Security)
+exports.verifyGatePassByOTP = async (req, res) => {
+    const { studentIdString, otp, scan_location } = req.body;
+    const securityUser = req.user; // Attached by auth middleware
+
+    // Add scan_location to securityUser for logging purposes
+    securityUser.scan_location = scan_location;
+
+    try {
+        if (!studentIdString || !otp) {
+            await logAuditAttempt('Unknown', 'Verified', securityUser, 'FAILED: Missing Student ID or OTP for Gate Pass verification.');
+            return res.status(400).json({
+                is_valid: false,
+                display_status: "INPUT REQUIRED",
+                message: 'Missing Student ID or OTP for verification.',
+                pass_details: {}
+            });
+        }
+
+        // Use the centralized verifyOTPPass service
+        const verificationResult = await verifyOTPPass(studentIdString, otp, 'gate');
+
+        if (!verificationResult.isValid) {
+            // Log the failure reason provided by the service
+            await logAuditAttempt('Unknown', 'Verified', securityUser, `FAILED (OTP): ${verificationResult.reason}`);
+            let displayStatus = "ENTRY DENIED";
+            if (verificationResult.reason.includes('Student ID not found')) {
+                displayStatus = "STUDENT NOT FOUND";
+            } else if (verificationResult.reason.includes('No active Gate Pass found')) {
+                displayStatus = "PASS NOT FOUND";
+            } else if (verificationResult.reason.includes('Pass expired')) {
+                displayStatus = "PASS EXPIRED";
+            }
+            return res.status(200).json({
+                is_valid: false,
+                display_status: displayStatus,
+                message: verificationResult.reason,
+                pass_details: {}
+            });
+        }
+
+        const gatePass = verificationResult.pass;
+
+        // Populate student and HOD details for the response and audit log
+        await gatePass.populate('student_id', 'fullName studentId');
+        await gatePass.populate('hod_approver_id', 'fullName');
+
+        // --- Duplicate Verification Check ---
+        const sixtySecondsAgo = new Date(Date.now() - 60000);
+        const recentVerification = await AuditLog.findOne({
+            pass_id: gatePass._id,
+            event_type: 'Verified',
+            timestamp: { $gte: sixtySecondsAgo },
+            'event_details.result': { $regex: /^SUCCESS/ }
+        });
+
+        if (recentVerification) {
+            await logAuditAttempt(gatePass._id, 'Verified', securityUser, `FAILED (OTP): Duplicate scan attempted within 60 seconds.`);
+            return res.status(200).json({
+                is_valid: false,
+                display_status: "DUPLICATE SCAN",
+                message: "This pass was already successfully verified within the last minute.",
+                pass_details: {
+                    student_name: gatePass.student_id ? gatePass.student_id.fullName : 'N/A',
+                    pass_type: gatePass.pass_type,
+                }
+            });
+        }
+
+        // Log success
+        const auditDetails = {
+            student_name: gatePass.student_id ? gatePass.student_id.fullName : 'N/A',
+            pass_type: gatePass.pass_type,
+            pass_start_time: gatePass.date_valid_from,
+            pass_end_time: gatePass.date_valid_to,
+        };
+        await logAuditAttempt(gatePass._id, 'Verified', securityUser, `SUCCESS (OTP): ENTRY GRANTED`, auditDetails);
+
+        // Send notification to student
+        await sendNotification(
+            gatePass.student_id._id,
+            `Your Gate Pass to ${gatePass.destination} has been verified by Security at ${scan_location}.`,
+            'Gate Pass Verified'
+        );
+
+        const response = {
+            is_valid: true,
+            display_status: "ENTRY GRANTED",
+            message: 'Gate Pass validated successfully.',
+            pass_details: {
+                pass_id: gatePass._id,
+                student_id: gatePass.student_id ? gatePass.student_id.studentId : 'N/A',
+                student_name: gatePass.student_id ? gatePass.student_id.fullName : 'N/A',
+                pass_type: gatePass.pass_type,
+                hod_approver_name: gatePass.hod_approver_id ? gatePass.hod_approver_id.fullName : 'N/A',
+                date_valid_to: gatePass.date_valid_to
+            }
+        };
+
+        req.io.emit('new-pass-verified', response);
+        return res.status(200).json(response);
+
+    } catch (error) {
+        console.error('Error in verifyGatePassByOTP:', error);
+        await logAuditAttempt('Unknown', 'Verified', securityUser, `FAILED (OTP): Server Error - ${error.message}`);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+
+// @desc    Verify a gate pass using QR Code
+// @route   POST /api/gatepass/verify-qr
+// @access  Private (Security)
+exports.verifyGatePassByQR = async (req, res) => {
+    const { qr_token, scan_location } = req.body;
+    const securityUser = req.user; // Attached by auth middleware
+
+    // Add scan_location to securityUser for logging purposes
+    securityUser.scan_location = scan_location;
+
+    try {
+        if (!qr_token) {
+            await logAuditAttempt('Unknown', 'Verified', securityUser, 'FAILED: Missing QR Token for Gate Pass verification.');
+            return res.status(400).json({
+                is_valid: false,
+                display_status: "INPUT REQUIRED",
+                message: 'Missing QR Token for verification.',
+                pass_details: {}
+            });
+        }
+
+        // Use the centralized verifyQRPass service
+        const verificationResult = await verifyQRPass(qr_token, 'gate');
+
+        if (!verificationResult.isValid) {
+            // Log the failure reason provided by the service
+            await logAuditAttempt('Unknown', 'Verified', securityUser, `FAILED (QR): ${verificationResult.reason}`);
+            let displayStatus = "ENTRY DENIED";
+            if (verificationResult.reason.includes('Invalid QR')) {
+                displayStatus = "INVALID QR";
+            } else if (verificationResult.reason.includes('not found')) {
+                displayStatus = "PASS NOT FOUND";
+            } else if (verificationResult.reason.includes('expired')) {
+                displayStatus = "PASS EXPIRED";
+            }
+            return res.status(200).json({
+                is_valid: false,
+                display_status: displayStatus,
+                message: verificationResult.reason,
+                pass_details: {}
+            });
+        }
+
+        const gatePass = verificationResult.pass;
+
+        // Populate student and HOD details for the response and audit log
+        await gatePass.populate('student_id', 'fullName studentId');
+        await gatePass.populate('hod_approver_id', 'fullName');
+
+        // --- Duplicate Verification Check ---
+        const sixtySecondsAgo = new Date(Date.now() - 60000);
+        const recentVerification = await AuditLog.findOne({
+            pass_id: gatePass._id,
+            event_type: 'Verified',
+            timestamp: { $gte: sixtySecondsAgo },
+            'event_details.result': { $regex: /^SUCCESS/ }
+        });
+
+        if (recentVerification) {
+            await logAuditAttempt(gatePass._id, 'Verified', securityUser, `FAILED (QR): Duplicate scan attempted within 60 seconds.`);
+            return res.status(200).json({
+                is_valid: false,
+                display_status: "DUPLICATE SCAN",
+                message: "This pass was already successfully verified within the last minute.",
+                pass_details: {
+                    student_name: gatePass.student_id ? gatePass.student_id.fullName : 'N/A',
+                    pass_type: gatePass.pass_type,
+                }
+            });
+        }
+
+        // Log success
+        const auditDetails = {
+            student_name: gatePass.student_id ? gatePass.student_id.fullName : 'N/A',
+            pass_type: gatePass.pass_type,
+            pass_start_time: gatePass.date_valid_from,
+            pass_end_time: gatePass.date_valid_to,
+        };
+        await logAuditAttempt(gatePass._id, 'Verified', securityUser, `SUCCESS (QR): ENTRY GRANTED`, auditDetails);
+
+        // Send notification to student
+        await sendNotification(
+            gatePass.student_id._id,
+            `Your Gate Pass to ${gatePass.destination} has been verified by Security at ${scan_location}.`,
+            'Gate Pass Verified'
+        );
+
+        const response = {
+            is_valid: true,
+            display_status: "ENTRY GRANTED",
+            message: 'Gate Pass validated successfully.',
+            pass_details: {
+                pass_id: gatePass._id,
+                student_id: gatePass.student_id ? gatePass.student_id.studentId : 'N/A',
+                student_name: gatePass.student_id ? gatePass.student_id.fullName : 'N/A',
+                pass_type: gatePass.pass_type,
+                hod_approver_name: gatePass.hod_approver_id ? gatePass.hod_approver_id.fullName : 'N/A',
+                date_valid_to: gatePass.date_valid_to
+            }
+        };
+
+        req.io.emit('new-pass-verified', response);
+        return res.status(200).json(response);
+
+    } catch (error) {
+        console.error('Error in verifyGatePassByQR:', error);
+        await logAuditAttempt('Unknown', 'Verified', securityUser, `FAILED (QR): Server Error - ${error.message}`);
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
+};
+
 // @desc    Log a late return for a gate pass
 // @route   POST /api/gatepass/log-late-return
 // @access  Private (Security)
@@ -533,8 +783,8 @@ exports.logLateReturn = async (req, res) => {
         });
 
         // Emit Socket.IO event for frontend update
-        if (req.io && req.userSocketMap.has(gatePass.student_id._id.toString())) {
-            req.io.to(gatePass.student_id._id.toString()).emit('statusUpdate:gatePass', {
+        if (req.io && req.userSocketMap.has(pass.student_id._id.toString())) {
+            req.io.to(pass.student_id._id.toString()).emit('statusUpdate:gatePass', {
                 recordId: gatePass._id,
                 newStatus: 'LATE_RETURN',
                 userId: gatePass.student_id._id,
@@ -574,11 +824,66 @@ exports.getStudentGatePassHistory = async (req, res) => {
     const historyPasses = await GatePass.find({ student_id: studentId })
       .populate('faculty_approver_id', 'fullName')
       .populate('hod_approver_id', 'fullName')
+      .select('+pdf_path') // Add this line
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, data: historyPasses });
   } catch (error) {
     console.error('Error fetching student gate pass history:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
+// @desc    Download a gate pass PDF
+// @route   GET /api/gatepass/download-pdf/:id
+// @access  Private (Student, HOD, Security - authorized to view this pass)
+exports.downloadGatePassPDF = async (req, res) => {
+  try {
+    const passId = req.params.id;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const gatePass = await GatePass.findById(passId);
+
+    if (!gatePass) {
+      return res.status(404).json({ success: false, message: 'Gate Pass not found.' });
+    }
+
+    // Authorization: Only the student who requested it, or an HOD/Security can download
+    const isStudent = userRole === 'student' && gatePass.student_id.toString() === userId;
+    const isHOD = userRole === 'HOD' && gatePass.department_id.toString() === req.user.department.toString();
+    const isSecurity = userRole === 'security';
+
+    if (!isStudent && !isHOD && !isSecurity) {
+      return res.status(403).json({ success: false, message: 'Not authorized to download this gate pass.' });
+    }
+
+    if (!gatePass.pdf_path) {
+      return res.status(404).json({ success: false, message: 'PDF not generated for this gate pass.' });
+    }
+
+    const absolutePath = gatePass.pdf_path; // gatePass.pdf_path is already an absolute path
+
+    // Ensure the path is safe and within the expected directory
+    const safePdfDir = path.join(__dirname, '..' , 'generated_pdfs'); // Base directory for generated PDFs
+    if (!absolutePath.startsWith(safePdfDir)) {
+        console.error(`Attempted to access PDF outside safe directory. Path: ${absolutePath}, Safe Dir: ${safePdfDir}`);
+        return res.status(400).json({ success: false, message: 'Invalid PDF path or PDF not found in expected directory.' });
+    }
+
+    res.download(absolutePath, (err) => {
+      if (err) {
+        console.error('Error downloading PDF:', err);
+        // Check if the error is due to file not found
+        if (err.code === 'ENOENT') {
+            return res.status(404).json({ success: false, message: 'PDF file not found on server.' });
+        }
+        return res.status(500).json({ success: false, message: 'Error downloading PDF.' });
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in downloadGatePassPDF:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };

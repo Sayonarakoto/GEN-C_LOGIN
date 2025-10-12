@@ -11,13 +11,17 @@ exports.enforceDepartmentIsolation = async (req, res, next) => {
     const userRole = req.user?.role?.toLowerCase();
     const userDepartment = req.user?.department;
 
+    console.log(`[Department Isolation] enforceDepartmentIsolation: User Role: ${userRole}, User Department: ${userDepartment}`);
+
     // Only apply to Faculty and HOD roles
     if (userRole !== 'faculty' && userRole !== 'hod') {
+      console.log(`[Department Isolation] Skipping for role: ${userRole}`);
       return next();
     }
 
     // Verify department exists in JWT
     if (!userDepartment) {
+      console.warn(`[Department Isolation] Access denied: User ${req.user?.id} is not assigned to a department.`);
       return res.status(403).json({
         success: false,
         message: 'User is not assigned to a department',
@@ -28,9 +32,11 @@ exports.enforceDepartmentIsolation = async (req, res, next) => {
     // Attach department filter to request for downstream use
     req.departmentFilter = { studentDepartment: userDepartment };
     req.userDepartment = userDepartment;
+    console.log(`[Department Isolation] Department filter set for ${userDepartment}.`);
 
     next();
   } catch (error) {
+    console.error('[Department Isolation] Error enforcing department isolation:', error);
     res.status(500).json({
       success: false,
       message: 'Error enforcing department isolation',

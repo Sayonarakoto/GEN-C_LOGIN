@@ -1,159 +1,169 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Box,
   Container,
-  Typography,
+  Card,
+  Table,
   Button,
-  Paper,
+  Alert,
+  Spinner,
   Tabs,
   Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  CircularProgress,
-  Alert,
-} from '@mui/material';
-import { Badge } from 'react-bootstrap';
+  Badge,
+} from 'react-bootstrap';
 import apiClient from '../api/client';
+import { useAuth } from '../hooks/useAuth';
 
-// --- Pending Requests Table ---
 const PendingRequests = ({ pendingRequests, onApprove, onReject, loading, error }) => {
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <CircularProgress />
-      </Box>
+      <div className="d-flex justify-content-center mt-4">
+        <Spinner animation="border" />
+      </div>
     );
   }
 
   if (error) {
-    return <Alert severity="error">{error}</Alert>;
+    return <Alert variant="danger">{error}</Alert>;
   }
 
   return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Student Name</TableCell>
-            <TableCell>Exit Time</TableCell>
-            <TableCell>Return Time</TableCell>
-            <TableCell>Reason</TableCell>
-            <TableCell align="right">Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {pendingRequests.length > 0 ? (
-            pendingRequests.map((request) => (
-              <TableRow key={request._id}>
-                <TableCell>{request.student_id?.fullName}</TableCell>
-                <TableCell>{new Date(request.date_valid_from).toLocaleTimeString()}</TableCell>
-                <TableCell>{request.date_valid_to ? new Date(request.date_valid_to).toLocaleTimeString() : 'N/A'}</TableCell>
-                <TableCell>{request.reason}</TableCell>
-                <TableCell align="right">
-                  <Button size="small" variant="contained" color="success" onClick={() => onApprove(request._id)} sx={{ mr: 1 }}>
-                    Approve
-                  </Button>
-                  <Button size="small" variant="contained" color="error" onClick={() => onReject(request._id)}>
-                    Reject
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={5} align="center">
-                No pending requests.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <Table striped bordered hover responsive>
+      <thead>
+        <tr>
+          <th>Student Name</th>
+          <th>Exit Time</th>
+          <th>Return Time</th>
+          <th>Reason</th>
+          <th className="text-end">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {pendingRequests.length > 0 ? (
+          pendingRequests.map((request) => (
+            <tr key={request._id}>
+              <td>{request.student_id?.fullName}</td>
+              <td>{new Date(request.date_valid_from).toLocaleTimeString()}</td>
+              <td>{request.date_valid_to ? new Date(request.date_valid_to).toLocaleTimeString() : 'N/A'}</td>
+              <td>{request.reason}</td>
+              <td className="text-end">
+                <Button size="sm" variant="success" onClick={() => onApprove(request._id)} className="me-1">
+                  Approve
+                </Button>
+                <Button size="sm" variant="danger" onClick={() => onReject(request._id)}>
+                  Reject
+                </Button>
+              </td>
+            </tr>
+          ))
+        ) : (
+          <tr>
+            <td colSpan={5} className="text-center">
+              No pending requests.
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </Table>
   );
 };
 
-// --- History Table ---
 const HistoryTable = ({ history, loading, error }) => {
-    const getStatusBadge = (status) => {
-        switch (status) {
-          case 'Approved':
-            return <Badge bg="success">Approved</Badge>;
-          case 'Rejected':
-            return <Badge bg="danger">Rejected</Badge>;
-          default:
-            return <Badge bg="secondary">{status}</Badge>;
-        }
-      };
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'Approved':
+      case 'FINAL APPROVED':
+        return <Badge bg="success">Approved</Badge>;
+      case 'Rejected':
+        return <Badge bg="danger">Rejected</Badge>;
+      case 'FINAL APPROVED (EXPIRED)':
+        return <Badge bg="warning" text="dark">Expired</Badge>;
+      case 'Forwarded to HOD':
+        return <Badge bg="info">Forwarded</Badge>;
+      default:
+        return <Badge bg="secondary">{status}</Badge>;
+    }
+  };
 
-    const getFacultyViewStatus = (pass) => {
-        if (pass.hod_status === 'APPROVED') return 'FINAL APPROVED';
-        if (pass.hod_status === 'REJECTED' || pass.hod_status === 'REJECTED') return 'REJECTED';
-        if (pass.faculty_status === 'APPROVED' && pass.hod_approver_id) return 'Forwarded to HOD';
-        return pass.faculty_status; // Should be PENDING
-    };
+  const getFacultyViewStatus = (pass) => {
+    const now = new Date();
+    const validTo = new Date(pass.date_valid_to);
+
+    if (pass.hod_status === 'APPROVED') {
+      if (validTo < now) {
+        return 'FINAL APPROVED (EXPIRED)';
+      }
+      return 'FINAL APPROVED';
+    }
+    if (pass.hod_status === 'REJECTED' || pass.faculty_status === 'REJECTED') {
+      return 'REJECTED';
+    }
+    if (pass.faculty_status === 'APPROVED' && pass.hod_approver_id) {
+      return 'Forwarded to HOD';
+    }
+    return pass.faculty_status; // Should be PENDING
+  };
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <CircularProgress />
-      </Box>
+      <div className="d-flex justify-content-center mt-4">
+        <Spinner animation="border" />
+      </div>
     );
   }
 
   if (error) {
-    return <Alert severity="error">{error}</Alert>;
+    return <Alert variant="danger">{error}</Alert>;
   }
 
   return (
-    <TableContainer component={Paper}>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Student Name</TableCell>
-            <TableCell>Date</TableCell>
-            <TableCell>Status</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {history.length > 0 ? (
-            history.map((item) => (
-              <tr key={item._id}>
-                <td>{item.student_id?.fullName}</td>
-                <td>{new Date(item.createdAt).toLocaleString()}</td>
-                <td>{getStatusBadge(getFacultyViewStatus(item))}</td>
-              </tr>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={3} align="center">
-                No history found.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <Table striped bordered hover responsive>
+      <thead>
+        <tr>
+          <th>Student Name</th>
+          <th>Date</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {history.length > 0 ? (
+          history.map((item) => (
+            <tr key={item._id}>
+              <td>{item.student_id?.fullName}</td>
+              <td>{new Date(item.createdAt).toLocaleString()}</td>
+              <td>{getStatusBadge(getFacultyViewStatus(item))}</td>
+            </tr>
+          ))
+        ) : (
+          <tr>
+            <td colSpan={3} className="text-center">
+              No history found.
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </Table>
   );
 };
 
-// --- Main Faculty Gate Pass Component ---
 const FacultyGatePass = () => {
-  const [tabIndex, setTabIndex] = useState(0);
+  const [key, setKey] = useState('pending');
   const [pendingRequests, setPendingRequests] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { user } = useAuth();
 
   const fetchGatePassData = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
-      const pendingRes = await apiClient.get('/api/gatepass/faculty/pending');
-      const historyRes = await apiClient.get('/api/gatepass/faculty/history');
+
+      const endpoint = user?.role === 'HOD' ? 'hod' : 'faculty';
+      const [pendingRes, historyRes] = await Promise.all([
+        apiClient.get(`/api/gatepass/${endpoint}/pending`),
+        apiClient.get(`/api/gatepass/${endpoint}/history`),
+      ]);
+      
       setPendingRequests(pendingRes.data.data);
       setHistory(historyRes.data.data);
     } catch (err) {
@@ -162,16 +172,19 @@ const FacultyGatePass = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [user]);
 
   useEffect(() => {
-    fetchGatePassData();
-  }, [fetchGatePassData]);
+    if (user) {
+      fetchGatePassData();
+    }
+  }, [fetchGatePassData, user]);
 
   const handleApprove = async (id) => {
     try {
-      await apiClient.put(`/api/gatepass/faculty/approve/${id}`);
-      fetchGatePassData(); // Refresh data
+      const endpoint = user?.role === 'HOD' ? 'hod' : 'faculty';
+      await apiClient.put(`/api/gatepass/${endpoint}/approve/${id}`);
+      fetchGatePassData();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to approve request.');
       console.error(err);
@@ -180,30 +193,27 @@ const FacultyGatePass = () => {
 
   const handleReject = async (id) => {
     try {
-      await apiClient.put(`/api/gatepass/faculty/reject/${id}`); // Corrected endpoint
-      fetchGatePassData(); // Refresh data
+      const endpoint = user?.role === 'HOD' ? 'hod' : 'faculty';
+      await apiClient.put(`/api/gatepass/${endpoint}/reject/${id}`);
+      fetchGatePassData();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to reject request.');
       console.error(err);
     }
   };
 
-  const handleTabChange = (event, newValue) => {
-    setTabIndex(newValue);
-  };
-
   return (
-    <Container maxWidth="lg" sx={{ py: 4 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Gate Pass Management
-      </Typography>
-      <Paper elevation={2}>
-        <Tabs value={tabIndex} onChange={handleTabChange} centered>
-          <Tab label="Pending Requests" />
-          <Tab label="Approval History" />
-        </Tabs>
-        <Box sx={{ p: 3 }}>
-          {tabIndex === 0 && (
+    <Container fluid className="py-4">
+      <h1 className="h4 mb-4">Gate Pass Management</h1>
+      <Card>
+        <Card.Header>
+          <Tabs id="gate-pass-tabs" activeKey={key} onSelect={(k) => setKey(k)} className="card-header-tabs">
+            <Tab eventKey="pending" title="Pending Requests" />
+            <Tab eventKey="history" title="Approval History" />
+          </Tabs>
+        </Card.Header>
+        <Card.Body>
+          {key === 'pending' && (
             <PendingRequests
               pendingRequests={pendingRequests}
               onApprove={handleApprove}
@@ -212,9 +222,9 @@ const FacultyGatePass = () => {
               error={error}
             />
           )}
-          {tabIndex === 1 && <HistoryTable history={history} loading={loading} error={error} />}
-        </Box>
-      </Paper>
+          {key === 'history' && <HistoryTable history={history} loading={loading} error={error} />}
+        </Card.Body>
+      </Card>
     </Container>
   );
 };

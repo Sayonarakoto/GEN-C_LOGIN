@@ -9,8 +9,9 @@ const FacultyRoutes = require('./routes/faculty');
 const studentRoutes = require('./routes/student'); // New student routes
 const specialPassRoutes = require('./routes/specialPasses');
 const hodSpecialPassRoutes = require('./routes/hodSpecialPasses'); // New HOD Special Passes routes
-const auditRoutes = require('./routes/audit'); // New Audit routes
-const gatepassRoutes = require('./routes/gatepass');
+const hodGatePassRoutes = require('./routes/hodGatePass'); // Corrected HOD Gate Pass routes
+const gatepassRoutes = require('./routes/gatepass'); // Import gatepass routes
+const auditRoutes = require('./routes/audit'); // New Audit route
 
 const latecomerRoutes = require('./routes/latecomers');
 const securityRoutes = require('./routes/Security');
@@ -59,6 +60,7 @@ app.use('/api/student', studentRoutes); // Register student routes
 app.use('/api/special-passes', specialPassRoutes);
 app.use('/api/hod/special-passes', hodSpecialPassRoutes); // Register HOD Special Passes routes
 app.use('/api/audit', auditRoutes); // Register Audit routes
+app.use('/api/gatepass/hod', hodGatePassRoutes); // Register HOD Gate Pass routes
 app.use('/api/gatepass', gatepassRoutes);
 app.use('/api/latecomers', latecomerRoutes);
 app.use('/api/security', securityRoutes);

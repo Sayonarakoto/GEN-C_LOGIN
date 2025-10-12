@@ -8,8 +8,11 @@ const {
   facultyApproveGatePass,
   facultyRejectGatePass,
   logLateReturn,
-  getFacultyGatePassStats, // New import
+  getFacultyGatePassStats,
   getStudentGatePassHistory,
+  downloadGatePassPDF,
+  verifyGatePassByOTP, // NEW: Import verifyGatePassByOTP
+  verifyGatePassByQR, // NEW: Import verifyGatePassByQR
 } = require('../controllers/gatepassController');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
@@ -29,6 +32,11 @@ router.post('/student/request', requireAuth, requestGatePass);
 // @desc    Get gate pass history for a student
 // @access  Private (Student)
 router.get('/student/history', requireAuth, getStudentGatePassHistory);
+
+// @route   GET /api/gatepass/download-pdf/:id
+// @desc    Download a gate pass PDF
+// @access  Private (Student, HOD, Security)
+router.get('/download-pdf/:id', requireAuth, downloadGatePassPDF);
 
 // --- Faculty Routes ---
 
@@ -63,5 +71,15 @@ router.get('/faculty/stats', requireAuth, requireRole('faculty'), getFacultyGate
 // @desc    Log a late return for a gate pass
 // @access  Private (Security)
 router.post('/log-late-return', requireAuth, requireRole('Security'), logLateReturn);
+
+// @route   POST /api/gatepass/verify-otp
+// @desc    Verify a gate pass using Student ID and OTP
+// @access  Private (Security)
+router.post('/verify-otp', requireAuth, requireRole('Security'), verifyGatePassByOTP);
+
+// @route   POST /api/gatepass/verify-qr
+// @desc    Verify a gate pass using QR Code
+// @access  Private (Security)
+router.post('/verify-qr', requireAuth, requireRole('Security'), verifyGatePassByQR);
 
 module.exports = router;

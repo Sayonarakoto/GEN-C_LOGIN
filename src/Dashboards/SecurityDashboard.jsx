@@ -44,31 +44,27 @@ const LiveLogTable = ({ logs, loading }) => {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={5} align="center"> {/* Adjusted colspan */}
+                <TableCell colSpan={5} align="center">
                   <CircularProgress />
                 </TableCell>
               </TableRow>
             ) : Array.isArray(logs) && logs.length > 0 ? (
               logs.map((log) => (
                 <TableRow key={log._id}>
-                  <TableCell component="th" scope="row">{log.event_details?.student_name || 'N/A'}</TableCell>
-                  <TableCell>{log.event_details?.pass_type || 'N/A'}</TableCell>
-                  <TableCell>
+                  <TableCell component="th" scope="row">{log.event_details?.student_name || 'N/A'}</TableCell><TableCell>{log.event_details?.pass_type || 'N/A'}</TableCell><TableCell>
                     {log.event_details?.pass_start_time
                       ? new Date(log.event_details.pass_start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
                       : 'N/A'}
-                  </TableCell>
-                  <TableCell>
+                  </TableCell><TableCell>
                     {log.event_details?.pass_end_time
                       ? new Date(log.event_details.pass_end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
                       : 'N/A'}
-                  </TableCell>
-                  <TableCell align="right">{new Date(log.timestamp).toLocaleTimeString()}</TableCell>
+                  </TableCell><TableCell align="right">{new Date(log.timestamp).toLocaleTimeString()}</TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={5} align="center"> {/* Adjusted colspan */}
+                <TableCell colSpan={5} align="center">
                   No check-ins recorded yet.
                 </TableCell>
               </TableRow>
@@ -103,6 +99,7 @@ export default function SecurityDashboard() {
   const [formLoading, setFormLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false); // State for scanner modal
   const [scannedToken, setScannedToken] = useState(""); // Temporary state to hold the scanned token
+  const [passVerificationType, setPassVerificationType] = useState('special'); // 'special' or 'gate'
 
   // Live Log State
   const [logs, setLogs] = useState([]);
@@ -174,23 +171,28 @@ export default function SecurityDashboard() {
     const tokenToUse = token || scannedToken; // Prioritize token passed directly (from scan)
 
     const payload = {};
-    let endpoint = "/api/special-passes/verify"; // Default to OTP verification
+    let endpoint;
 
-    if (tokenToUse) {
-      payload.qr_token = tokenToUse;
-      // endpoint remains "/api/special-passes/verify";
-    } else if (studentId && otp) { // Manual input with Student ID and OTP
-      payload.student_id = studentId;
-      payload.verification_otp = otp;
-      // endpoint remains "/api/special-passes/verify"
+    if (passVerificationType === 'special') {
+        payload.qr_token = tokenToUse;
+        endpoint = "/api/special-passes/verify";
+    } else if (passVerificationType === 'gate') {
+        if (tokenToUse) {
+            payload.qr_token = tokenToUse;
+            endpoint = "/api/gatepass/verify-qr"; // Assuming a different endpoint for QR verification of gate passes
+        } else {
+            payload.studentIdString = studentId;
+            payload.otp = otp;
+            endpoint = "/api/gatepass/verify-otp";
+        }
     } else {
         setFormLoading(false);
         setVerificationResult({
             is_valid: false,
             display_status: "INPUT REQUIRED",
-            error_message: "Please scan a QR code or enter both Student ID and OTP to verify a pass.",
+            error_message: "Please select a pass type (Special or Gate) before verification.",
         });
-        return; // No valid input
+        return; // No valid pass type selected
     }
     
     // Reset scanned token after preparing payload
@@ -264,6 +266,27 @@ export default function SecurityDashboard() {
             <Typography variant="h5" fontWeight={600} mb={3} color="#1F2937">
               Verify Pass
             </Typography>
+
+            {/* Pass Type Selection */}
+            <Box sx={{ mb: 3 }}>
+              <Typography variant="subtitle1" fontWeight={500} mb={1}>Select Pass Type:</Typography>
+              <Stack direction="row" spacing={2}>
+                <Button
+                  variant={passVerificationType === 'special' ? 'contained' : 'outlined'}
+                  onClick={() => setPassVerificationType('special')}
+                  disabled={formLoading}
+                >
+                  Special Pass
+                </Button>
+                <Button
+                  variant={passVerificationType === 'gate' ? 'contained' : 'outlined'}
+                  onClick={() => setPassVerificationType('gate')}
+                  disabled={formLoading}
+                >
+                  Gate Pass
+                </Button>
+              </Stack>
+            </Box>
             
             {/* QR CODE SCANNER SECTION */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, p: 2, border: '1px dashed #ccc', borderRadius: 1 }}>

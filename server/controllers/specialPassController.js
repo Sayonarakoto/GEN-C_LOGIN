@@ -216,7 +216,7 @@ exports.createOverridePass = async (req, res) => {
 };
 
 exports.verifyPass = async (req, res) => {
-    const { qr_token, scan_location, student_id, verification_otp } = req.body; 
+    const { qr_token, scan_location, student_id, verification_otp, passType } = req.body; // Add passType
     const securityUser = req.user; // Attached by Task 1 Middleware
 
     // Add scan_location to securityUser for logging purposes
@@ -225,26 +225,42 @@ exports.verifyPass = async (req, res) => {
     let verificationResult = { isValid: false, reason: 'Invalid input.' };
     let pass = null;
     let verificationMethod = 'Unknown';
+    let passModel; // To hold either SpecialPass or GatePass model
+
+    // Determine which model to use based on passType
+    if (passType === 'special') {
+        passModel = SpecialPass;
+    } else if (passType === 'gate') {
+        passModel = GatePass;
+    } else {
+        await logAuditAttempt('Unknown', 'Verified', securityUser, 'FAILED: Invalid pass type provided.');
+        return res.status(400).json({
+            is_valid: false,
+            display_status: "INPUT REQUIRED",
+            message: 'Invalid pass type provided for verification.',
+            pass_details: {}
+        });
+    }
 
     // DFD 5.2: Check Input Method & Parse
     if (qr_token) {
         verificationMethod = 'QR Code';
         verificationResult = validatePassToken(qr_token);
         if (verificationResult.isValid) {
-            pass = await SpecialPass.findById(verificationResult.payload.pass_id)
+            pass = await passModel.findById(verificationResult.payload.pass_id)
                 .populate('student_id', 'fullName studentId')
                 .populate('hod_approver_id', 'fullName');
         }
-    } else if (student_id && verification_otp) { 
+    } else if (student_id && verification_otp) {
         verificationMethod = 'Student ID + OTP Fallback';
-        
+
         // 🔑 PASS BOTH: Call the service with the input Student ID string and OTP
-        verificationResult = await verifyOTPPass(student_id, verification_otp); 
+        verificationResult = await verifyOTPPass(student_id, verification_otp, passType); // Pass passType
 
         if (verificationResult.isValid) {
             // The service returns the found pass, now re-fetch and populate
-            pass = await SpecialPass.findById(verificationResult.pass._id)
-                .populate('student_id', 'fullName studentId') // 🔑 Ensure 'studentId' is populated
+            pass = await passModel.findById(verificationResult.pass._id)
+                .populate('student_id', 'fullName studentId')
                 .populate('hod_approver_id', 'fullName');
         }
     } else { // 🔑 FAILURE: Missing QR token OR (Student ID and OTP)
@@ -259,12 +275,12 @@ exports.verifyPass = async (req, res) => {
 
     // Handle invalid verification result (from either QR or OTP path)
     if (!verificationResult.isValid || !pass) {
-        const logPassId = verificationResult.payload?.pass_id || 'Unknown'; 
+        const logPassId = verificationResult.payload?.pass_id || 'Unknown';
         await logAuditAttempt(logPassId, 'Verified', securityUser, `FAILED (${verificationMethod}): ${verificationResult.reason || 'Pass not found or invalid.'}`);
         return res.status(200).json({
             is_valid: false,
             display_status: "ENTRY DENIED",
-            message: `Pass verification failed: ${verificationResult.reason || 'Pass not found or invalid.'}`,
+            message: `Pass verification failed: ${verificationResult.reason || 'Pass not found or invalid.'}`, 
             pass_details: {}
         });
     }
@@ -293,9 +309,12 @@ exports.verifyPass = async (req, res) => {
 
     // --- 2. Database Status Check (DFD 5.3) ---
     // This logic now applies after either QR or OTP validation has provided a valid 'pass' object
-    if (pass.status !== 'Approved' && pass.status !== 'Override - Active') {
-        const statusReason = `Status is ${pass.status}`;
-        
+    let passStatusField = (passType === 'special') ? pass.status : pass.hod_status;
+    let validStatuses = (passType === 'special') ? ['Approved', 'Override - Active'] : ['APPROVED'];
+
+    if (!validStatuses.includes(passStatusField)) {
+        const statusReason = `Status is ${passStatusField}`;
+
         // Log failure (Task 5)
         await logAuditAttempt(pass._id, 'Verified', securityUser, `FAILED (${verificationMethod}): ${statusReason}`);
 
@@ -309,9 +328,12 @@ exports.verifyPass = async (req, res) => {
 
     // --- 3. SUCCESS: Finalize Pass & Notify (DFD 5.5) ---
     let finalStatus = 'ENTRY GRANTED';
-    if (pass.is_one_time_use) {
+    if (pass.is_one_time_use) { // is_one_time_use is only for SpecialPass
         // Update D1 to 'Used' and set final message
-        await SpecialPass.updateOne({ _id: pass._id }, { status: 'Used' });
+        if (passType === 'special') {
+            await SpecialPass.updateOne({ _id: pass._id }, { status: 'Used' });
+        }
+        // GatePasses don't have 'Used' status in the same way, they are just 'APPROVED'
         await sendPassUsedNotification(pass); // Trigger notification service (Task 6)
         finalStatus = 'PASS USED';
     }
@@ -324,7 +346,7 @@ exports.verifyPass = async (req, res) => {
         pass_end_time: pass.date_valid_to,   // Add pass end time
     };
     await logAuditAttempt(pass._id, 'Verified', securityUser, `SUCCESS (${verificationMethod}): ${finalStatus}`, auditDetails);
-    
+
     // --- 5. Response Formatting (DFD 5.6) ---
     const response = {
         is_valid: true,

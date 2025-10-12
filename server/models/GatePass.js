@@ -24,6 +24,10 @@ const GatePassSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    pass_type: {
+        type: String,
+        default: 'Gate Pass'
+    },
     faculty_status: { // New field for Level 1 approval
         type: String,
         enum: ['PENDING', 'APPROVED', 'REJECTED'],
@@ -54,6 +58,10 @@ const GatePassSchema = new mongoose.Schema({
     hod_comment: {
         type: String
     },
+    pdf_path: {
+        type: String,
+        default: null
+    }
 }, { timestamps: true });
 
 module.exports = mongoose.model('GatePass', GatePassSchema);

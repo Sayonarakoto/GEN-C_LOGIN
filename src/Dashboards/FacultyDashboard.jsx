@@ -40,21 +40,30 @@ const FacultyDashboard = () => {
 
   const refreshStats = useCallback(async () => {
       try {
-        const response = await api.get('/api/faculty/stats');
-        if (response.data && response.data.success) {
+        const facultyStatsResponse = await api.get('/api/faculty/stats');
+        let hodGatePassPending = 0;
+
+        if (user?.role === 'HOD') {
+          const hodGatePassStatsResponse = await api.get('/api/gatepass/hod/stats');
+          if (hodGatePassStatsResponse.data && hodGatePassStatsResponse.data.success) {
+            hodGatePassPending = hodGatePassStatsResponse.data.data.totalPendingHODApproval;
+          }
+        }
+
+        if (facultyStatsResponse.data && facultyStatsResponse.data.success) {
           setStats(prevStats => ({
             ...prevStats,
-            pending: response.data.data.pending,
-            approved: response.data.data.approved,
-            lateToday: response.data.data.todayEntry,
-            alerts: response.data.data.alerts,
+            pending: hodGatePassPending > 0 ? hodGatePassPending : facultyStatsResponse.data.data.pending, // Prioritize HOD pending if available
+            approved: facultyStatsResponse.data.data.approved,
+            lateToday: facultyStatsResponse.data.data.todayEntry,
+            alerts: facultyStatsResponse.data.data.alerts,
           }));
         }
     } catch (error) {
       console.error("Failed to fetch stats:", error);
       toast.error('Failed to refresh dashboard stats.');
     }
-  }, [toast]);
+  }, [toast, user]);
 
   useEffect(() => {
     if (loading || !user) return; // CRITICAL CHECK

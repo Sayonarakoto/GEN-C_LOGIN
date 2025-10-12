@@ -7,14 +7,12 @@ const {
   getGatePassHistory,
   facultyApproveGatePass,
   facultyRejectGatePass,
-  hodApproveGatePass,
-  hodRejectGatePass,
   logLateReturn,
-  getFacultyGatePassStats, // New import
-  getHODDepartmentStats,   // New import
+  getFacultyGatePassStats,
   getStudentGatePassHistory,
-  getHODGatePassHistory,
-  getPendingHODApprovals,
+  downloadGatePassPDF,
+  verifyGatePassByOTP, // NEW: Import verifyGatePassByOTP
+  verifyGatePassByQR, // NEW: Import verifyGatePassByQR
 } = require('../controllers/gatepassController');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
@@ -34,6 +32,11 @@ router.post('/student/request', requireAuth, requestGatePass);
 // @desc    Get gate pass history for a student
 // @access  Private (Student)
 router.get('/student/history', requireAuth, getStudentGatePassHistory);
+
+// @route   GET /api/gatepass/download-pdf/:id
+// @desc    Download a gate pass PDF
+// @access  Private (Student, HOD, Security)
+router.get('/download-pdf/:id', requireAuth, downloadGatePassPDF);
 
 // --- Faculty Routes ---
 
@@ -62,38 +65,21 @@ router.put('/faculty/reject/:id', requireAuth, requireRole('faculty'), facultyRe
 // @access  Private (Faculty)
 router.get('/faculty/stats', requireAuth, requireRole('faculty'), getFacultyGatePassStats);
 
-// --- HOD Routes ---
-
-// @route   GET /api/gatepass/hod/history
-// @desc    Get all gate pass history for HOD's department
-// @access  Private (HOD)
-router.get('/hod/history', requireAuth, requireRole('HOD'), getHODGatePassHistory);
-
-// @route   GET /api/gatepass/hod/pending
-// @desc    Get pending gate passes for HOD approval
-// @access  Private (HOD)
-router.get('/hod/pending', requireAuth, requireRole('HOD'), getPendingHODApprovals);
-
-// @route   PUT /api/gatepass/hod/approve/:id
-// @desc    HOD approves/finalizes a gate pass
-// @access  Private (HOD)
-router.put('/hod/approve/:id', requireAuth, requireRole('HOD'), hodApproveGatePass);
-
-// @route   PUT /api/gatepass/hod/reject/:id
-// @desc    HOD rejects a gate pass
-// @access  Private (HOD)
-router.put('/hod/reject/:id', requireAuth, requireRole('HOD'), hodRejectGatePass);
-
-// @route   GET /api/gatepass/hod/stats
-// @desc    Get department-wide gate pass statistics for HOD
-// @access  Private (HOD)
-router.get('/hod/stats', requireAuth, requireRole('HOD'), getHODDepartmentStats);
-
 // --- Security Routes ---
 
 // @route   POST /api/gatepass/log-late-return
 // @desc    Log a late return for a gate pass
 // @access  Private (Security)
 router.post('/log-late-return', requireAuth, requireRole('Security'), logLateReturn);
+
+// @route   POST /api/gatepass/verify-otp
+// @desc    Verify a gate pass using Student ID and OTP
+// @access  Private (Security)
+router.post('/verify-otp', requireAuth, requireRole('Security'), verifyGatePassByOTP);
+
+// @route   POST /api/gatepass/verify-qr
+// @desc    Verify a gate pass using QR Code
+// @access  Private (Security)
+router.post('/verify-qr', requireAuth, requireRole('Security'), verifyGatePassByQR);
 
 module.exports = router;

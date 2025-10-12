@@ -57,6 +57,10 @@ exports.approveSpecialPass = async (req, res) => {
     pass.hod_comment = hodComment;
     pass.approved_at = new Date();
 
+    // Generate OTP (always generate for approved passes)
+    const otp = generateThreeDigitOTP();
+    pass.verification_otp = otp; // Critical: Pass now has the OTP
+
     // **CRITICAL CONDITIONAL LOGIC**
     if (pass.requires_qr_scan) {
         
@@ -69,11 +73,6 @@ exports.approveSpecialPass = async (req, res) => {
           '1h'
         );
         pass.qr_code_jwt = qrCodeJwt; // 🔑 Critical: Pass now has the JWT
-
-        // 1B. Generate OTP
-        const otp = generateThreeDigitOTP();
-        pass.verification_otp = otp; // 🔑 Critical: Pass now has the OTP
-
 
         // --- STEP 2: GENERATE PDF (NOW IT HAS ALL DATA) ---
 
@@ -92,8 +91,8 @@ exports.approveSpecialPass = async (req, res) => {
         // --- STEP B: INTERNAL EXEMPTION (No QR/OTP) ---
         // The status is already 'Approved'. The user suggested 'Approved (Internal)' but that would require a schema change.
         pass.qr_code_jwt = null;
-        pass.verification_otp = null;
         pass.pdf_path = null;
+        // OTP is now always generated, so no need to null it here
     }
 
     await pass.save(); // Save the final updates

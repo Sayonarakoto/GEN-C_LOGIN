@@ -19,6 +19,7 @@ import { VisibilityOutlined, CheckOutlined, CloseOutlined, ArrowBack } from '@mu
 import api from '../api/client';
 import useToastService from '../hooks/useToastService';
 import { useAuth } from '../hooks/useAuth';
+import StatsFetcher from '../components/StatsFetcher';
 
 // Helper to determine chip color based on status
 const statusColors = {
@@ -158,6 +159,10 @@ export default function LateEntriesApprovals({ onActionComplete }) {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h5" component="h2" gutterBottom sx={{ color: '#333' }}>
+        Late Entry Management
+      </Typography>
+      <StatsFetcher featureType="lateentry" />
+      <Typography variant="h6" component="h3" gutterBottom sx={{ color: '#333', mt: 4 }}>
         Actionable Requests
       </Typography>
       {loading && <Typography>Loading...</Typography>}

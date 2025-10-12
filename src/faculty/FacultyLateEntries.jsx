@@ -23,6 +23,7 @@ import useToastService from '../hooks/useToastService';
 import api from '../api/client';
 import axios from 'axios';
 import { useAuth } from '../hooks/useAuth';
+import StatsFetcher from '../components/StatsFetcher';
 
 const FacultyLateEntries = ({ currentFilter }) => {
   const toast = useToastService();
@@ -45,7 +46,12 @@ const FacultyLateEntries = ({ currentFilter }) => {
         delete queryParams.statusFilter;
       }
 
-      const response = await api.get('/api/latecomers/faculty/all', { params: queryParams, signal });
+      let endpoint = '/api/latecomers/faculty/all'; // Default for faculty
+      if (user.role === 'HOD') {
+        endpoint = '/api/latecomers/hod/history';
+      }
+
+      const response = await api.get(endpoint, { params: queryParams, signal });
       const entries = Array.isArray(response.data?.data) ? response.data.data : [];
       setLateEntries(entries);
       const initialEdits = {};
@@ -172,6 +178,7 @@ const FacultyLateEntries = ({ currentFilter }) => {
 
   return (
     <Box>
+      <StatsFetcher featureType="lateentry" />
       <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
         <Typography variant="h6" gutterBottom>Filter Entries</Typography>
         <Box component="form" onSubmit={handleApplyFilters} ref={formRef}>

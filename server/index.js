@@ -15,6 +15,7 @@ const auditRoutes = require('./routes/audit'); // New Audit route
 
 const latecomerRoutes = require('./routes/latecomers');
 const securityRoutes = require('./routes/Security');
+const statsRoutes = require('./routes/stats');
 const { requireAuth } = require('./middleware/auth'); // Import your auth middleware
 const { upload, uploadStudents, getAllStudents } = require('./controllers/excelUploadController'); // Import from new controller
 const { forgotPassword, resetPassword } = require('./controllers/passwordResetController'); // Import from new controller
@@ -64,6 +65,7 @@ app.use('/api/gatepass/hod', hodGatePassRoutes); // Register HOD Gate Pass route
 app.use('/api/gatepass', gatepassRoutes);
 app.use('/api/latecomers', latecomerRoutes);
 app.use('/api/security', securityRoutes);
+app.use('/api/stats', statsRoutes);
 
 // Serve static files from the React app
 app.use('/GEN-C_LOGIN', express.static(path.join(__dirname, '..', 'dist')));

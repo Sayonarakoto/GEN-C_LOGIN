@@ -27,6 +27,7 @@ import {
 } from '@mui/material';
 import apiClient from '../api/client';
 import { useAuth } from '../hooks/useAuth'; // Import useAuth
+import StatsFetcher from '../components/StatsFetcher';
 
 // Component to show the list of pending requests
 const PendingRequests = () => {
@@ -470,6 +471,7 @@ export default function FacultySpecialPasses() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
+      <StatsFetcher featureType="specialpass" />
       <Typography variant="h4" component="h1" gutterBottom>
         Special Pass Management
       </Typography>

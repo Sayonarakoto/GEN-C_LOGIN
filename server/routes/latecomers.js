@@ -100,14 +100,8 @@ router.put('/:id/update',
 // New route for faculty to get all their assigned late entries with optional status filter
 router.get('/faculty/all',
   requireAuth,
-  requireRole(['faculty', 'HOD']),
+  requireRole('faculty'),
   attachUserDoc,
-  (req, res, next) => {
-    if (req.user.role === 'HOD') {
-      return latecomerController.getFacultyStats(req, res);
-    }
-    next();
-  },
   latecomerController.getFacultyLateEntries
 );
 

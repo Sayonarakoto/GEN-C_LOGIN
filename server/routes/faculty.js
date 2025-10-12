@@ -3,8 +3,7 @@ const router = express.Router();
 const facultyController = require('../controllers/facultyController'); // Import getDepartmentMembers
 const { requireAuth, requireRole } = require('../middleware/auth');
 
-// Route to get dashboard stats
-router.get('/stats', requireAuth, requireRole(['faculty', 'HOD']), facultyController.getDashboardStats);
+
 
 // Route to get distinct departments for faculty
 router.get('/departments/distinct', requireAuth, requireRole('faculty'), facultyController.getDistinctDepartments);

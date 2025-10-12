@@ -22,7 +22,10 @@ exports.getActiveGatePass = async (req, res) => {
       faculty_status: 'APPROVED',
       hod_status: 'APPROVED',
       date_valid_to: { $gte: new Date() }
-    }).populate('student_id', 'fullName studentId department').select('+pdf_path');
+    }).populate('student_id', 'fullName studentId department')
+      .populate('faculty_approver_id', 'fullName')
+      .populate('hod_approver_id', 'fullName')
+      .select('+pdf_path');
 
     if (!activePass) {
       return res.status(404).json({ success: false, message: 'No active gate pass found.' });
@@ -39,13 +42,18 @@ exports.getActiveGatePass = async (req, res) => {
 // @route   POST /api/gatepass/student/request
 // @access  Private (Student)
 exports.requestGatePass = async (req, res) => {
-    const { destination, reason, selectedApproverId, exitTime, returnTime } = req.body;
+    const { destination, reason, selectedApproverId, date_valid_from, date_valid_to, isHalfDay } = req.body;
     const studentId = req.user.id;
 
     try {
         // Basic validation
-        if (!destination || !reason || !selectedApproverId || !exitTime) {
+        if (!destination || !reason || !selectedApproverId || !date_valid_from) {
             return res.status(400).json({ success: false, message: 'Please provide all required fields.' });
+        }
+
+        // If not a half-day pass, date_valid_to is required
+        if (!isHalfDay && !date_valid_to) {
+            return res.status(400).json({ success: false, message: 'Return time is required for full-day passes.' });
         }
 
         const student = await Student.findById(studentId);
@@ -84,36 +92,19 @@ exports.requestGatePass = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid approver designation.' });
         }
 
-        // FIX: Directly use ISO 8601 strings to create Date objects
-        const now = new Date();
-        let exitDate;
-        if (exitTime && exitTime.match(/^\d{2}:\d{2}$/)) { // Validate HH:mm format
-            const [exitHours, exitMinutes] = exitTime.split(':');
-            // Create a Date object for today, in IST timezone
-            const today = new Date();
-            // Set the date to today, and the time to the provided HH:mm in IST
-            exitDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(exitHours), parseInt(exitMinutes));
-            // Adjust for IST offset (UTC+5:30)
-            exitDate.setUTCHours(parseInt(exitHours) - 5, parseInt(exitMinutes) - 30, 0, 0);
-
-            if (isNaN(exitDate.getTime())) { // Check if date is valid
-                return res.status(400).json({ success: false, message: 'Invalid exit time provided.' });
-            }
-        } else {
-            return res.status(400).json({ success: false, message: 'Exit time is required and must be in HH:mm format.' });
+        // Convert ISO strings to Date objects
+        const exitDate = new Date(date_valid_from);
+        let returnDateObj = null;
+        if (date_valid_to) {
+            returnDateObj = new Date(date_valid_to);
         }
 
-        let returnDate = null;
-        if (returnTime && returnTime.match(/^\d{2}:\d{2}$/)) { // Validate HH:mm format if provided
-            const [returnHours, returnMinutes] = returnTime.split(':');
-            const today = new Date();
-            returnDate = new Date(today.getFullYear(), today.getMonth(), today.getDate(), parseInt(returnHours), parseInt(returnMinutes));
-            // Adjust for IST offset (UTC+5:30)
-            returnDate.setUTCHours(parseInt(returnHours) - 5, parseInt(returnMinutes) - 30, 0, 0);
-
-            if (isNaN(returnDate.getTime())) { // Check if date is valid
-                return res.status(400).json({ success: false, message: 'Invalid return time provided.' });
-            }
+        // Validate dates
+        if (isNaN(exitDate.getTime())) {
+            return res.status(400).json({ success: false, message: 'Invalid exit date/time provided.' });
+        }
+        if (!isHalfDay && date_valid_to && isNaN(returnDateObj.getTime())) {
+            return res.status(400).json({ success: false, message: 'Invalid return date/time provided.' });
         }
 
         const newPass = new GatePass({
@@ -125,7 +116,7 @@ exports.requestGatePass = async (req, res) => {
             hod_approver_id,
             department_id: student.department,
             date_valid_from: exitDate,
-            date_valid_to: returnDate,
+            date_valid_to: returnDateObj,
             faculty_status,
             hod_status,
         });

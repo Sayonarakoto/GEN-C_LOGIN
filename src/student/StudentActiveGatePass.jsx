@@ -34,7 +34,17 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
         // Combine selected times with today's date to form full ISO date strings
         const today = dayjs();
         data.date_valid_from = exitTime ? today.hour(exitTime.hour()).minute(exitTime.minute()).second(0).millisecond(0).toISOString() : '';
-        data.date_valid_to = returnTime ? today.hour(returnTime.hour()).minute(returnTime.minute()).second(0).millisecond(0).toISOString() : '';
+        
+        // Conditional setting of date_valid_to based on isHalfDay
+        if (isHalfDay) {
+            data.date_valid_to = null; // Explicitly set to null if half-day
+        } else {
+            data.date_valid_to = returnTime ? today.hour(returnTime.hour()).minute(returnTime.minute()).second(0).millisecond(0).toISOString() : '';
+        }
+        
+        // Pass isHalfDay to the backend
+        data.isHalfDay = isHalfDay;
+
         // Remove old exitTime and returnTime fields if they are no longer needed by the backend
         delete data.exitTime;
         delete data.returnTime;
@@ -74,6 +84,7 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
                         label="Half Day / Return Not Required"
                         className="mb-3 fs-5"
                         onChange={(e) => setIsHalfDay(e.target.checked)}
+                        checked={isHalfDay} // Ensure the switch reflects the state
                     />
 
                     <Row>
@@ -98,7 +109,7 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
                                         value={returnTime}
                                         onChange={setReturnTime}
                                         slots={{ textField: TextField }}
-                                        slotProps={{ textField: { fullWidth: true } }}
+                                        slotProps={{ textField: { fullWidth: true, required: !isHalfDay } }} // Conditionally required
                                     />
                                 </Form.Group>
                             </Col>
@@ -308,7 +319,18 @@ const StudentGatePass = () => {
                                         <DetailRow icon={<CalendarToday fontSize="small" />} label="Issued Date/Time:" value={new Date(passData.createdAt).toLocaleString()} />
                                         <DetailRow icon={<Place fontSize="small" />} label="Destination:" value={passData.destination} />
                                         <DetailRow icon={<Comment fontSize="small" />} label="Purpose:" value={passData.reason} />
-                                        <DetailRow icon={<PersonPin fontSize="small" />} label="Approved By:" value={passData.faculty_id?.fullName || 'N/A'} className="border-bottom-0" />
+                                        <DetailRow icon={<PersonPin fontSize="small" />} label="Approved By:" value={
+                                            (passData.hod_status === 'REJECTED' && passData.hod_approver_id?.fullName) ?
+                                            `Rejected By HOD: ${passData.hod_approver_id.fullName}` :
+                                            (passData.faculty_status === 'REJECTED' && passData.faculty_approver_id?.fullName) ?
+                                            `Rejected By Faculty: ${passData.faculty_approver_id.fullName}` :
+                                            (passData.hod_status === 'APPROVED' && passData.hod_approver_id?.fullName && passData.faculty_status === 'APPROVED' && passData.faculty_approver_id?.fullName) ?
+                                            `Faculty: ${passData.faculty_approver_id.fullName}, HOD: ${passData.hod_approver_id.fullName}` :
+                                            (passData.hod_status === 'APPROVED' && passData.hod_approver_id?.fullName) ?
+                                            `HOD: ${passData.hod_approver_id.fullName}` :
+                                            (passData.faculty_status === 'APPROVED' && passData.faculty_approver_id?.fullName) ?
+                                            `Faculty: ${passData.faculty_approver_id.fullName}` : 'Pending'
+                                        } className="border-bottom-0" />
                                     </div>
                                     <div className="mt-4 p-3 rounded-3 bg-success-subtle text-success-emphasis fw-bold text-center">
                                         <p className="fs-5 mb-0">Valid Until: {new Date(passData.date_valid_to).toLocaleString()}</p>
@@ -414,6 +436,10 @@ const GatePassHistory = ({ history, handleDownloadPDF, downloadingPdf = false })
                                     <p className="text-muted small mb-2">{new Date(pass.createdAt).toLocaleString()}</p>
                                     <p className="mb-0"><strong>Reason:</strong> {pass.reason}</p>
                                     <p className="mb-0"><strong>Approved By:</strong> {
+                                        (pass.hod_status === 'REJECTED' && pass.hod_approver_id?.fullName) ?
+                                        `Rejected By HOD: ${pass.hod_approver_id.fullName}` :
+                                        (pass.faculty_status === 'REJECTED' && pass.faculty_approver_id?.fullName) ?
+                                        `Rejected By Faculty: ${pass.faculty_approver_id.fullName}` :
                                         (pass.hod_status === 'APPROVED' && pass.hod_approver_id?.fullName && pass.faculty_status === 'APPROVED' && pass.faculty_approver_id?.fullName) ?
                                         `Faculty: ${pass.faculty_approver_id.fullName}, HOD: ${pass.hod_approver_id.fullName}` :
                                         (pass.hod_status === 'APPROVED' && pass.hod_approver_id?.fullName) ?

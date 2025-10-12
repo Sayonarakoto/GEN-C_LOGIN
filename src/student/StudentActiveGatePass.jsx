@@ -26,7 +26,6 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
     const [isHalfDay, setIsHalfDay] = useState(false);
     const [exitTime, setExitTime] = useState(null);
     const [returnTime, setReturnTime] = useState(null);
-    const { showToast } = useToast(); // Import useToast
 
     const handleSubmit = (event) => {
         event.preventDefault();
@@ -48,14 +47,25 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
             data.date_valid_to = returnTime ? today.hour(returnTime.hour()).minute(returnTime.minute()).second(0).millisecond(0).toISOString() : '';
         }
         
-        // Pass isHalfDay to the backend
+        // Pass isHalfDay and approverRole to the backend
         data.isHalfDay = isHalfDay;
+        data.approverRole = approverRole; // Add role to submitted data
 
         // Remove old exitTime and returnTime fields if they are no longer needed by the backend
         delete data.exitTime;
         delete data.returnTime;
         onSubmit(data);
     };
+
+    // Filter faculty list based on the selected role
+    const filteredFaculty = facultyList.filter(faculty => {
+        const designation = faculty.designation.toLowerCase();
+        if (approverRole === 'HOD') {
+            return designation.includes('hod');
+        }
+        // For 'Faculty', we might want to exclude HODs from the list to avoid confusion
+        return !designation.includes('hod');
+    });
 
     return (
         <Card className="shadow-sm rounded-3 border-0">
@@ -74,11 +84,19 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
                         <Form.Control as="textarea" name="reason" rows={3} placeholder="e.g., Routine dental checkup" required />
                     </Form.Group>
 
+                    <Form.Group className="mb-3" controlId="approver-role-select">
+                        <Form.Label>Select Approver Role</Form.Label>
+                        <Form.Select value={approverRole} onChange={(e) => setApproverRole(e.target.value)} required>
+                            <option value="Faculty">Faculty Advisor</option>
+                            <option value="HOD">HOD</option>
+                        </Form.Select>
+                    </Form.Group>
+
                     <Form.Group className="mb-3" controlId="faculty-select">
-                        <Form.Label>Select Approving Faculty/HOD</Form.Label>
+                        <Form.Label>Select Approving {approverRole}</Form.Label>
                         <Form.Select name="selectedApproverId" required>
-                            <option value="">Select a faculty member...</option>
-                            {facultyList.map(faculty => (
+                            <option value="">Select an approver...</option>
+                            {filteredFaculty.map(faculty => (
                                 <option key={faculty._id} value={faculty._id}>{faculty.fullName} ({faculty.designation} - {faculty.department})</option>
                             ))}
                         </Form.Select>

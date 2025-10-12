@@ -62,7 +62,11 @@ exports.verifyOTPPass = async (inputStudentIdString, otp, passType) => {
         }
 
         // --- Standard Validity Checks ---
-        if (pass.date_valid_to && pass.date_valid_to < new Date()) {
+        const now = new Date();
+        if (pass.date_valid_from && now < pass.date_valid_from) {
+            return { isValid: false, reason: 'Pass is not yet valid.' };
+        }
+        if (pass.date_valid_to && pass.date_valid_to < now) {
             return { isValid: false, reason: 'Pass expired.' };
         }
 
@@ -127,7 +131,11 @@ exports.verifyQRPass = async (qr_token, passType) => {
             return { isValid: false, reason: `Pass is not approved.` };
         }
 
-        if (pass.date_valid_to && pass.date_valid_to < new Date()) {
+        const now = new Date();
+        if (pass.date_valid_from && now < pass.date_valid_from) {
+            return { isValid: false, reason: 'Pass is not yet valid.' };
+        }
+        if (pass.date_valid_to && pass.date_valid_to < now) {
             return { isValid: false, reason: 'Pass expired.' };
         }
 

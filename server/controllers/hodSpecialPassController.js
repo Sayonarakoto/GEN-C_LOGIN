@@ -81,6 +81,8 @@ exports.approveSpecialPass = async (req, res) => {
         const hodName = hod ? hod.fullName : 'Unknown HOD';
         
         // 2. Generate PDF (The 'pass' object now contains qr_code_jwt and verification_otp)
+        pass.qr_code_id = pass.qr_code_jwt;
+        pass.one_time_pin = pass.verification_otp;
         const pdfResult = await generateWatermarkedPDF(pass, hodName); 
         if (pdfResult.success) {
           pass.pdf_path = pdfResult.filePath;
@@ -197,7 +199,7 @@ exports.initiateSpecialPass = async (req, res) => { // This is the function for 
     const {
         student_id,
         pass_type = 'HOD Initiated', // Provide a default value for now
-        request_reason,
+        request_reason = 'Initiated by HOD',
         date_required,
         start_time,
         end_time
@@ -256,6 +258,8 @@ exports.initiateSpecialPass = async (req, res) => { // This is the function for 
         const hodName = hod ? hod.fullName : 'Unknown HOD';
 
         // Generate PDF
+        newPass.qr_code_id = newPass.qr_code_jwt;
+        newPass.one_time_pin = newPass.verification_otp;
         const pdfResult = await generateWatermarkedPDF(newPass, hodName);
         if (pdfResult.success) {
           newPass.pdf_path = pdfResult.filePath;

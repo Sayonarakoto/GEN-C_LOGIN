@@ -83,6 +83,9 @@ exports.hodApproveGatePass = async (req, res) => {
         const hodName = hod ? hod.fullName : 'Unknown HOD';
 
         // Generate PDF
+        console.log('--- Pass data before PDF generation ---');
+        console.log(pass);
+        console.log('------------------------------------');
         const pdfResult = await generateWatermarkedPDF(pass, hodName);
         if (pdfResult.success) {
             pass.pdf_path = pdfResult.filePath;

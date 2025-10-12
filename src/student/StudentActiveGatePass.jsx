@@ -26,6 +26,7 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
     const [isHalfDay, setIsHalfDay] = useState(false);
     const [exitTime, setExitTime] = useState(null);
     const [returnTime, setReturnTime] = useState(null);
+    const { showToast } = useToast(); // Import useToast
 
     const handleSubmit = (event) => {
         event.preventDefault();
@@ -39,6 +40,11 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList }) => {
         if (isHalfDay) {
             data.date_valid_to = null; // Explicitly set to null if half-day
         } else {
+            // Client-side validation for returnTime
+            if (!returnTime) {
+                showToast('Expected Return Time is required for full-day passes.', 'error');
+                return; // Stop submission
+            }
             data.date_valid_to = returnTime ? today.hour(returnTime.hour()).minute(returnTime.minute()).second(0).millisecond(0).toISOString() : '';
         }
         

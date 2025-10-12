@@ -72,7 +72,11 @@ const FacultyLateEntries = ({ currentFilter }) => {
   useEffect(() => {
     const abortController = new AbortController();
     if (user?.department) {
-      fetchLateEntries({ ...filterParams, statusFilter: currentFilter }, abortController.signal);
+      const effectiveFilterParams = { ...filterParams };
+      if (!effectiveFilterParams.statusFilter && currentFilter) {
+        effectiveFilterParams.statusFilter = currentFilter;
+      }
+      fetchLateEntries(effectiveFilterParams, abortController.signal);
     }
 
     return () => {
@@ -136,7 +140,7 @@ const FacultyLateEntries = ({ currentFilter }) => {
   const columns = [
     { dataField: 'studentId.studentId', text: 'Student ID' },
     { dataField: 'studentId.fullName', text: 'Student Name' },
-    { dataField: 'studentId.department', text: 'Department' },
+    
     { dataField: 'createdAt', text: 'Date', formatter: (cell) => cell ? new Date(cell).toLocaleString() : 'N/A' },
     { dataField: 'reason', text: 'Reason' },
     { dataField: 'status', text: 'Status' },
@@ -211,7 +215,7 @@ const FacultyLateEntries = ({ currentFilter }) => {
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
               <FormControl fullWidth>
-                <InputLabel>Status</InputLabel>
+                <InputLabel shrink>Status</InputLabel>
                 <Select
                   name="statusFilter"
                   value={filterParams.statusFilter}
@@ -221,9 +225,6 @@ const FacultyLateEntries = ({ currentFilter }) => {
                   <MenuItem value="">All</MenuItem>
                   <MenuItem value="Approved">Approved</MenuItem>
                   <MenuItem value="Rejected">Rejected</MenuItem>
-                  <MenuItem value="Pending Faculty">Pending Faculty</MenuItem>
-                  <MenuItem value="Pending HOD">Pending HOD</MenuItem>
-                  <MenuItem value="Resubmitted">Resubmitted</MenuItem>
                 </Select>
               </FormControl>
             </Grid>

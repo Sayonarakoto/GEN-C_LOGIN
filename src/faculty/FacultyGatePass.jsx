@@ -121,7 +121,10 @@ const HistoryTable = ({ history, loading, error }) => {
       <thead>
         <tr>
           <th>Student Name</th>
-          <th>Date</th>
+          <th>Start Time</th>
+          <th>End Time</th>
+          <th>Reason</th>
+          <th>Approved By</th>
           <th>Status</th>
         </tr>
       </thead>
@@ -130,13 +133,16 @@ const HistoryTable = ({ history, loading, error }) => {
           history.map((item) => (
             <tr key={item._id}>
               <td>{item.student_id?.fullName}</td>
-              <td>{new Date(item.createdAt).toLocaleString()}</td>
+              <td>{new Date(item.date_valid_from).toLocaleString()}</td>
+              <td>{item.date_valid_to ? new Date(item.date_valid_to).toLocaleString() : 'N/A'}</td>
+              <td>{item.reason}</td>
+              <td>{getApproverDisplay(item)}</td>
               <td>{getStatusBadge(getFacultyViewStatus(item))}</td>
             </tr>
           ))
         ) : (
           <tr>
-            <td colSpan={3} className="text-center">
+            <td colSpan={6} className="text-center">
               No history found.
             </td>
           </tr>

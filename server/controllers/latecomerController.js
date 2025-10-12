@@ -9,8 +9,8 @@ const { checkHODNeed, finalizeAction } = require('../utils/latecomerUtils');
 const populateLateEntry = (query) => {
     return query
         .populate('studentId', 'fullName studentId department')
-        .populate('facultyId', 'fullName employeeId')
-        .populate('HODId', 'fullName employeeId');
+        .populate('facultyId', 'fullName employeeId designation')
+        .populate('HODId', 'fullName employeeId designation');
 };
 
 // Helper function to handle responses (Refactor)
@@ -242,12 +242,12 @@ exports.hodAction = async (req, res) => {
 // GET /api/latecomers/faculty/all (New Filtered Faculty Dashboard View)
 exports.getFacultyLateEntries = async (req, res) => {
   try {
-    const { statusFilter } = req.query; // Get filter from query params
+    const { statusFilter, from, to } = req.query; // Get filter from query params
     const facultyId = req.user.id;
 
     let queryCriteria = { facultyId: new mongoose.Types.ObjectId(facultyId) };
 
-    // APPLY THE FILTER LOGIC
+    // APPLY THE FILTER LOGIC for status
     if (statusFilter === 'Rejected') {
         queryCriteria.status = 'Rejected';
         queryCriteria.isFinal = false; // Only non-final rejected entries (resubmittable)
@@ -256,6 +256,20 @@ exports.getFacultyLateEntries = async (req, res) => {
     } else if (statusFilter === 'Approved') {
         queryCriteria.status = 'Approved';
         queryCriteria.isFinal = true; // Only final approved entries
+    }
+
+    // APPLY THE FILTER LOGIC for dates
+    if (from || to) {
+        queryCriteria.createdAt = {};
+        if (from) {
+            queryCriteria.createdAt.$gte = new Date(from);
+        }
+        if (to) {
+            // Set to the end of the day for the 'to' date
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999);
+            queryCriteria.createdAt.$lte = toDate;
+        }
     }
     
     // Sort by updatedAt for most recent activity
@@ -663,12 +677,40 @@ exports.checkHODNeedController = async (req, res) => {
 // @access  Private (HOD)
 exports.getHODLateEntryHistory = async (req, res) => {
   try {
+    const { statusFilter, from, to } = req.query; // Get filter from query params
     const department = req.user.department;
     if (!department) {
       return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
     }
 
-    const history = await LateEntry.find({ department: department })
+    let queryCriteria = { department: department };
+
+    // APPLY THE FILTER LOGIC for status
+    if (statusFilter === 'Rejected') {
+        queryCriteria.status = 'Rejected';
+        queryCriteria.isFinal = false; // Only non-final rejected entries (resubmittable)
+    } else if (statusFilter === 'Pending') {
+        queryCriteria.status = { $in: ['Pending Faculty', 'Pending HOD', 'Resubmitted'] };
+    } else if (statusFilter === 'Approved') {
+        queryCriteria.status = 'Approved';
+        queryCriteria.isFinal = true; // Only final approved entries
+    }
+
+    // APPLY THE FILTER LOGIC for dates
+    if (from || to) {
+        queryCriteria.createdAt = {};
+        if (from) {
+            queryCriteria.createdAt.$gte = new Date(from);
+        }
+        if (to) {
+            // Set to the end of the day for the 'to' date
+            const toDate = new Date(to);
+            toDate.setHours(23, 59, 59, 999);
+            queryCriteria.createdAt.$lte = toDate;
+        }
+    }
+
+    const history = await LateEntry.find(queryCriteria)
       .populate('studentId', 'fullName studentId')
       .populate('facultyId', 'fullName')
       .populate('HODId', 'fullName')

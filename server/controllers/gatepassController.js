@@ -84,10 +84,11 @@ exports.requestGatePass = async (req, res) => {
             notificationMessage = `A new Gate Pass request from ${student.fullName} is awaiting your approval.`;
         } else if (selectedApprover.designation === 'HOD') {
             faculty_approver_id = selectedApproverId; // HOD acts as the initial approver
-            hod_approver_id = null; // Single-tier approval, HOD is the only approver
+            hod_approver_id = selectedApproverId; // HOD is also the HOD approver
             faculty_status = 'APPROVED'; // Bypassed faculty approval
-            notificationRecipientId = faculty_approver_id;
-            notificationMessage = `A new Gate Pass request from ${student.fullName} is awaiting your approval.`;
+            hod_status = 'PENDING'; // HOD still needs to approve it as HOD
+            notificationRecipientId = hod_approver_id; // Notify the HOD for their approval
+            notificationMessage = `A new Gate Pass request from ${student.fullName} is awaiting your final approval.`;
         } else {
             return res.status(400).json({ success: false, message: 'Invalid approver designation.' });
         }
@@ -188,8 +189,9 @@ exports.getGatePassHistory = async (req, res) => {
       ]
     })
       .populate('student_id', 'fullName studentId department')
-      .populate('faculty_approver_id', 'fullName')
-      .populate('hod_approver_id', 'fullName')
+      .populate('faculty_approver_id', 'fullName designation') // Added designation
+      .populate('hod_approver_id', 'fullName designation')     // Added designation
+      .select('date_valid_from date_valid_to reason') // Explicitly select these fields
       .sort({ createdAt: -1 });
 
     res.status(200).json({ success: true, data: historyPasses });

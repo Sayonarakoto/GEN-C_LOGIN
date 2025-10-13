@@ -15,8 +15,13 @@ import {
   TableHead,
   TableRow,
   TextField,
-  Radio
+  Radio,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem
 } from '@mui/material';
+import { Row, Col } from 'react-bootstrap'; // React-Bootstrap Grid
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
@@ -27,14 +32,11 @@ const AuditTrail = () => {
   const { user } = useAuth();
   const [students, setStudents] = useState([]);
   const [selectedStudent, setSelectedStudent] = useState(null);
-  const [selectedStudentDetails, setSelectedStudentDetails] = useState(null); // New state
+  const [selectedStudentDetails, setSelectedStudentDetails] = useState(null);
   const [reportData, setReportData] = useState({ specialPasses: [], lateEntries: [], gatePasses: [] });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState({
-    startDate: null,
-    endDate: null,
-  });
+  const [filters, setFilters] = useState({ startDate: null, endDate: null });
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [studentsPerPage] = useState(5);
@@ -42,7 +44,6 @@ const AuditTrail = () => {
 
   const fetchStudents = useCallback(async () => {
     if (!user?.department) return;
-
     setLoading(true);
     try {
       const response = await apiClient.get('/api/faculty/students', {
@@ -68,7 +69,7 @@ const AuditTrail = () => {
   }, [fetchStudents]);
 
   const handleDateChange = (name, date) => {
-    setFilters((prev) => ({ ...prev, [name]: date }));
+    setFilters(prev => ({ ...prev, [name]: date }));
   };
 
   const handleStudentSelect = (student) => {
@@ -81,7 +82,6 @@ const AuditTrail = () => {
       setError('Please select a student.');
       return;
     }
-
     setLoading(true);
     setError('');
     try {
@@ -105,7 +105,6 @@ const AuditTrail = () => {
       setError('Please select a student to download the report.');
       return;
     }
-
     try {
       const params = {
         startDate: filters.startDate ? dayjs(filters.startDate).format('YYYY-MM-DD') : null,
@@ -114,21 +113,16 @@ const AuditTrail = () => {
       const queryString = new URLSearchParams(params).toString();
       const url = `/api/students/${selectedStudent}/activity-report/download-pdf?${queryString}`;
 
-      const response = await apiClient.get(url, {
-        responseType: 'blob', // Important: responseType must be 'blob'
-      });
-
-      // Create a blob URL and trigger download
+      const response = await apiClient.get(url, { responseType: 'blob' });
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const downloadUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = downloadUrl;
-      link.setAttribute('download', `Student_Activity_Report_${selectedStudentDetails.studentId}.pdf`); // Set the download file name
+      link.setAttribute('download', `Student_Activity_Report_${selectedStudentDetails.studentId}.pdf`);
       document.body.appendChild(link);
       link.click();
-      link.remove(); // Clean up the DOM
-      window.URL.revokeObjectURL(downloadUrl); // Release the object URL
-
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
     } catch (err) {
       console.error("Failed to download PDF report:", err);
       setError('Failed to download PDF report.');
@@ -184,7 +178,7 @@ const AuditTrail = () => {
                 ) : error ? (
                   <TableRow><TableCell colSpan={5} align="center"><Typography color="error">{error}</Typography></TableCell></TableRow>
                 ) : students.length > 0 ? (
-                  students.map((student) => (
+                  students.map(student => (
                     <TableRow key={student._id}>
                       <TableCell padding="checkbox">
                         <Radio
@@ -204,45 +198,33 @@ const AuditTrail = () => {
               </TableBody>
             </Table>
           </TableContainer>
-          <TablePagination
-            component="div"
-            count={totalStudents}
-            page={currentPage - 1}
-            onPageChange={(event, newPage) => setCurrentPage(newPage + 1)}
-            rowsPerPage={studentsPerPage}
-            rowsPerPageOptions={[5]}
-            onRowsPerPageChange={() => {}}
-          />
 
+          {/* For pagination, you could add here */}
+          {/* <TablePagination ... /> */}
+
+          {/* Date pickers and buttons in a react-bootstrap row/col grid can be used, but keeping MUI Stack here is fine */}
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ my: 3 }}>
             <DatePicker
               label="From Date"
               value={filters.startDate}
               onChange={(date) => handleDateChange('startDate', date)}
-              slotProps={{
-                textField: ({ $typeof, ...params }) => <TextField {...params} />,
-              }}
+              slotProps={{ textField: params => <TextField {...params} /> }}
             />
             <DatePicker
               label="To Date"
               value={filters.endDate}
               onChange={(date) => handleDateChange('endDate', date)}
-              slotProps={{
-                textField: ({ $typeof, ...params }) => <TextField {...params} />,
-              }}
+              slotProps={{ textField: params => <TextField {...params} /> }}
             />
             <Button variant="contained" onClick={handleFetchReport}>Fetch Report</Button>
-            <Button
-              variant="outlined"
-              onClick={handleDownloadPdf}
-              disabled={!selectedStudent}
-            >
+            <Button variant="outlined" onClick={handleDownloadPdf} disabled={!selectedStudent}>
               Download PDF
             </Button>
           </Stack>
 
           {reportData && (
             <Box>
+              {/* Approved Special Passes Table */}
               <Typography variant="h6" gutterBottom>Approved Special Passes</Typography>
               <TableContainer component={Paper} sx={{ mb: 3 }}>
                 <Table>
@@ -255,16 +237,14 @@ const AuditTrail = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {reportData.specialPasses.length > 0 ? (
-                      reportData.specialPasses.map((pass) => (
-                        <TableRow key={pass._id}>
-                          <TableCell>{pass.pass_type}</TableCell>
-                          <TableCell>{pass.request_reason}</TableCell>
-                          <TableCell>{pass.hod_approver_id?.fullName || 'N/A'}</TableCell>
-                          <TableCell>{new Date(pass.approved_at).toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
+                    {reportData.specialPasses.length ? reportData.specialPasses.map(pass => (
+                      <TableRow key={pass._id}>
+                        <TableCell>{pass.pass_type}</TableCell>
+                        <TableCell>{pass.request_reason}</TableCell>
+                        <TableCell>{pass.hod_approver_id?.fullName || 'N/A'}</TableCell>
+                        <TableCell>{new Date(pass.approved_at).toLocaleString()}</TableCell>
+                      </TableRow>
+                    )) : (
                       <TableRow>
                         <TableCell colSpan={4} align="center">No approved special passes found for the selected period.</TableCell>
                       </TableRow>
@@ -273,6 +253,7 @@ const AuditTrail = () => {
                 </Table>
               </TableContainer>
 
+              {/* Late Entries Table */}
               <Typography variant="h6" gutterBottom>Late Entries</Typography>
               <TableContainer component={Paper} sx={{ mb: 3 }}>
                 <Table>
@@ -286,17 +267,15 @@ const AuditTrail = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {reportData.lateEntries.length > 0 ? (
-                      reportData.lateEntries.map((entry) => (
-                        <TableRow key={entry._id}>
-                          <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
-                          <TableCell>{entry.reason}</TableCell>
-                          <TableCell>{entry.status}</TableCell>
-                          <TableCell>{entry.facultyId?.fullName || 'N/A'}</TableCell>
-                          <TableCell>{entry.HODId?.fullName || 'N/A'}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
+                    {reportData.lateEntries.length ? reportData.lateEntries.map(entry => (
+                      <TableRow key={entry._id}>
+                        <TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+                        <TableCell>{entry.reason}</TableCell>
+                        <TableCell>{entry.status}</TableCell>
+                        <TableCell>{entry.facultyId?.fullName || 'N/A'}</TableCell>
+                        <TableCell>{entry.HODId?.fullName || 'N/A'}</TableCell>
+                      </TableRow>
+                    )) : (
                       <TableRow>
                         <TableCell colSpan={5} align="center">No late entries found for the selected period.</TableCell>
                       </TableRow>
@@ -305,6 +284,7 @@ const AuditTrail = () => {
                 </Table>
               </TableContainer>
 
+              {/* Gate Passes Table */}
               <Typography variant="h6" gutterBottom>Gate Passes</Typography>
               <TableContainer component={Paper}>
                 <Table>
@@ -319,18 +299,16 @@ const AuditTrail = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {reportData.gatePasses.length > 0 ? (
-                      reportData.gatePasses.map((pass) => (
-                        <TableRow key={pass._id}>
-                          <TableCell>{pass.destination}</TableCell>
-                          <TableCell>{pass.reason}</TableCell>
-                          <TableCell>{pass.faculty_status}</TableCell>
-                          <TableCell>{pass.hod_status}</TableCell>
-                          <TableCell>{new Date(pass.date_valid_from).toLocaleString()}</TableCell>
-                          <TableCell>{new Date(pass.date_valid_to).toLocaleString()}</TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
+                    {reportData.gatePasses.length ? reportData.gatePasses.map(pass => (
+                      <TableRow key={pass._id}>
+                        <TableCell>{pass.destination}</TableCell>
+                        <TableCell>{pass.reason}</TableCell>
+                        <TableCell>{pass.faculty_status}</TableCell>
+                        <TableCell>{pass.hod_status}</TableCell>
+                        <TableCell>{new Date(pass.date_valid_from).toLocaleString()}</TableCell>
+                        <TableCell>{new Date(pass.date_valid_to).toLocaleString()}</TableCell>
+                      </TableRow>
+                    )) : (
                       <TableRow>
                         <TableCell colSpan={6} align="center">No gate passes found for the selected period.</TableCell>
                       </TableRow>

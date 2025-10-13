@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import dayjs from 'dayjs';
 import {
   Table,
   TableBody,
@@ -9,7 +10,6 @@ import {
   Paper,
   TextField,
   Button,
-  Grid,
   CircularProgress,
   Typography,
   Box,
@@ -19,6 +19,7 @@ import {
   MenuItem,
   Stack,
 } from '@mui/material';
+import { Row, Col } from 'react-bootstrap'; // <-- React Bootstrap Grid
 import useToastService from '../hooks/useToastService';
 import api from '../api/client';
 import axios from 'axios';
@@ -32,6 +33,7 @@ const FacultyLateEntries = ({ currentFilter }) => {
   const [loading, setLoading] = useState(false);
   const [rowEdits, setRowEdits] = useState({});
   const formRef = useRef(null);
+
   const [filterParams, setFilterParams] = useState({
     from: '',
     to: '',
@@ -42,18 +44,24 @@ const FacultyLateEntries = ({ currentFilter }) => {
     setLoading(true);
     try {
       const queryParams = { ...params };
-      if (queryParams.statusFilter === '') {
-        delete queryParams.statusFilter;
+      if (!queryParams.statusFilter) delete queryParams.statusFilter;
+
+      if (queryParams.from) {
+        queryParams.from = dayjs(queryParams.from).startOf('day').toISOString();
+      }
+      if (queryParams.to) {
+        queryParams.to = dayjs(queryParams.to).endOf('day').toISOString();
       }
 
-      let endpoint = '/api/latecomers/faculty/all'; // Default for faculty
-      if (user.role === 'HOD') {
+      let endpoint = '/api/latecomers/faculty/all';
+      if (user?.role === 'HOD') {
         endpoint = '/api/latecomers/hod/history';
       }
 
       const response = await api.get(endpoint, { params: queryParams, signal });
       const entries = Array.isArray(response.data?.data) ? response.data.data : [];
       setLateEntries(entries);
+
       const initialEdits = {};
       entries.forEach(entry => {
         initialEdits[entry._id] = { remarks: entry.remarks || '' };
@@ -72,41 +80,36 @@ const FacultyLateEntries = ({ currentFilter }) => {
   useEffect(() => {
     const abortController = new AbortController();
     if (user?.department) {
-      const effectiveFilterParams = { ...filterParams };
-      if (!effectiveFilterParams.statusFilter && currentFilter) {
-        effectiveFilterParams.statusFilter = currentFilter;
+      const effectiveFilter = { ...filterParams };
+      if (!effectiveFilter.statusFilter && currentFilter) {
+        effectiveFilter.statusFilter = currentFilter;
       }
-      fetchLateEntries(effectiveFilterParams, abortController.signal);
+      fetchLateEntries(effectiveFilter, abortController.signal);
     }
-
-    return () => {
-      abortController.abort();
-    };
+    return () => abortController.abort();
   }, [fetchLateEntries, user, currentFilter, filterParams]);
 
   const handleChange = (id, field, value) => {
-    setRowEdits((prev) => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
+    setRowEdits(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }));
   };
 
   const handleUpdate = async (id, action) => {
     setLoading(true);
     try {
       const { remarks } = rowEdits[id] || {};
-      
       let endpoint;
+
       if (user.role === 'HOD') {
         endpoint = `/api/latecomers/${id}/hod-action`;
       } else if (user.role === 'faculty') {
         endpoint = `/api/latecomers/${id}/faculty-action`;
       } else {
-        return toast.error('Unauthorized action.');
+        toast.error('Unauthorized action.');
+        setLoading(false);
+        return;
       }
-      
-      await api.put(endpoint, { 
-          action: action, 
-          remarks 
-      });
-      
+
+      await api.put(endpoint, { action, remarks });
       toast.success('Updated successfully');
       fetchLateEntries(filterParams);
     } catch (err) {
@@ -116,48 +119,50 @@ const FacultyLateEntries = ({ currentFilter }) => {
     }
   };
 
-  const handleFilterChange = (event) => {
-    setFilterParams({
-      ...filterParams,
-      [event.target.name]: event.target.value,
-    });
+  const handleFilterChange = (e) => {
+    const { name, value } = e.target;
+    setFilterParams(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleApplyFilters = (event) => {
-    event.preventDefault();
+  const handleApplyFilters = (e) => {
+    e.preventDefault();
     fetchLateEntries(filterParams);
   };
 
   const handleClearFilters = () => {
-    setFilterParams({
-      from: '',
-      to: '',
-      statusFilter: '',
-    });
+    setFilterParams({ from: '', to: '', statusFilter: '' });
     fetchLateEntries({});
   };
 
   const columns = [
     { dataField: 'studentId.studentId', text: 'Student ID' },
     { dataField: 'studentId.fullName', text: 'Student Name' },
-    
-    { dataField: 'createdAt', text: 'Date', formatter: (cell) => cell ? new Date(cell).toLocaleString() : 'N/A' },
+    {
+      dataField: 'createdAt',
+      text: 'Date',
+      formatter: (cell) => cell ? new Date(cell).toLocaleString() : 'N/A',
+    },
     { dataField: 'reason', text: 'Reason' },
     { dataField: 'status', text: 'Status' },
-    { dataField: 'approvedBy', text: 'Approved By', formatter: (cell, row) => row.status === 'Approved' && row.facultyId?.fullName ? row.facultyId.fullName : 'N/A' },
+    {
+      dataField: 'approvedBy',
+      text: 'Approved By',
+      formatter: (cell, row) => (row.status === 'Approved' && row.facultyId?.fullName) ? row.facultyId.fullName : 'N/A',
+    },
     {
       dataField: 'actions',
       text: 'Action',
       formatter: (row) => {
-        const canEdit = user.role === 'faculty';
+        if (user.role === 'HOD') {
+          return <Typography variant="body2" color="info.main" fontWeight="bold">HOD View-Only</Typography>;
+        }
+        if (user.role !== 'faculty') {
+          return <Typography variant="body2" color="text.secondary">View Only</Typography>;
+        }
 
-        if (user.role === 'HOD') return <Typography variant="body2" color="info.main" fontWeight="bold">HOD View-Only</Typography>;
-        if (!canEdit) return <Typography variant="body2" color="text.secondary">View Only</Typography>;
-        
-        const isActionable = row.status === 'Pending Faculty' || row.status === 'Resubmitted';
-
+        const isActionable = ['Pending Faculty', 'Resubmitted'].includes(row.status);
         if (!isActionable) {
-            return <Typography variant="body2" color="success.main" fontWeight="bold">Finalized</Typography>;
+          return <Typography variant="body2" color="success.main" fontWeight="bold">Finalized</Typography>;
         }
 
         const id = row._id;
@@ -171,23 +176,30 @@ const FacultyLateEntries = ({ currentFilter }) => {
               onChange={(e) => handleChange(id, 'remarks', e.target.value)}
               size="small"
               sx={{ flex: 1 }}
+              disabled={loading}
             />
-            <Button variant="contained" color="success" size="small" onClick={() => handleUpdate(id, 'approve')}>Approve</Button>
-            <Button variant="contained" color="error" size="small" onClick={() => handleUpdate(id, 'reject')}>Reject</Button>
+            <Button variant="contained" color="success" size="small" onClick={() => handleUpdate(id, 'approve')} disabled={loading}>
+              Approve
+            </Button>
+            <Button variant="contained" color="error" size="small" onClick={() => handleUpdate(id, 'reject')} disabled={loading}>
+              Reject
+            </Button>
           </Stack>
         );
-      },
-    },
+      }
+    }
   ];
 
   return (
     <Box>
-      <StatsFetcher featureType="lateentry" />
+      <StatsFetcher featureType="lateentry" user={user} />
+
       <Paper elevation={1} sx={{ p: 3, mb: 4, borderRadius: 2 }}>
         <Typography variant="h6" gutterBottom>Filter Entries</Typography>
+
         <Box component="form" onSubmit={handleApplyFilters} ref={formRef}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
+          <Row className="g-3 align-items-center justify-content-end">
+            <Col xs={12} sm={6} lg={3}>
               <TextField
                 fullWidth
                 label="From Date"
@@ -195,12 +207,11 @@ const FacultyLateEntries = ({ currentFilter }) => {
                 name="from"
                 value={filterParams.from}
                 onChange={handleFilterChange}
-                InputLabelProps={{
-                  shrink: true,
-                }}
+                InputLabelProps={{ shrink: true }}
+                disabled={loading}
               />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            </Col>
+            <Col xs={12} sm={6} lg={3}>
               <TextField
                 fullWidth
                 label="To Date"
@@ -208,31 +219,34 @@ const FacultyLateEntries = ({ currentFilter }) => {
                 name="to"
                 value={filterParams.to}
                 onChange={handleFilterChange}
-                InputLabelProps={{
-                  shrink: true,
-                }}
+                InputLabelProps={{ shrink: true }}
+                disabled={loading}
               />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth>
+            </Col>
+            <Col xs={12} sm={6} lg={3}>
+              <FormControl fullWidth disabled={loading}>
                 <InputLabel shrink>Status</InputLabel>
                 <Select
                   name="statusFilter"
                   value={filterParams.statusFilter}
-                  label="Status"
                   onChange={handleFilterChange}
+                  label="Status"
                 >
                   <MenuItem value="">All</MenuItem>
                   <MenuItem value="Approved">Approved</MenuItem>
                   <MenuItem value="Rejected">Rejected</MenuItem>
                 </Select>
               </FormControl>
-            </Grid>
-            <Grid item xs={12} md={3} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-              <Button variant="contained" type="submit" sx={{ mr: 1 }}>Filter</Button>
-              <Button variant="outlined" onClick={handleClearFilters}>Clear</Button>
-            </Grid>
-          </Grid>
+            </Col>
+            <Col xs={12} lg={3} className="d-flex gap-2 justify-content-end">
+              <Button variant="contained" type="submit" disabled={loading}>
+                Filter
+              </Button>
+              <Button variant="outlined" onClick={handleClearFilters} disabled={loading}>
+                Clear
+              </Button>
+            </Col>
+          </Row>
         </Box>
       </Paper>
 
@@ -266,11 +280,11 @@ const FacultyLateEntries = ({ currentFilter }) => {
                         {col.dataField === 'actions' ? (
                           col.formatter(entry)
                         ) : col.dataField.includes('.') ? (
-                          col.dataField.split('.').reduce((o, i) => o?.[i], entry)
+                          col.dataField.split('.').reduce((o, i) => o?.[i], entry) ?? 'N/A'
                         ) : col.formatter ? (
                           col.formatter(entry[col.dataField], entry)
                         ) : (
-                          entry[col.dataField]
+                          entry[col.dataField] ?? 'N/A'
                         )}
                       </TableCell>
                     ))}

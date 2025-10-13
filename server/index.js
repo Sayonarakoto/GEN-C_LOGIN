@@ -66,6 +66,7 @@ app.use('/api/gatepass', gatepassRoutes);
 app.use('/api/latecomers', latecomerRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/qr-gatepass', require('./routes/qrGatePass'));
 
 // Serve static files from the React app
 app.use('/GEN-C_LOGIN', express.static(path.join(__dirname, '..', 'dist')));

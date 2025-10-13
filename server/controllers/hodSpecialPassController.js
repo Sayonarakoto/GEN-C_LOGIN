@@ -9,23 +9,22 @@ const { generateThreeDigitOTP } = require('../utils/otpUtils'); // Import OTP ut
 const { schedulePassCleanup } = require('../services/schedulerService'); // Import scheduler service
 
 exports.getPendingSpecialPasses = async (req, res) => {
-    // This value is 'CT' from the JWT
-    const department = req.user.department; 
-
-    // Add this new debug line
-    console.log(`DEBUG: HOD Special Pass Query - Searching for Dept: '${department}', Status: 'Pending'`);
+    const department = req.user.department;
+    const hodId = req.user.id;
 
     try {
         const pendingPasses = await SpecialPass.find({
-            department: new RegExp(`^${department}$`, 'i'), 
+            department: new RegExp(`^${department}$`, 'i'),
             status: 'Pending'
         })
         .populate('student_id', 'studentId fullName year')
-        .populate('hod_approver_id', 'fullName') 
-        .sort({ requested_at: -1 }); 
+        .populate('hod_approver_id', 'fullName')
+        .sort({ requested_at: -1 });
 
-        // Add this final debug line
-        console.log(`DEBUG: HOD Special Pass Query - Found ${pendingPasses.length} requests.`);
+        if (pendingPasses.length > 0) {
+            const message = `You have ${pendingPasses.length} pending special pass requests.`;
+            await sendNotification(hodId, message, 'Pending Requests');
+        }
 
         res.status(200).json({ success: true, data: pendingPasses });
     } catch (error) {
@@ -328,26 +327,4 @@ module.exports = {
     rejectSpecialPass: exports.rejectSpecialPass,
     initiateSpecialPass: exports.initiateSpecialPass,
     getSpecialPassHistory: exports.getSpecialPassHistory
-};
-
-exports.getSpecialPassHistory = async (req, res) => {
-    const department = req.user.department;
-    console.log(`DEBUG: HOD Special Pass History - Searching for Dept: '${department}', Status: ['Approved', 'Rejected']`);
-
-    try {
-        const historyPasses = await SpecialPass.find({
-            department: department,
-            status: { $in: ['Approved', 'Rejected'] }
-        })
-        .populate('student_id', 'studentId fullName year')
-        .populate('hod_approver_id', 'fullName')
-        .sort({ approved_at: -1, requested_at: -1 });
-
-        console.log(`DEBUG: HOD Special Pass History - Found ${historyPasses.length} requests.`);
-
-        res.status(200).json({ success: true, data: historyPasses });
-    } catch (error) {
-        console.error('CRITICAL ERROR fetching HOD special pass history:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch pass history.' });
-    }
 };

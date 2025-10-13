@@ -1,5 +1,12 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
+
+const verifyLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 10, // 10 requests per minute per IP
+  message: 'Too many verification attempts, please try again later.'
+});
 const {
   getActiveGatePass,
   requestGatePass,
@@ -80,6 +87,6 @@ router.post('/verify-otp', requireAuth, requireRole('Security'), verifyGatePassB
 // @route   POST /api/gatepass/verify-qr
 // @desc    Verify a gate pass using QR Code
 // @access  Private (Security)
-router.post('/verify-qr', requireAuth, requireRole('Security'), verifyGatePassByQR);
+router.post('/verify-qr', verifyLimiter, requireAuth, requireRole('Security'), verifyGatePassByQR);
 
 module.exports = router;

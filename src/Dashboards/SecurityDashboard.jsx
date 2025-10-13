@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import {
   Box,
   Typography,
@@ -21,60 +21,8 @@ import { Row, Col } from 'react-bootstrap';
 import { QrCodeScanner, Lock, CheckCircle, Cancel, Logout, Schedule } from "@mui/icons-material";
 import apiClient from "../api/client";
 import { useAuth } from "../hooks/useAuth";
-import SecurityScanner from "../components/SecurityScanner"; // Import the SecurityScanner
 
-const LiveLogTable = ({ logs, loading }) => {
-  // ... (This component remains unchanged)
-  return (
-    <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3, height: '100%' }}>
-      <Typography variant="h5" fontWeight={600} mb={2} color="#1F2937">
-        Today's Check-Ins
-      </Typography>
-      <TableContainer>
-        <Table>
-                    <TableHead>
-            <TableRow>
-              <TableCell>Student Name</TableCell>
-              <TableCell>Pass Type</TableCell>
-              <TableCell>Start Time</TableCell> {/* New column */}
-              <TableCell>End Time</TableCell>   {/* New column */}
-              <TableCell align="right">CheckoutTime</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} align="center">
-                  <CircularProgress />
-                </TableCell>
-              </TableRow>
-            ) : Array.isArray(logs) && logs.length > 0 ? (
-              logs.map((log) => (
-                <TableRow key={log._id}>
-                  <TableCell component="th" scope="row">{log.event_details?.student_name || 'N/A'}</TableCell><TableCell>{log.event_details?.pass_type || 'N/A'}</TableCell><TableCell>
-                    {log.event_details?.pass_start_time
-                      ? new Date(log.event_details.pass_start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-                      : 'N/A'}
-                  </TableCell><TableCell>
-                    {log.event_details?.pass_end_time
-                      ? new Date(log.event_details.pass_end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-                      : 'N/A'}
-                  </TableCell><TableCell align="right">{new Date(log.timestamp).toLocaleTimeString()}</TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} align="center">
-                  No check-ins recorded yet.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Paper>
-  );
-};
+const QRScanner = React.lazy(() => import('../components/QRScanner'));
 
 const modalStyle = {
   position: 'absolute',
@@ -88,42 +36,90 @@ const modalStyle = {
   p: 4,
 };
 
+const LiveLogTable = ({ logs, loading }) => (
+  <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, borderRadius: 3, height: '100%' }}>
+    <Typography variant="h5" fontWeight={600} mb={2} color="#1F2937">
+      Today's Check-Ins
+    </Typography>
+    <TableContainer>
+      <Table>
+        <TableHead>
+          <TableRow>
+            <TableCell>Student Name</TableCell>
+            <TableCell>Pass Type</TableCell>
+            <TableCell>Start Time</TableCell>
+            <TableCell>End Time</TableCell>
+            <TableCell align="right">CheckoutTime</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={5} align="center">
+                <CircularProgress />
+              </TableCell>
+            </TableRow>
+          ) : Array.isArray(logs) && logs.length > 0 ? (
+            logs.map((log) => (
+              <TableRow key={log._id}>
+                <TableCell>{log.event_details?.student_name || 'N/A'}</TableCell>
+                <TableCell>{log.event_details?.pass_type || 'N/A'}</TableCell>
+                <TableCell>
+                  {log.event_details?.pass_start_time
+                    ? new Date(log.event_details.pass_start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                    : 'N/A'}
+                </TableCell>
+                <TableCell>
+                  {log.event_details?.pass_end_time
+                    ? new Date(log.event_details.pass_end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
+                    : 'N/A'}
+                </TableCell>
+                <TableCell align="right">{new Date(log.timestamp).toLocaleTimeString()}</TableCell>
+              </TableRow>
+            ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={5} align="center">
+                No check-ins recorded yet.
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
+    </TableContainer>
+  </Paper>
+);
+
 export default function SecurityDashboard() {
   const { logout } = useAuth();
   const [time, setTime] = useState(new Date());
+  const [error, setError] = useState(null);
 
   // Verification Form State
   const [otp, setOtp] = useState("");
-  const [studentId, setStudentId] = useState(""); // New state for student ID
+  const [studentId, setStudentId] = useState("");
   const [verificationResult, setVerificationResult] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
-  const [showScanner, setShowScanner] = useState(false); // State for scanner modal
-  const [scannedToken, setScannedToken] = useState(""); // Temporary state to hold the scanned token
-  const [passVerificationType, setPassVerificationType] = useState('special'); // 'special' or 'gate'
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannedToken, setScannedToken] = useState("");
+  const [passVerificationType, setPassVerificationType] = useState('special');
 
   // Live Log State
   const [logs, setLogs] = useState([]);
   const [logLoading, setLogLoading] = useState(true);
 
-  // Create a memoized version of the unique logs to prevent duplicates in the view
+  // Unique logs memoized, sorted descending by time
   const uniqueLogs = useMemo(() => {
-    const uniqueMap = logs.reduce((map, log) => {
-      // Use pass_id for uniqueness, otherwise fall back to _id for logs without it
+    const map = new Map();
+    logs.forEach(log => {
       const key = log.pass_id || log._id;
       const existing = map.get(key);
-      // Keep only the newest log entry for each pass
       if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
         map.set(key, log);
       }
-      return map;
-    }, new Map());
-    
-    const sortedUniqueLogs = Array.from(uniqueMap.values());
-    // Sort the final array by timestamp to show the most recent check-ins first
-    sortedUniqueLogs.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    return sortedUniqueLogs;
+    });
+    return Array.from(map.values()).sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }, [logs]);
-
 
   useEffect(() => {
     const timerId = setInterval(() => setTime(new Date()), 1000);
@@ -131,27 +127,24 @@ export default function SecurityDashboard() {
   }, []);
 
   const headerColor = verificationResult
-    ? verificationResult.is_valid
-      ? "#10B981"
-      : "#EF4444"
+    ? verificationResult.is_valid ? "#10B981" : "#EF4444"
     : "#3B82F6";
+
   const backgroundColor = verificationResult
-    ? verificationResult.is_valid
-      ? "#D1FAE5"
-      : "#FEE2E2"
+    ? verificationResult.is_valid ? "#D1FAE5" : "#FEE2E2"
     : "#F3F4F6";
 
   const fetchLogs = useCallback(async () => {
     setLogLoading(true);
     try {
-      const response = await apiClient.get("/api/security/logs"); // Correct endpoint
-      if (response.data && response.data.success) {
+      const response = await apiClient.get("/api/security/logs");
+      if (response.data?.success) {
         setLogs(Array.isArray(response.data.data) ? response.data.data : []);
       } else {
         setLogs([]);
       }
-    } catch (error) {
-      console.error("Failed to fetch live logs:", error);
+    } catch (err) {
+      console.error("Failed to fetch live logs:", err);
       setLogs([]);
     } finally {
       setLogLoading(false);
@@ -159,76 +152,91 @@ export default function SecurityDashboard() {
   }, []);
 
   useEffect(() => {
-    fetchLogs().finally(() => setLogLoading(false));
-    const intervalId = setInterval(fetchLogs, 60000);
-    return () => clearInterval(intervalId);
+    fetchLogs();
+    const interval = setInterval(fetchLogs, 60000);
+    return () => clearInterval(interval);
   }, [fetchLogs]);
 
   const handleVerification = async (token = null) => {
     setFormLoading(true);
     setVerificationResult(null);
 
-    const tokenToUse = token || scannedToken; // Prioritize token passed directly (from scan)
+    const tokenToUse = token || scannedToken;
 
-    const payload = {};
-    let endpoint;
+    let payload = {};
+    let endpoint = "";
 
     if (passVerificationType === 'special') {
-        payload.qr_token = tokenToUse;
-        endpoint = "/api/special-passes/verify";
+      payload.qr_token = tokenToUse;
+      endpoint = "/api/special-passes/verify";
     } else if (passVerificationType === 'gate') {
-        if (tokenToUse) {
-            payload.qr_token = tokenToUse;
-            endpoint = "/api/gatepass/verify-qr"; // Assuming a different endpoint for QR verification of gate passes
-        } else {
-            payload.studentIdString = studentId;
-            payload.otp = otp;
-            endpoint = "/api/gatepass/verify-otp";
-        }
+      if (tokenToUse) {
+        payload.qr_token = tokenToUse;
+        endpoint = "/api/gatepass/verify-qr";
+      } else {
+        payload.studentIdString = studentId;
+        payload.otp = otp;
+        endpoint = "/api/gatepass/verify-otp";
+      }
     } else {
-        setFormLoading(false);
-        setVerificationResult({
-            is_valid: false,
-            display_status: "INPUT REQUIRED",
-            error_message: "Please select a pass type (Special or Gate) before verification.",
-        });
-        return; // No valid pass type selected
+      setFormLoading(false);
+      const errResult = {
+        is_valid: false,
+        display_status: "INPUT REQUIRED",
+        error_message: "Select pass type before verification.",
+      };
+      setVerificationResult(errResult);
+      return errResult;
     }
-    
-    // Reset scanned token after preparing payload
+
     setScannedToken("");
 
-    console.log("Sending verification request:", { endpoint, payload }); // Debug log
-
     try {
-      const result = await apiClient.post(endpoint, payload);
-      console.log("Verification response:", result.data); // Debug log
-      setVerificationResult(result.data);
-      if (result.data.is_valid) {
-        // Re-fetch the logs from the database to get the new entry
+      const res = await apiClient.post(endpoint, payload);
+      setVerificationResult(res.data);
+      if (res.data.is_valid) {
         fetchLogs();
       }
-    } catch (error) {
-      console.error("Verification error:", error); // Debug log
-      setVerificationResult({
+      return res.data;
+    } catch (err) {
+      console.error("Verification error:", err);
+      const errResult = {
         is_valid: false,
         display_status: "VERIFICATION FAILED",
-        error_message: error.response?.data?.message || "An error occurred during verification.",
-      });
+        error_message: err.response?.data?.message || "Error during verification.",
+      };
+      setVerificationResult(errResult);
+      return errResult;
     } finally {
       setFormLoading(false);
     }
   };
 
-  const handleScanSuccess = (decodedText) => {
+  const playSound = (src) => {
+    const audio = new Audio(src);
+    audio.play().catch(() => { });
+  };
+
+  const handleScanSuccess = async (decodedText) => {
     setShowScanner(false);
-    // Directly call handleVerification with the decoded token
-    handleVerification(decodedText);
+    setVerificationResult({
+      is_valid: null,
+      display_status: "VERIFYING...",
+      message: "Please wait while we verify the pass..."
+    });
+
+    const result = await handleVerification(decodedText);
+
+    if (result?.is_valid) {
+      playSound('/sounds/success.mp3');
+    } else {
+      playSound('/sounds/error.mp3');
+    }
   };
 
   const resetVerification = () => {
     setOtp("");
-    setStudentId(""); // Reset student ID
+    setStudentId("");
     setScannedToken("");
     setVerificationResult(null);
   };
@@ -239,9 +247,28 @@ export default function SecurityDashboard() {
     <Box sx={{ minHeight: "100vh", bgcolor: backgroundColor, transition: "background-color 0.5s", p: { xs: 1, md: 3 } }}>
       <Modal open={showScanner} onClose={() => setShowScanner(false)}>
         <Box sx={modalStyle}>
-          <Typography variant="h6" component="h2" mb={2}>Scan Pass QR Code</Typography>
-          <SecurityScanner onScanSuccess={handleScanSuccess} />
-          <Button onClick={() => setShowScanner(false)} sx={{ mt: 2 }} fullWidth>Cancel Scan</Button>
+          <Typography variant="h6" component="h2" mb={2}>
+            Scan Pass QR Code
+          </Typography>
+
+          <Suspense fallback={<CircularProgress />}>
+            <QRScanner
+              onScanSuccess={handleScanSuccess}
+              onError={(error) => {
+                console.error('Scanner error:', error);
+                setVerificationResult({
+                  is_valid: false,
+                  display_status: "SCANNER ERROR",
+                  error_message: error.message || 'Failed to access camera'
+                });
+                setShowScanner(false);
+              }}
+            />
+          </Suspense>
+
+          <Button onClick={() => setShowScanner(false)} sx={{ mt: 2 }} fullWidth variant="outlined">
+            Cancel Scan
+          </Button>
         </Box>
       </Modal>
 
@@ -250,13 +277,13 @@ export default function SecurityDashboard() {
           {verificationResult?.display_status || "AWAITING SCAN/INPUT"}
         </Typography>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(0,0,0,0.1)', p: '4px 12px', borderRadius: '12px' }}>
-                <Schedule sx={{ fontSize: 28 }} />
-                <Typography variant="h6" fontWeight={500}>{time.toLocaleTimeString()}</Typography>
-            </Box>
-            <IconButton onClick={logout} sx={{ color: 'white' }} aria-label="logout">
-                <Logout sx={{ fontSize: 32 }} />
-            </IconButton>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, bgcolor: 'rgba(0,0,0,0.1)', p: '4px 12px', borderRadius: '12px' }}>
+            <Schedule sx={{ fontSize: 28 }} />
+            <Typography variant="h6" fontWeight={500}>{time.toLocaleTimeString()}</Typography>
+          </Box>
+          <IconButton onClick={logout} sx={{ color: 'white' }} aria-label="logout">
+            <Logout sx={{ fontSize: 32 }} />
+          </IconButton>
         </Box>
       </Box>
 
@@ -287,28 +314,28 @@ export default function SecurityDashboard() {
                 </Button>
               </Stack>
             </Box>
-            
+
             {/* QR CODE SCANNER SECTION */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, p: 2, border: '1px dashed #ccc', borderRadius: 1 }}>
               <Typography variant="h6" fontWeight={500}>
                 <QrCodeScanner sx={{ mr: 1, color: headerColor, verticalAlign: 'middle' }} /> QR Code Scan
               </Typography>
-              <Button 
-                variant="contained" 
+              <Button
+                variant="contained"
                 onClick={() => {
-                    resetVerification(); // Clear any existing input before scanning
-                    setShowScanner(true);
+                  resetVerification();
+                  setShowScanner(true);
                 }}
                 disabled={formLoading}
               >
                 Open Scanner
               </Button>
             </Box>
-            
+
             <Typography textAlign="center" variant="overline" display="block" mb={3}>
               — OR MANUAL OTP —
             </Typography>
-            
+
             {/* MANUAL OTP INPUT SECTION */}
             <Typography variant="h6" fontWeight={500} mb={1}>
               <Lock sx={{ mr: 1, color: headerColor, verticalAlign: 'middle' }} /> Enter Student ID & OTP
@@ -318,7 +345,7 @@ export default function SecurityDashboard() {
                 fullWidth
                 label="Student ID"
                 value={studentId}
-                onChange={(e) => {
+                onChange={e => {
                   const val = e.target.value.replace(/[^0-9]/g, '');
                   setStudentId(val);
                   setScannedToken("");
@@ -330,7 +357,7 @@ export default function SecurityDashboard() {
                 fullWidth
                 label="3-Digit OTP"
                 value={otp}
-                onChange={(e) => {
+                onChange={e => {
                   const val = e.target.value.replace(/[^0-9]/g, '');
                   if (val.length <= 3) {
                     setOtp(val);
@@ -345,14 +372,9 @@ export default function SecurityDashboard() {
             <Stack direction="row" spacing={2} mt={4}>
               <Button
                 variant="contained"
-                onClick={() => handleVerification()} // No token passed, relies on OTP state
+                onClick={() => handleVerification()}
                 disabled={formLoading || !isManualInputValid}
-                sx={{
-                  py: 1.5,
-                  flexGrow: 1,
-                  bgcolor: headerColor,
-                  "&:hover": { bgcolor: headerColor },
-                }}
+                sx={{ py: 1.5, flexGrow: 1, bgcolor: headerColor, "&:hover": { bgcolor: headerColor } }}
               >
                 {formLoading ? <CircularProgress size={24} sx={{ color: "#fff" }} /> : "VERIFY & LOG"}
               </Button>
@@ -360,7 +382,7 @@ export default function SecurityDashboard() {
                 Reset
               </Button>
             </Stack>
-            
+
             {/* VERIFICATION RESULT DISPLAY */}
             {verificationResult && (
               <Box mt={4}>
@@ -377,28 +399,28 @@ export default function SecurityDashboard() {
                   <Typography variant="subtitle1" fontWeight={600} mb={1} color="#4B5563">
                     Pass Details:
                   </Typography>
-                   <Row>
-                      <Col xs={6}>
-                         <Typography variant="body2" color="#6B7280">Student ID:</Typography>
-                         <Typography fontWeight={500}>{verificationResult.pass_details?.student_id || "N/A"}</Typography>
-                      </Col>
-                      <Col xs={6}>
-                         <Typography variant="body2" color="#6B7280">Student Name:</Typography>
-                         <Typography fontWeight={500}>{verificationResult.pass_details?.student_name || "N/A"}</Typography>
-                      </Col>
-                      <Col xs={6}>
-                         <Typography variant="body2" color="#6B7280">Pass Type:</Typography>
-                         <Typography fontWeight={500}>{verificationResult.pass_details?.pass_type || "N/A"}</Typography>
-                      </Col>
-                      <Col xs={6}>
-                         <Typography variant="body2" color="#6B7280">Valid Until:</Typography>
-                         <Typography fontWeight={500}>
-                            {verificationResult.pass_details?.date_valid_to
-                               ? new Date(verificationResult.pass_details.date_valid_to).toLocaleDateString()
-                               : "N/A"}
-                         </Typography>
-                      </Col>
-                   </Row>
+                  <Row>
+                    <Col xs={6}>
+                      <Typography variant="body2" color="#6B7280">Student ID:</Typography>
+                      <Typography fontWeight={500}>{verificationResult.pass_details?.student_id || "N/A"}</Typography>
+                    </Col>
+                    <Col xs={6}>
+                      <Typography variant="body2" color="#6B7280">Student Name:</Typography>
+                      <Typography fontWeight={500}>{verificationResult.pass_details?.student_name || "N/A"}</Typography>
+                    </Col>
+                    <Col xs={6}>
+                      <Typography variant="body2" color="#6B7280">Pass Type:</Typography>
+                      <Typography fontWeight={500}>{verificationResult.pass_details?.pass_type || "N/A"}</Typography>
+                    </Col>
+                    <Col xs={6}>
+                      <Typography variant="body2" color="#6B7280">Valid Until:</Typography>
+                      <Typography fontWeight={500}>
+                        {verificationResult.pass_details?.date_valid_to
+                          ? new Date(verificationResult.pass_details.date_valid_to).toLocaleDateString()
+                          : "N/A"}
+                      </Typography>
+                    </Col>
+                  </Row>
                 </Paper>
               </Box>
             )}

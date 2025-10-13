@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { validationResult } = require('express-validator');
 const LateEntry = require('../models/LateEntry');
 const Faculty = require('../models/Faculty');
+const { sendNotification } = require('../services/notificationService');
 // Assuming '../utils/latecomerUtils' is the correct path
 const { checkHODNeed, finalizeAction } = require('../utils/latecomerUtils'); 
 
@@ -29,13 +30,9 @@ const handleResponse = (res, promise) => {
 
 // GET /api/latecomers/faculty/pending (T3.1 - Working)
 exports.getFacultyPending = async (req, res) => {
-  console.log('--- DEBUG: Entering getFacultyPending ---');
   try {
-    console.log('DEBUG: req.user object:', JSON.stringify(req.user, null, 2));
-
     const facultyId = req.user.id;
     if (!facultyId) {
-      console.error('ERROR: User ID not found on req.user object.');
       return res.status(400).json({ success: false, message: 'User authentication data is incomplete.' });
     }
 
@@ -44,14 +41,12 @@ exports.getFacultyPending = async (req, res) => {
       status: { $in: ['Pending Faculty', 'Resubmitted'] }
     };
 
-    console.log('DEBUG: Executing database query:', JSON.stringify(query, null, 2));
-
     const pendingRequestsQuery = LateEntry.find(query).sort({ createdAt: -1 });
     const pendingRequests = await populateLateEntry(pendingRequestsQuery);
 
-    console.log(`DEBUG: Found ${pendingRequests.length} pending requests.`);
     if (pendingRequests.length > 0) {
-        console.log('DEBUG: First request found:', JSON.stringify(pendingRequests[0], null, 2));
+      const message = `You have ${pendingRequests.length} pending late entry requests.`;
+      await sendNotification(facultyId, message, 'Pending Requests');
     }
 
     res.status(200).json({ success: true, data: pendingRequests });

@@ -464,6 +464,7 @@ const HistoryTable = () => {
 
 export default function FacultySpecialPasses() {
   const [tabIndex, setTabIndex] = useState(0);
+  const { user } = useAuth(); // Get user from auth context
 
   const handleTabChange = (event, newValue) => {
     setTabIndex(newValue);
@@ -471,7 +472,7 @@ export default function FacultySpecialPasses() {
 
   return (
     <Container maxWidth="lg" sx={{ py: 4 }}>
-      <StatsFetcher featureType="specialpass" />
+      <StatsFetcher featureType="specialpass" user={user} />
       <Typography variant="h4" component="h1" gutterBottom>
         Special Pass Management
       </Typography>

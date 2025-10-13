@@ -30,12 +30,12 @@ const GatePassSchema = new mongoose.Schema({
     },
     faculty_status: { // New field for Level 1 approval
         type: String,
-        enum: ['PENDING', 'APPROVED', 'REJECTED'],
+        enum: ['PENDING', 'APPROVED', 'REJECTED', 'USED'],
         default: 'PENDING'
     },
     hod_status: { // New field for Level 2 approval
         type: String,
-        enum: ['PENDING', 'APPROVED', 'REJECTED'],
+        enum: ['PENDING', 'APPROVED', 'REJECTED', 'USED'],
         default: 'PENDING'
     },
     qr_code_id: { // Renamed from qr_token

@@ -16,27 +16,48 @@ const getIcon = (key) => {
     }
 };
 
-const StatsFetcher = ({ featureType }) => {
+const StatsFetcher = ({ featureType, user }) => {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    const abortController = new AbortController();
+    const signal = abortController.signal;
+
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/api/stats/${featureType}`);
+        const apiUrl = `/api/stats/${featureType}`;
+        const params = { role: user?.role };
+        const response = await api.get(apiUrl, { params, signal });
         setStats(response.data.data);
         setError(null);
       } catch (err) {
+        if (err.name === 'AbortError') {
+          // Request was intentionally aborted, do not treat as an error
+          return;
+        }
         setError('Failed to fetch stats.');
-        console.error(`Failed to fetch ${featureType} stats:`, err);
+        // Only log if it's not an AbortError
+        if (err.name !== 'AbortError') {
+          console.error(`ERROR: StatsFetcher - Failed to fetch ${featureType} stats:`, err);
+        }
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    fetchStats();
-  }, [featureType]);
+    if (user && featureType) {
+      fetchStats();
+    } else {
+      setLoading(false);
+    }
+
+    return () => {
+      abortController.abort();
+    };
+  }, [featureType, user]);
 
   if (loading) {
     return <div className="d-flex justify-content-center mt-4"><Spinner animation="border" /></div>;

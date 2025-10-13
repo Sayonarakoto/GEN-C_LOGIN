@@ -5,8 +5,21 @@ const LateEntry = require('../models/LateEntry');
 const getGatePassStats = async (req, res) => {
   try {
     const { department } = req.user; // Assuming department is stored in the user object
+    const { role } = req.query; // Get role from query parameters
 
-    const pending = await GatePass.countDocuments({ department_id: department, hod_status: 'PENDING' });
+    let pendingQuery = { department_id: department };
+
+    if (role === 'HOD') {
+      pendingQuery.hod_status = 'PENDING';
+    } else if (role === 'faculty') {
+      pendingQuery.faculty_status = 'PENDING';
+    } else {
+      // Default or error case if role is not specified or invalid
+      // For now, we'll return an error, but a default behavior could be implemented
+      return res.status(400).json({ success: false, message: 'Invalid or missing role for gate pass stats.' });
+    }
+
+    const pending = await GatePass.countDocuments(pendingQuery);
     const approved = await GatePass.countDocuments({ department_id: department, hod_status: 'APPROVED' });
     const rejected = await GatePass.countDocuments({ department_id: department, hod_status: 'REJECTED' });
     const total = await GatePass.countDocuments({ department_id: department });

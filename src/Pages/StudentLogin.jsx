@@ -57,7 +57,7 @@ const StudentLogin = () => {
       <div className="auth-container">
         <div className="auth-box">
           <form onSubmit={onFinish}>
-            <h2>Sign in</h2>
+            <h2>Student Login</h2>
             
             <div className="inputBox">
               <input

@@ -14,6 +14,28 @@ import apiClient from '../api/client';
 import { useAuth } from '../hooks/useAuth';
 import StatsFetcher from '../components/StatsFetcher';
 
+const getApproverDisplay = (pass) => {
+  if (pass.hod_status === 'APPROVED' && pass.hod_approver_id?.fullName) {
+    return `${pass.hod_approver_id.fullName} (${pass.hod_approver_id.designation || 'HOD'})`;
+  }
+  if (pass.faculty_status === 'APPROVED' && pass.faculty_id?.fullName) {
+    return `${pass.faculty_id.fullName} (${pass.faculty_id.designation || 'Faculty'})`;
+  }
+  if (pass.hod_status === 'REJECTED' && pass.hod_approver_id?.fullName) {
+    return `Rejected by ${pass.hod_approver_id.fullName} (${pass.hod_approver_id.designation || 'HOD'})`;
+  }
+  if (pass.faculty_status === 'REJECTED' && pass.faculty_id?.fullName) {
+    return `Rejected by ${pass.faculty_id.fullName} (${pass.faculty_id.designation || 'Faculty'})`;
+  }
+  if (pass.hod_status === 'PENDING' && pass.faculty_status === 'APPROVED' && pass.faculty_id?.fullName) {
+    return `Forwarded by ${pass.faculty_id.fullName} (${pass.faculty_id.designation || 'Faculty'}) to HOD`;
+  }
+  if (pass.faculty_status === 'PENDING' && pass.faculty_id?.fullName) {
+    return `Pending with ${pass.faculty_id.fullName} (${pass.faculty_id.designation || 'Faculty'})`;
+  }
+  return 'N/A';
+};
+
 const PendingRequests = ({ pendingRequests, onApprove, onReject, loading, error }) => {
   if (loading) {
     return (
@@ -211,7 +233,7 @@ const FacultyGatePass = () => {
 
   return (
     <Container fluid className="py-4">
-      <StatsFetcher featureType="gatepass" />
+      <StatsFetcher featureType="gatepass" user={user} />
       <h1 className="h4 mb-4">Gate Pass Management</h1>
       <Card>
         <Card.Header>

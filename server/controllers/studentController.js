@@ -166,8 +166,6 @@ exports.downloadStudentActivityReportPDF = async (req, res) => {
             year: student.year,
         };
 
-        const pdfPath = await generateStudentActivityReportPDF(studentDetails, reportData, startDate, endDate);
-
         res.download(pdfPath, `Student_Activity_Report_${student.studentId}.pdf`, (err) => {
             if (err) {
                 console.error('Error sending PDF:', err);

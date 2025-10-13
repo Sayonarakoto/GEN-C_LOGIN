@@ -237,6 +237,33 @@ const getStudentsByDepartment = async (req, res) => {
   }
 };
 
+const updateFacultyProfile = async (req, res) => {
+  try {
+    const { fullName, department, designation, email, profilePictureUrl } = req.body;
+    const faculty = await Faculty.findById(req.user.id);
+
+    if (!faculty) {
+      return res.status(404).json({ success: false, message: 'Faculty not found.' });
+    }
+
+    faculty.fullName = fullName;
+    faculty.department = department;
+    faculty.designation = designation;
+    faculty.email = email;
+    faculty.profilePictureUrl = profilePictureUrl;
+
+    await faculty.save();
+
+    res.json({ success: true, message: 'Profile updated successfully.' });
+  } catch (error) {
+    console.error('Error updating faculty profile:', error);
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
+      return res.status(400).json({ success: false, message: 'Email already in use. Please use a different email.' });
+    }
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = { 
   getDashboardStats, 
   getDistinctDepartments, 
@@ -244,5 +271,6 @@ module.exports = {
   getHODByDepartment, 
   getAllFaculty, 
   getDepartmentMembers, 
-  getStudentsByDepartment // Export the new function
+  getStudentsByDepartment, // Export the new function
+  updateFacultyProfile
 };

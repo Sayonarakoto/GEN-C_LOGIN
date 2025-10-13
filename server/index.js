@@ -35,7 +35,7 @@ app.use((req, res, next) => {
   req.userSocketMap = socketManager.getUserSocketMap();
   next();
 });
-app.use('/static/uploads', express.static(path.join(__dirname, 'uploads'))); // Changed this line
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Changed this line
 
 // Add debugging middleware
 app.use((req, res, next) => {
@@ -68,19 +68,19 @@ app.use('/api/security', securityRoutes);
 app.use('/api/stats', statsRoutes);
 
 // Serve static files from the React app
-app.use('/GEN-C_LOGIN', express.static(path.join(__dirname, '..', 'dist')));
+// app.use('/GEN-C_LOGIN', express.static(path.join(__dirname, '..', 'dist'))); // Commented out for development
 
 // For any other requests, serve the index.html of the React app
-app.get(/.*/, (req, res, next) => {
-  // Check if the request is for an API route. If so, let it fall through
-  // to the 404 handler, otherwise serve the index.html.
-  if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/auth') || req.originalUrl.startsWith('/static/uploads')) { // Added /static/uploads
-    // Let the 404 handler below manage this. 
-    // This is optional but can make the intent clearer.
-    return next();
-  }
-  res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
-});
+// app.get(/.*/, (req, res, next) => { // Commented out for development
+//   // Check if the request is for an API route. If so, let it fall through
+//   // to the 404 handler, otherwise serve the index.html.
+//   if (req.originalUrl.startsWith('/api') || req.originalUrl.startsWith('/auth') || req.originalUrl.startsWith('/static/uploads')) { // Added /static/uploads
+//     // Let the 404 handler below manage this. 
+//     // This is optional but can make the intent clearer.
+//     return next();
+//   }
+//   res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
+// });
 
 // Error handling middleware
 app.use((err, req, res, next) => {

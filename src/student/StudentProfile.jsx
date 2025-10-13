@@ -50,7 +50,7 @@ const UploadButton = styled(IconButton)(() => ({
 
 
 const StudentProfile = () => {
-    const { user, login, token } = useAuth(); // Get user, login, and token from auth context
+    const { user, login, token, updateUser } = useAuth(); // Get user, login, and token from auth context
     const toast = useToastService(); // Initialize toast service
     const fileInputRef = useRef(null); // Ref for the hidden file input
 
@@ -114,11 +114,11 @@ const StudentProfile = () => {
 
             // Then, update the rest of the profile data
             const updatedData = { ...formData, profilePictureUrl };
-            await apiClient.put('/api/student/profile', updatedData);
+            await apiClient.put('/api/students/profile', updatedData);
 
             // Update the user context with the new data
             const updatedUser = { ...user, ...updatedData };
-            login(token, updatedUser);
+            updateUser(updatedUser);
 
             toast.success('Profile updated successfully!');
         } catch (error) {
@@ -126,7 +126,10 @@ const StudentProfile = () => {
             const errorMessage = error.response?.data?.message || error.message;
             if (errorMessage.includes('File too large')) {
                 setAlert({ message: 'Image is too large. Please select a smaller file.', type: 'error' });
-            } else {
+            } else if (errorMessage === 'Email already in use. Please use a different email.') {
+                toast.error(errorMessage);
+            }
+            else {
                 toast.error('Failed to update profile.');
             }
         }

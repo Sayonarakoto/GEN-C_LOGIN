@@ -83,8 +83,8 @@ export const AuthProvider = ({ children }) => {
       // 2. CRITICAL: Use the role from the token for the final user state
       //    We combine the token data with any extra data the API provided.
       const finalUserData = {
-          ...userDataFromAPI, // Use the fresh data from the API response
           ...userData,        // Override role/id/etc. with the definitive token data
+          ...userDataFromAPI, // Use the fresh data from the API response
       };
 
       sessionStorage.setItem('token', newToken);
@@ -103,8 +103,12 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateUser = (newUserData) => {
+    setUser(newUserData);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

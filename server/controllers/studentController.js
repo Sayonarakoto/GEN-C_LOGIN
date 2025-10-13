@@ -46,6 +46,10 @@ exports.updateStudentProfile = async (req, res) => {
         res.json({ success: true, message: 'Profile updated successfully.' });
     } catch (error) {
         console.error('Error updating profile:', error);
+        // Check for Mongoose duplicate key error (email uniqueness)
+        if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
+            return res.status(400).json({ success: false, message: 'Email already in use. Please use a different email.' });
+        }
         res.status(500).json({ success: false, message: 'Server error' });
     }
 };

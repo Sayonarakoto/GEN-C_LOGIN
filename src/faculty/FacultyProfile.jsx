@@ -86,7 +86,7 @@ const StatsCard = styled(Paper)(({ theme }) => ({
 }));
 
 const FacultyProfile = () => {
-    const { user, login, token } = useAuth();
+    const { user, login, token, updateUser } = useAuth();
     const toast = useToastService();
     const fileInputRef = useRef(null);
     const navigate = useNavigate();
@@ -205,7 +205,7 @@ const FacultyProfile = () => {
             await apiClient.put('/api/faculty/profile', updatedData);
 
             const updatedUser = { ...user, ...updatedData };
-            login(token, updatedUser);
+            updateUser(updatedUser);
 
             toast.success('Profile updated successfully!');
         } catch (error) {
@@ -213,7 +213,10 @@ const FacultyProfile = () => {
             const errorMessage = error.response?.data?.message || error.message;
             if (errorMessage.includes('File too large')) {
                 setAlert({ message: 'Image is too large. Please select a smaller file.', type: 'error' });
-            } else {
+            } else if (errorMessage === 'Email already in use. Please use a different email.') {
+                toast.error(errorMessage);
+            }
+            else {
                 toast.error('Failed to update profile.');
             }
         }

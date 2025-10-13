@@ -23,4 +23,6 @@ router.get('/department-members', requireAuth, requireRole(['faculty', 'HOD']), 
 // Route to get students by department with search and pagination
 router.get('/students', requireAuth, requireRole(['faculty', 'HOD']), facultyController.getStudentsByDepartment);
 
+router.put('/profile', requireAuth, requireRole(['faculty', 'HOD']), facultyController.updateFacultyProfile);
+
 module.exports = router;

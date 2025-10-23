@@ -11,7 +11,7 @@ const fetch = require('node-fetch'); // For embedding images if needed later
  * @param {string} hodName - The full name of the approving HOD.
  * @returns {object} An object containing success status and the file path of the generated PDF.
  */
-async function generateWatermarkedPDF(passData, hodName) {
+async function generateWatermarkedPDF(passData, hodName, hodDepartment = 'N/A') {
     const uploadDir = path.join(__dirname, '..', 'generated_pdfs');
     if (!fs.existsSync(uploadDir)) {
         fs.mkdirSync(uploadDir, { recursive: true });
@@ -24,7 +24,8 @@ async function generateWatermarkedPDF(passData, hodName) {
         try {
             qrDataUrl = await QRCode.toDataURL(passData.qr_code_id);
         } catch (err) {
-            // Proceeding without QR code, but this could be a critical failure.
+            console.error('Error generating QR code for PDF:', err);
+            // Proceeding without QR code
         }
     }
 
@@ -49,7 +50,8 @@ async function generateWatermarkedPDF(passData, hodName) {
     currentY -= lineHeight;
     page.drawText(`Pass Type: ${passData.pass_type || 'Gate Pass'}`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
     currentY -= lineHeight;
-    page.drawText(`Reason: ${passData.reason}`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
+    // Corrected from passData.reason to passData.request_reason
+    page.drawText(`Reason: ${passData.request_reason || 'N/A'}`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
     currentY -= lineHeight;
     page.drawText(`Valid Date: ${new Date(passData.date_valid_from).toLocaleDateString('en-GB', { dateStyle: 'short' })}`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
     currentY -= lineHeight;
@@ -66,37 +68,35 @@ async function generateWatermarkedPDF(passData, hodName) {
 
     currentY -= (lineHeight * 2); // Move down 2 lines
 
-    // 2. Apply Digital Watermark
-    const departmentCode = passData.department_id || 'N/A';
-    const approvedDate = passData.updatedAt ? new Date(passData.updatedAt).toLocaleDateString() : 'N/A';
-    const watermarkText = `APPROVED BY: ${hodName.toUpperCase()} - DEPT: ${departmentCode} - ${approvedDate}`; 
+    // 2. Apply Digital Watermark (Corrected)
+    // Use the hodDepartment passed into the function, which comes from the HOD's own record.
+    const approvedDate = passData.approved_at ? new Date(passData.approved_at).toLocaleDateString() : 'N/A';
+    const watermarkText = `APPROVED BY: ${hodName.toUpperCase()} - DEPT: ${hodDepartment.toUpperCase()} - ${approvedDate}`; 
 
-    // pdf-lib doesn't have direct rotate and opacity for text like pdfkit.
-    // This is a simplified watermark. For a true rotated watermark, you'd need to draw it as an image or use more complex transformations.
     page.drawText(watermarkText, {
         x: 50,
         y: currentY,
         font,
-        size: 18,
-        color: rgb(0.7, 0.7, 0.7), // Light gray
-        opacity: 0.3,
+        size: 14, // Adjusted size
+        color: rgb(0.5, 0.5, 0.5), // Darker gray for readability
+        opacity: 0.5,
     });
     currentY -= (lineHeight * 2);
 
-    // 3. Add QR Code and OTP at the bottom
+    // 3. Add QR Code and OTP at the bottom (Corrected)
     const bottomY = 150; // Position near the bottom
 
     if (qrDataUrl) {
         const qrImage = await pdfDoc.embedPng(qrDataUrl);
         page.drawImage(qrImage, { x: 50, y: bottomY, width: 100, height: 100 });
     } else {
-        page.drawText('QR Code not available.', { x: 50, y: bottomY + 40, font, size: 10, color: rgb(0, 0, 0) });
+        page.drawText('QR Scan Not Required', { x: 50, y: bottomY + 40, font, size: 10, color: rgb(0.5, 0.5, 0.5) });
     }
 
     if (passData.one_time_pin) {
         page.drawText(`OTP: ${passData.one_time_pin}`, { x: 200, y: bottomY + 40, font, size: 16, color: rgb(0, 0, 0) });
     } else {
-        page.drawText('OTP not available.', { x: 200, y: bottomY + 40, font, size: 10, color: rgb(0, 0, 0) });
+        page.drawText('OTP: N/A', { x: 200, y: bottomY + 40, font, size: 12, color: rgb(0.5, 0.5, 0.5) });
     }
 
     const pdfBytes = await pdfDoc.save();

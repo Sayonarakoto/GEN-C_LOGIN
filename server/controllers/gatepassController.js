@@ -248,7 +248,7 @@ exports.facultyApproveGatePass = async (req, res) => {
         pass.hod_status = 'APPROVED'; 
         
         // CRITICAL STEP: Generate Credentials!
-        pass.qr_code_id = generateToken({ passId: pass._id }); 
+        pass.qr_code_id = generateToken({ passId: pass._id }, process.env.PASS_TOKEN_SECRET); 
         pass.one_time_pin = generateThreeDigitOTP();
 
         // Emit status update and notification to Student (FINAL APPROVAL)

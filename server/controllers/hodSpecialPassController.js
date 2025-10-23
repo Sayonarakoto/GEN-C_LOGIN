@@ -191,106 +191,119 @@ exports.rejectSpecialPass = async (req, res) => {
   }
 };
 
-exports.initiateSpecialPass = async (req, res) => { // This is the function for the /initiate endpoint
+exports.initiateSpecialPass = async (req, res) => {
     console.log('DEBUG: initiateSpecialPass - Start');
     console.log('DEBUG: req.body:', req.body);
-    // 🔑 STEP 1: Destructure the expected fields from the HOD form
+
     const {
         student_id,
-        pass_type = 'HOD Initiated', // Provide a default value for now
-        request_reason = 'Initiated by HOD',
+        pass_type,
+        request_reason, // Reason is now expected from the frontend
         date_required,
         start_time,
         end_time
     } = req.body;
 
-    const hodId = req.user.id; // The HOD is the one initiating and approving
+    const hodId = req.user.id;
 
     try {
-        console.log('DEBUG: initiateSpecialPass - Before Student.findById');
-        // Find the student by their MongoDB _id
+        // -- STEP 1: Fetch HOD and Student Data --
+        const hod = await Faculty.findById(hodId);
+        if (!hod) {
+            return res.status(404).json({ success: false, message: 'HOD not found.' });
+        }
+
         const student = await Student.findById(student_id);
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student not found.' });
         }
 
-        // 🔑 STEP 2: Calculate Valid Dates (Copied from the working logic)
+        // -- STEP 2: Validate Input and Dates --
+        const final_request_reason = request_reason || 'Initiated by HOD'; // Default if reason is empty
+        const requires_qr = pass_type === 'Other'; // QR is only required for 'Other' type
+
         const dateValidFrom = new Date(`${date_required}T${start_time}:00`);
         const dateValidTo = new Date(`${date_required}T${end_time}:00`);
 
         if (isNaN(dateValidFrom.getTime()) || isNaN(dateValidTo.getTime()) || dateValidFrom >= dateValidTo) {
-             return res.status(400).json({ success: false, message: 'Invalid date or time slot calculation.' });
+            return res.status(400).json({ success: false, message: 'Invalid date or time slot calculation.' });
         }
 
-        // 🔑 STEP 3: Create the Pass (Since HOD initiates, it's immediately Approved)
+        // -- STEP 3: Create and Save the Pass --
         const newPass = new SpecialPass({
             pass_type,
-            student_id: student._id, // Use the MongoDB ID
+            student_id: student._id,
             department: student.department,
-            request_reason,
+            request_reason: final_request_reason,
             hod_approver_id: hodId,
             date_valid_from: dateValidFrom,
             date_valid_to: dateValidTo,
-            is_one_time_use: false,
-            requires_qr_scan: true,
-            status: 'Approved', // Immediate approval by HOD
+            is_one_time_use: requires_qr, // Only one-time use if QR is involved
+            requires_qr_scan: requires_qr,
+            status: 'Approved',
             requested_at: new Date(),
             approved_at: new Date()
         });
 
-        // Populate student_id to ensure studentId is available for PDF generation
+        // -- STEP 4: Conditional QR/OTP and PDF Generation --
+        let qrCodeJwt = null;
+        let otp = null;
+
+        if (requires_qr) {
+            // DIAGNOSTIC: Log the secret being used for generation
+            console.log('DIAGNOSTIC (Generation): Using PASS_TOKEN_SECRET starting with:', process.env.PASS_TOKEN_SECRET.substring(0, 4));
+
+            // Generate QR and OTP only for 'Other'
+            qrCodeJwt = generateToken(
+                { pass_id: newPass._id, student_id: newPass.student_id, pass_type: newPass.pass_type },
+                process.env.PASS_TOKEN_SECRET,
+                '1h'
+            );
+            newPass.qr_code_jwt = qrCodeJwt;
+
+            otp = generateThreeDigitOTP();
+            newPass.verification_otp = otp;
+        }
+
+        // Always generate a PDF
         await newPass.populate('student_id', 'studentId fullName');
+        newPass.qr_code_id = qrCodeJwt; // Will be null if not generated
+        newPass.one_time_pin = otp; // Will be null if not generated
 
-        // 🔑 STEP 4: Generate QR/OTP (Crucial Step!)
-        const qrCodeJwt = generateToken(
-            { pass_id: newPass._id, student_id: newPass.student_id, pass_type: newPass.pass_type, },
-            process.env.PASS_TOKEN_SECRET,
-            '1h'
-        );
-        newPass.qr_code_jwt = qrCodeJwt;
-
-        const otp = generateThreeDigitOTP();
-        newPass.verification_otp = otp;
-
-        // Fetch HOD's full name for the watermark
-        const hod = await Faculty.findById(hodId);
-        const hodName = hod ? hod.fullName : 'Unknown HOD';
-
-        // Generate PDF
-        newPass.qr_code_id = newPass.qr_code_jwt;
-        newPass.one_time_pin = newPass.verification_otp;
-        const pdfResult = await generateWatermarkedPDF(newPass, hodName);
+        // Pass HOD's full details to the PDF service
+        const pdfResult = await generateWatermarkedPDF(newPass, hod.fullName, hod.department);
         if (pdfResult.success) {
-          newPass.pdf_path = pdfResult.filePath;
+            newPass.pdf_path = pdfResult.filePath;
         } else {
-          console.error('Failed to generate PDF:', pdfResult.error);
+            console.error('Failed to generate PDF:', pdfResult.error);
+            // Decide if you want to fail the whole request or just proceed without a PDF
         }
 
         await newPass.save();
 
-        // Log audit event
+        // -- STEP 5: Audit and Notify --
         await AuditLog.create({
-          pass_id: newPass._id,
-          event_type: 'Initiated',
-          actor_role: 'HOD',
-          actor_id: hodId,
-          event_details: {
-            request_reason: request_reason,
-            otp: newPass.verification_otp,
-            pdfPath: newPass.pdf_path,
-            requires_qr_scan: newPass.requires_qr_scan
-          },
-          timestamp: new Date()
+            pass_id: newPass._id,
+            event_type: 'Initiated',
+            actor_role: 'HOD',
+            actor_id: hodId,
+            event_details: {
+                request_reason: final_request_reason,
+                otp: newPass.verification_otp, // Will be null if not applicable
+                pdfPath: newPass.pdf_path,
+                requires_qr_scan: newPass.requires_qr_scan
+            },
+            timestamp: new Date()
         });
 
-        // Send notification to student
         await sendNotification(student._id, 'A special pass has been initiated for you by your HOD.', 'Pass Initiated');
 
+        // -- STEP 6: Send Response --
         res.status(201).json({
             success: true,
             message: 'Pass initiated and approved successfully.',
             pass: newPass,
-            qr_token: qrCodeJwt // Return token for the modal display
+            qr_token: qrCodeJwt // Will be null if not generated
         });
 
     } catch (error) {

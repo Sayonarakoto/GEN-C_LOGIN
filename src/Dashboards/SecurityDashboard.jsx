@@ -47,15 +47,13 @@ const LiveLogTable = ({ logs, loading }) => (
           <TableRow>
             <TableCell>Student Name</TableCell>
             <TableCell>Pass Type</TableCell>
-            <TableCell>Start Time</TableCell>
-            <TableCell>End Time</TableCell>
-            <TableCell align="right">CheckoutTime</TableCell>
+            <TableCell>Checkout Time</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={5} align="center">
+              <TableCell colSpan={3} align="center">
                 <CircularProgress />
               </TableCell>
             </TableRow>
@@ -64,22 +62,12 @@ const LiveLogTable = ({ logs, loading }) => (
               <TableRow key={log._id}>
                 <TableCell>{log.event_details?.student_name || 'N/A'}</TableCell>
                 <TableCell>{log.event_details?.pass_type || 'N/A'}</TableCell>
-                <TableCell>
-                  {log.event_details?.pass_start_time
-                    ? new Date(log.event_details.pass_start_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-                    : 'N/A'}
-                </TableCell>
-                <TableCell>
-                  {log.event_details?.pass_end_time
-                    ? new Date(log.event_details.pass_end_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-                    : 'N/A'}
-                </TableCell>
-                <TableCell align="right">{new Date(log.timestamp).toLocaleTimeString()}</TableCell>
+                <TableCell>{new Date(log.timestamp).toLocaleTimeString()}</TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={5} align="center">
+              <TableCell colSpan={3} align="center">
                 No check-ins recorded yet.
               </TableCell>
             </TableRow>
@@ -93,22 +81,18 @@ const LiveLogTable = ({ logs, loading }) => (
 export default function SecurityDashboard() {
   const { logout } = useAuth();
   const [time, setTime] = useState(new Date());
-  const [error, setError] = useState(null);
-
-  // Verification Form State
-  const [otp, setOtp] = useState("");
-  const [studentId, setStudentId] = useState("");
+  
   const [verificationResult, setVerificationResult] = useState(null);
   const [formLoading, setFormLoading] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [scannedToken, setScannedToken] = useState("");
-  const [passVerificationType, setPassVerificationType] = useState('special');
+  
+  const [studentId, setStudentId] = useState("");
+  const [otp, setOtp] = useState("");
+  const [passType, setPassType] = useState('gate'); // 'gate' or 'special'
 
-  // Live Log State
   const [logs, setLogs] = useState([]);
   const [logLoading, setLogLoading] = useState(true);
 
-  // Unique logs memoized, sorted descending by time
   const uniqueLogs = useMemo(() => {
     const map = new Map();
     logs.forEach(log => {
@@ -153,91 +137,61 @@ export default function SecurityDashboard() {
 
   useEffect(() => {
     fetchLogs();
-    const interval = setInterval(fetchLogs, 60000);
-    return () => clearInterval(interval);
   }, [fetchLogs]);
-
-  const handleVerification = async (token = null) => {
-    setFormLoading(true);
-    setVerificationResult(null);
-
-    const tokenToUse = token || scannedToken;
-
-    let payload = {};
-    let endpoint = "";
-
-    if (passVerificationType === 'special') {
-      payload.qr_token = tokenToUse;
-      endpoint = "/api/special-passes/verify";
-    } else if (passVerificationType === 'gate') {
-      if (tokenToUse) {
-        payload.qr_token = tokenToUse;
-        endpoint = "/api/gatepass/verify-qr";
-      } else {
-        payload.studentIdString = studentId;
-        payload.otp = otp;
-        endpoint = "/api/gatepass/verify-otp";
-      }
-    } else {
-      setFormLoading(false);
-      const errResult = {
-        is_valid: false,
-        display_status: "INPUT REQUIRED",
-        error_message: "Select pass type before verification.",
-      };
-      setVerificationResult(errResult);
-      return errResult;
-    }
-
-    setScannedToken("");
-
-    try {
-      const res = await apiClient.post(endpoint, payload);
-      setVerificationResult(res.data);
-      if (res.data.is_valid) {
-        fetchLogs();
-      }
-      return res.data;
-    } catch (err) {
-      console.error("Verification error:", err);
-      const errResult = {
-        is_valid: false,
-        display_status: "VERIFICATION FAILED",
-        error_message: err.response?.data?.message || "Error during verification.",
-      };
-      setVerificationResult(errResult);
-      return errResult;
-    } finally {
-      setFormLoading(false);
-    }
-  };
 
   const playSound = (src) => {
     const audio = new Audio(src);
-    audio.play().catch(() => { });
+    audio.play().catch(() => {});
   };
 
-  const handleScanSuccess = async (decodedText) => {
-    setShowScanner(false);
-    setVerificationResult({
-      is_valid: null,
-      display_status: "VERIFYING...",
-      message: "Please wait while we verify the pass..."
-    });
-
-    const result = await handleVerification(decodedText);
-
-    if (result?.is_valid) {
+  const handleApiResponse = useCallback((result) => {
+    setVerificationResult(result);
+    if (result.is_valid) {
       playSound('/sounds/success.mp3');
+      fetchLogs(); // Refresh logs on success
     } else {
       playSound('/sounds/error.mp3');
     }
+  }, [fetchLogs]);
+
+  const handleVerification = useCallback(async (data) => {
+    setFormLoading(true);
+    let endpoint = "";
+    let payload = {};
+
+    if (data.type === 'otp') {
+        endpoint = passType === 'gate' ? '/api/gatepass/verify-otp' : '/api/special-passes/verify-otp';
+        payload = { studentIdString: data.studentId, otp: data.otp };
+    } else if (data.type === 'qr') {
+        endpoint = passType === 'gate' ? '/api/gatepass/verify-qr' : '/api/special-passes/verify';
+        payload = { qr_token: data.token };
+    }
+
+    try {
+      const res = await apiClient.post(endpoint, payload);
+      handleApiResponse(res.data);
+    } catch (err) {
+      handleApiResponse(err.response?.data || {
+        is_valid: false,
+        display_status: "ERROR",
+        message: "An unknown error occurred.",
+      });
+    }
+    setFormLoading(false);
+  }, [passType, handleApiResponse]);
+
+  const handleScanSuccess = useCallback((decodedText) => {
+    setShowScanner(false);
+    handleVerification({ type: 'qr', token: decodedText });
+  }, [handleVerification]);
+  
+  const handleManualVerification = () => {
+    handleVerification({ type: 'otp', studentId, otp });
   };
 
   const resetVerification = () => {
     setOtp("");
     setStudentId("");
-    setScannedToken("");
     setVerificationResult(null);
   };
 
@@ -247,28 +201,9 @@ export default function SecurityDashboard() {
     <Box sx={{ minHeight: "100vh", bgcolor: backgroundColor, transition: "background-color 0.5s", p: { xs: 1, md: 3 } }}>
       <Modal open={showScanner} onClose={() => setShowScanner(false)}>
         <Box sx={modalStyle}>
-          <Typography variant="h6" component="h2" mb={2}>
-            Scan Pass QR Code
-          </Typography>
-
-          <Suspense fallback={<CircularProgress />}>
-            <QRScanner
-              onScanSuccess={handleScanSuccess}
-              onError={(error) => {
-                console.error('Scanner error:', error);
-                setVerificationResult({
-                  is_valid: false,
-                  display_status: "SCANNER ERROR",
-                  error_message: error.message || 'Failed to access camera'
-                });
-                setShowScanner(false);
-              }}
-            />
-          </Suspense>
-
-          <Button onClick={() => setShowScanner(false)} sx={{ mt: 2 }} fullWidth variant="outlined">
-            Cancel Scan
-          </Button>
+          <Typography variant="h6" component="h2" mb={2}>Scan Pass QR Code</Typography>
+          <Suspense fallback={<CircularProgress />}><QRScanner onScanSuccess={handleScanSuccess} onError={(e) => console.error(e)} /></Suspense>
+          <Button onClick={() => setShowScanner(false)} sx={{ mt: 2 }} fullWidth variant="outlined">Cancel</Button>
         </Box>
       </Modal>
 
@@ -281,147 +216,58 @@ export default function SecurityDashboard() {
             <Schedule sx={{ fontSize: 28 }} />
             <Typography variant="h6" fontWeight={500}>{time.toLocaleTimeString()}</Typography>
           </Box>
-          <IconButton onClick={logout} sx={{ color: 'white' }} aria-label="logout">
-            <Logout sx={{ fontSize: 32 }} />
-          </IconButton>
+          <IconButton onClick={logout} sx={{ color: 'white' }} aria-label="logout"><Logout sx={{ fontSize: 32 }} /></IconButton>
         </Box>
       </Box>
 
       <Row className="g-4">
         <Col xs={12} lg={7}>
           <Paper elevation={3} sx={{ p: { xs: 3, md: 4 }, borderRadius: 3 }}>
-            <Typography variant="h5" fontWeight={600} mb={3} color="#1F2937">
-              Verify Pass
-            </Typography>
-
-            {/* Pass Type Selection */}
+            <Typography variant="h5" fontWeight={600} mb={3} color="#1F2937">Verify Pass</Typography>
+            
             <Box sx={{ mb: 3 }}>
               <Typography variant="subtitle1" fontWeight={500} mb={1}>Select Pass Type:</Typography>
               <Stack direction="row" spacing={2}>
-                <Button
-                  variant={passVerificationType === 'special' ? 'contained' : 'outlined'}
-                  onClick={() => setPassVerificationType('special')}
-                  disabled={formLoading}
-                >
-                  Special Pass
-                </Button>
-                <Button
-                  variant={passVerificationType === 'gate' ? 'contained' : 'outlined'}
-                  onClick={() => setPassVerificationType('gate')}
-                  disabled={formLoading}
-                >
-                  Gate Pass
-                </Button>
+                <Button variant={passType === 'gate' ? 'contained' : 'outlined'} onClick={() => setPassType('gate')} disabled={formLoading}>Gate Pass</Button>
+                <Button variant={passType === 'special' ? 'contained' : 'outlined'} onClick={() => setPassType('special')} disabled={formLoading}>Special Pass</Button>
               </Stack>
             </Box>
 
-            {/* QR CODE SCANNER SECTION */}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, p: 2, border: '1px dashed #ccc', borderRadius: 1 }}>
-              <Typography variant="h6" fontWeight={500}>
-                <QrCodeScanner sx={{ mr: 1, color: headerColor, verticalAlign: 'middle' }} /> QR Code Scan
-              </Typography>
-              <Button
-                variant="contained"
-                onClick={() => {
-                  resetVerification();
-                  setShowScanner(true);
-                }}
-                disabled={formLoading}
-              >
-                Open Scanner
-              </Button>
+              <Typography variant="h6" fontWeight={500}><QrCodeScanner sx={{ mr: 1, color: headerColor, verticalAlign: 'middle' }} /> QR Code Scan</Typography>
+              <Button variant="contained" onClick={() => { resetVerification(); setShowScanner(true); }} disabled={formLoading}>Open Scanner</Button>
             </Box>
 
-            <Typography textAlign="center" variant="overline" display="block" mb={3}>
-              — OR MANUAL OTP —
-            </Typography>
+            <Typography textAlign="center" variant="overline" display="block" mb={3}>— OR MANUAL OTP ENTRY —</Typography>
 
-            {/* MANUAL OTP INPUT SECTION */}
-            <Typography variant="h6" fontWeight={500} mb={1}>
-              <Lock sx={{ mr: 1, color: headerColor, verticalAlign: 'middle' }} /> Enter Student ID & OTP
-            </Typography>
+            <Typography variant="h6" fontWeight={500} mb={1}><Lock sx={{ mr: 1, color: headerColor, verticalAlign: 'middle' }} /> Enter Student ID & OTP</Typography>
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} mb={3}>
-              <TextField
-                fullWidth
-                label="Student ID"
-                value={studentId}
-                onChange={e => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  setStudentId(val);
-                  setScannedToken("");
-                }}
-                type="text"
-                disabled={formLoading}
-              />
-              <TextField
-                fullWidth
-                label="3-Digit OTP"
-                value={otp}
-                onChange={e => {
-                  const val = e.target.value.replace(/[^0-9]/g, '');
-                  if (val.length <= 3) {
-                    setOtp(val);
-                    setScannedToken("");
-                  }
-                }}
-                type="password"
-                inputProps={{ maxLength: 3 }}
-                disabled={formLoading}
-              />
+              <TextField fullWidth label="Student ID" value={studentId} onChange={e => setStudentId(e.target.value)} type="text" disabled={formLoading} />
+              <TextField fullWidth label="3-Digit OTP" value={otp} onChange={e => { const val = e.target.value.replace(/[^0-9]/g, ''); if (val.length <= 3) setOtp(val); }} type="password" inputProps={{ maxLength: 3 }} disabled={formLoading} />
             </Stack>
             <Stack direction="row" spacing={2} mt={4}>
-              <Button
-                variant="contained"
-                onClick={() => handleVerification()}
-                disabled={formLoading || !isManualInputValid}
-                sx={{ py: 1.5, flexGrow: 1, bgcolor: headerColor, "&:hover": { bgcolor: headerColor } }}
-              >
+              <Button variant="contained" onClick={handleManualVerification} disabled={formLoading || !isManualInputValid} sx={{ py: 1.5, flexGrow: 1, bgcolor: headerColor, "&:hover": { bgcolor: headerColor } }}>
                 {formLoading ? <CircularProgress size={24} sx={{ color: "#fff" }} /> : "VERIFY & LOG"}
               </Button>
-              <Button variant="outlined" onClick={resetVerification} disabled={formLoading}>
-                Reset
-              </Button>
+              <Button variant="outlined" onClick={resetVerification} disabled={formLoading}>Reset</Button>
             </Stack>
 
-            {/* VERIFICATION RESULT DISPLAY */}
             {verificationResult && (
               <Box mt={4}>
-                {verificationResult.is_valid ? (
-                  <Alert icon={<CheckCircle fontSize="inherit" />} severity="success" sx={{ mb: 2 }}>
-                    Verification Successful. Audit Log updated.
-                  </Alert>
-                ) : (
-                  <Alert icon={<Cancel fontSize="inherit" />} severity="error" sx={{ mb: 2 }}>
-                    {verificationResult.message || verificationResult.error_message || "Unknown error during verification."}
-                  </Alert>
-                )}
-                <Paper variant="outlined" sx={{ p: 2, bgcolor: "#F9FAFB" }}>
-                  <Typography variant="subtitle1" fontWeight={600} mb={1} color="#4B5563">
-                    Pass Details:
-                  </Typography>
-                  <Row>
-                    <Col xs={6}>
-                      <Typography variant="body2" color="#6B7280">Student ID:</Typography>
-                      <Typography fontWeight={500}>{verificationResult.pass_details?.student_id || "N/A"}</Typography>
-                    </Col>
-                    <Col xs={6}>
-                      <Typography variant="body2" color="#6B7280">Student Name:</Typography>
-                      <Typography fontWeight={500}>{verificationResult.pass_details?.student_name || "N/A"}</Typography>
-                    </Col>
-                    <Col xs={6}>
-                      <Typography variant="body2" color="#6B7280">Pass Type:</Typography>
-                      <Typography fontWeight={500}>{verificationResult.pass_details?.pass_type || "N/A"}</Typography>
-                    </Col>
-                    <Col xs={6}>
-                      <Typography variant="body2" color="#6B7280">Valid Until:</Typography>
-                      <Typography fontWeight={500}>
-                        {verificationResult.pass_details?.date_valid_to
-                          ? new Date(verificationResult.pass_details.date_valid_to).toLocaleDateString()
-                          : "N/A"}
-                      </Typography>
-                    </Col>
-                  </Row>
-                </Paper>
+                <Alert icon={verificationResult.is_valid ? <CheckCircle fontSize="inherit" /> : <Cancel fontSize="inherit" />} severity={verificationResult.is_valid ? "success" : "error"} sx={{ mb: 2 }}>
+                  {verificationResult.message || "Verification complete."}
+                </Alert>
+                {verificationResult.pass_details &&
+                  <Paper variant="outlined" sx={{ p: 2, bgcolor: "#F9FAFB" }}>
+                    <Typography variant="subtitle1" fontWeight={600} mb={1} color="#4B5563">Pass Details:</Typography>
+                    <Row>
+                      <Col xs={6}><Typography variant="body2" color="#6B7280">Student ID:</Typography><Typography fontWeight={500}>{verificationResult.pass_details?.student_id || "N/A"}</Typography></Col>
+                      <Col xs={6}><Typography variant="body2" color="#6B7280">Student Name:</Typography><Typography fontWeight={500}>{verificationResult.pass_details?.student_name || "N/A"}</Typography></Col>
+                      <Col xs={6}><Typography variant="body2" color="#6B7280">Pass Type:</Typography><Typography fontWeight={500}>{verificationResult.pass_details?.pass_type || "N/A"}</Typography></Col>
+                      <Col xs={6}><Typography variant="body2" color="#6B7280">Valid Until:</Typography><Typography fontWeight={500}>{verificationResult.pass_details?.date_valid_to ? new Date(verificationResult.pass_details.date_valid_to).toLocaleDateString() : "N/A"}</Typography></Col>
+                    </Row>
+                  </Paper>
+                }
               </Box>
             )}
           </Paper>

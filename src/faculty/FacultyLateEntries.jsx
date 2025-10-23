@@ -147,7 +147,19 @@ const FacultyLateEntries = ({ currentFilter }) => {
     {
       dataField: 'approvedBy',
       text: 'Approved By',
-      formatter: (cell, row) => (row.status === 'Approved' && row.facultyId?.fullName) ? row.facultyId.fullName : 'N/A',
+      formatter: (cell, row) => {
+        // If the entry is approved and an HOD ID is present, the HOD is the final approver.
+        if (row.status === 'Approved' && row.HODId) {
+          // The optional chaining ?. is critical because HODId might be just an ID string instead of a populated object
+          return `[HOD] ${row.HODId?.fullName || 'Details Missing'}`;
+        }
+        // If it's approved but no HOD, it must have been the faculty.
+        if (row.status === 'Approved' && row.facultyId) {
+          return row.facultyId?.fullName || 'Details Missing';
+        }
+        // For any other status, it's not yet approved.
+        return 'N/A';
+      },
     },
     {
       dataField: 'actions',

@@ -2,28 +2,30 @@
 const mongoose = require('mongoose');
 
 const GatePassQRSchema = new mongoose.Schema({
-    holderName: {
-        type: String,
+    gatepass: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'GatePass',
         required: true
     },
-    passType: {
+    student: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Student',
+        required: true
+    },
+    otp: {
         type: String,
         required: true
     },
     createdAt: {
         type: Date,
-        default: Date.now
-    },
-    expiresAt: {
-        type: Date,
-        required: true
+        default: Date.now,
+        expires: '1d' // Automatically delete after 24 hours
     },
     status: {
         type: String,
-        enum: ['active', 'used', 'revoked'],
+        enum: ['active', 'used', 'revoked', 'expired'],
         default: 'active'
-    },
-    meta: mongoose.Schema.Types.Mixed
+    }
 });
 
 const GatePassQR = mongoose.model('GatePassQR', GatePassQRSchema);

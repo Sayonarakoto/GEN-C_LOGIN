@@ -1,57 +1,94 @@
+const mongoose = require('mongoose');
 const GatePassQR = require('../models/GatePassQR');
-const jwt = require('jsonwebtoken');
-const JWT_SECRET = process.env.JWT_SECRET || 'replace_this_with_secure_secret';
+const GatePass = require('../models/GatePass');
+const Student = require('../models/student');
+const auditService = require('../services/auditService');
 
-// ADMIN: create a pass and return QR token (JWT)
-exports.createPass = async (req, res) => {
-    const { holderName, passType, validForMinutes = 60, meta } = req.body;
+exports.verifyGatePassWithOtp = async (req, res) => {
+    const { id, otp } = req.body;
+
+    if (!id || !otp) {
+        return res.status(400).json({ message: 'ID and OTP are required.' });
+    }
 
     try {
-        const expiresAt = new Date(Date.now() + validForMinutes * 60 * 1000);
-        const pass = await GatePassQR.create({ holderName, passType, expiresAt, meta });
+        let qrData;
 
-        const payload = { passId: pass._id.toString(), holderName, expiresAt: expiresAt.toISOString() };
-        const token = jwt.sign(payload, JWT_SECRET, { expiresIn: Math.ceil((expiresAt - Date.now()) / 1000) });
+        // Check if the provided ID is a valid MongoDB ObjectId.
+        if (mongoose.Types.ObjectId.isValid(id)) {
+            // If it is, assume it's a direct passId from a QR scan.
+            qrData = await GatePassQR.findById(id);
+        } else {
+            // If not, assume it's a studentId from manual entry.
+            const student = await Student.findOne({ studentId: id });
+            if (student) {
+                // Find the active QR pass for that student.
+                qrData = await GatePassQR.findOne({ student: student._id, status: 'active' });
+            } else {
+                await auditService.logAuditAttempt(id, 'Verified', req.user, 'Student Not Found');
+                return res.status(404).json({ message: `Student with ID ${id} not found.` });
+            }
+        }
 
-        res.json({ ok: true, token, pass });
+        if (!qrData) {
+            await auditService.logAuditAttempt(id, 'Verified', req.user, 'Pass Not Found');
+            return res.status(404).json({ message: 'No active gate pass found for the provided ID.' });
+        }
+
+        if (qrData.status !== 'active') {
+            await auditService.logAuditAttempt(qrData.gatepass, 'Verified', req.user, 'Invalid Status', { status: qrData.status });
+            return res.status(400).json({ message: `Pass is not active. Current status: ${qrData.status}` });
+        }
+
+        if (qrData.otp !== otp) {
+            await auditService.logAuditAttempt(qrData.gatepass, 'Verified', req.user, 'Invalid OTP');
+            return res.status(400).json({ message: 'Invalid OTP.' });
+        }
+
+        const gatePass = await GatePass.findById(qrData.gatepass);
+
+        if (!gatePass) {
+            await auditService.logAuditAttempt(qrData.gatepass, 'Verified', req.user, 'Associated Pass Not Found');
+            return res.status(404).json({ message: 'Associated gate pass not found.' });
+        }
+
+        if (gatePass.hod_status !== 'APPROVED') { // Check against the correct schema field
+            await auditService.logAuditAttempt(gatePass._id, 'Verified', req.user, 'Pass Not Approved', { status: gatePass.hod_status });
+            return res.status(400).json({ message: `Gate pass is not approved. Current status: ${gatePass.hod_status}` });
+        }
+
+        // All checks passed. Update statuses.
+        qrData.status = 'used';
+        await qrData.save();
+
+        gatePass.hod_status = 'USED'; // Update the correct schema field
+        await gatePass.save();
+
+        const student = await Student.findById(gatePass.student_id, 'fullName studentId');
+
+        await auditService.logAuditAttempt(gatePass._id, 'Verified', req.user, 'Success', {
+            student_name: student.fullName,
+            student_id: student.studentId
+        });
+
+        res.status(200).json({
+            message: 'Gate pass verified successfully.',
+            is_valid: true,
+            display_status: "VERIFICATION SUCCESS",
+            pass_details: {
+                pass_type: 'Gate Pass',
+                status: gatePass.hod_status,
+                student_name: student ? student.fullName : 'N/A',
+                student_id: student ? student.studentId : 'N/A',
+                date_valid_to: gatePass.date_valid_to
+            }
+        });
+
     } catch (error) {
-        console.error('Error creating QR gate pass:', error);
-        res.status(500).json({ ok: false, message: 'Error creating QR gate pass', error: error.message });
-    }
-};
-
-// GATE: verify scanned QR token
-exports.verifyPass = async (req, res) => {
-    const { token } = req.body;
-
-    if (!token) {
-        return res.status(400).json({ ok: false, message: 'No token provided' });
-    }
-
-    try {
-        const payload = jwt.verify(token, JWT_SECRET);
-        const pass = await GatePassQR.findById(payload.passId);
-
-        if (!pass) {
-            return res.status(404).json({ ok: false, message: 'Pass not found' });
+        console.error('Error verifying gate pass with OTP:', error);
+        if (req.user) {
+            await auditService.logAuditAttempt(id, 'Verified', req.user, 'Server Error', { error: error.message });
         }
-
-        if (pass.status !== 'active') {
-            return res.json({ ok: false, allowed: false, reason: `status:${pass.status}` });
-        }
-
-        if (new Date() > new Date(pass.expiresAt)) {
-            return res.json({ ok: false, allowed: false, reason: 'expired' });
-        }
-
-        // Optionally mark used
-        pass.status = 'used'; // or don't auto-use if you want single-scan
-        await pass.save();
-
-        return res.json({ ok: true, allowed: true, pass: { holderName: pass.holderName, passType: pass.passType, expiresAt: pass.expiresAt } });
-
-    } catch (err) {
-        console.error('Error verifying QR gate pass:', err);
-        return res.status(400).json({ ok: false, message: 'Invalid token', error: err.message });
+        res.status(500).json({ message: 'Server error during gate pass verification.' });
     }
 };

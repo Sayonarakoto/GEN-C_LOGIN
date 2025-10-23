@@ -244,6 +244,8 @@ exports.verifyPass = async (req, res) => {
 
     // DFD 5.2: Check Input Method & Parse
     if (qr_token) {
+        // DIAGNOSTIC: Log the secret being used for verification
+        console.log('DIAGNOSTIC (Verification): Using PASS_TOKEN_SECRET starting with:', process.env.PASS_TOKEN_SECRET.substring(0, 4));
         verificationMethod = 'QR Code';
         verificationResult = validatePassToken(qr_token);
         if (verificationResult.isValid) {

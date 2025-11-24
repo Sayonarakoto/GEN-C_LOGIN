@@ -47,13 +47,19 @@ const LiveLogTable = ({ logs, loading }) => (
           <TableRow>
             <TableCell>Student Name</TableCell>
             <TableCell>Pass Type</TableCell>
-            <TableCell>Checkout Time</TableCell>
+            <TableCell>Reason</TableCell>
+            <TableCell>Department</TableCell>
+            <TableCell>Approved By</TableCell>
+            <TableCell>Date</TableCell>
+            <TableCell>Day</TableCell>
+            <TableCell>Check-in Time</TableCell>
+            <TableCell>Check-out Time</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={3} align="center">
+              <TableCell colSpan={9} align="center">
                 <CircularProgress />
               </TableCell>
             </TableRow>
@@ -62,12 +68,18 @@ const LiveLogTable = ({ logs, loading }) => (
               <TableRow key={log._id}>
                 <TableCell>{log.event_details?.student_name || 'N/A'}</TableCell>
                 <TableCell>{log.event_details?.pass_type || 'N/A'}</TableCell>
-                <TableCell>{new Date(log.timestamp).toLocaleTimeString()}</TableCell>
+                <TableCell>{log.event_details?.request_reason || 'N/A'}</TableCell>
+                <TableCell>{log.event_details?.department || 'N/A'}</TableCell>
+                <TableCell>{log.event_details?.hod_name || 'N/A'}</TableCell>
+                <TableCell>{new Date(log.event_details?.check_in_time).toLocaleDateString()}</TableCell>
+                <TableCell>{new Date(log.event_details?.check_in_time).toLocaleDateString('en-US', { weekday: 'long' })}</TableCell>
+                <TableCell>{new Date(log.event_details?.check_in_time).toLocaleTimeString()}</TableCell>
+                <TableCell>{log.event_details?.check_out_time ? new Date(log.event_details.check_out_time).toLocaleTimeString() : 'N/A'}</TableCell>
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={3} align="center">
+              <TableCell colSpan={9} align="center">
                 No check-ins recorded yet.
               </TableCell>
             </TableRow>
@@ -221,7 +233,7 @@ export default function SecurityDashboard() {
       </Box>
 
       <Row className="g-4">
-        <Col xs={12} lg={7}>
+        <Col xs={12} lg={12}>
           <Paper elevation={3} sx={{ p: { xs: 3, md: 4 }, borderRadius: 3 }}>
             <Typography variant="h5" fontWeight={600} mb={3} color="#1F2937">Verify Pass</Typography>
             
@@ -272,7 +284,7 @@ export default function SecurityDashboard() {
             )}
           </Paper>
         </Col>
-        <Col xs={12} lg={5}>
+        <Col xs={12} lg={12}>
           <LiveLogTable logs={uniqueLogs} loading={logLoading} />
         </Col>
       </Row>

@@ -437,8 +437,13 @@ const GatePassHistory = ({ history, handleDownloadPDF, downloadingPdf = false })
         const validTo = new Date(pass.date_valid_to);
 
         // 1. Final Rejected State
-        if (pass.faculty_status === 'REJECTED' || pass.hod_status === 'REJECTED') {
-            return { variant: 'danger', text: 'REJECTED' };
+        if (pass.faculty_status === 'REJECTED') {
+            const rejecterName = pass.faculty_approver_id?.fullName || 'Faculty';
+            return { variant: 'danger', text: `REJECTED by ${rejecterName}` };
+        }
+        if (pass.hod_status === 'REJECTED') {
+            const rejecterName = pass.hod_approver_id?.fullName || 'HOD';
+            return { variant: 'danger', text: `REJECTED by ${rejecterName}` };
         }
 
         // 2. Final Approved State (and its sub-states like Used/Expired)

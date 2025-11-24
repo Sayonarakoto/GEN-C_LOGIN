@@ -132,20 +132,34 @@ exports.getSecurityVerificationLogs = async (req, res) => {
       event_type: 'Verified',
       'event_details.result': { $regex: /^SUCCESS/ } // Find where result starts with SUCCESS
     })
+    .populate({
+        path: 'pass_id',
+        select: 'hod_approver_id department request_reason date_valid_from date_valid_to',
+        populate: {
+            path: 'hod_approver_id',
+            select: 'fullName'
+        }
+    })
     .sort({ timestamp: -1 }) // Show newest first
     .limit(50); // Limit to the last 50 verified passes for performance
     
     // Map logs to ensure event_details contains student_name and pass_type
-    const formattedLogs = logs.map(log => ({
-      ...log.toObject(), // Convert Mongoose document to plain JavaScript object
-      event_details: {
-        ...log.event_details,
-        student_name: log.event_details.student_name || 'N/A',
-        pass_type: log.event_details.pass_type || 'N/A',
-        pass_start_time: log.event_details.pass_start_time || null, // Include pass start time
-        pass_end_time: log.event_details.pass_end_time || null,     // Include pass end time
-      }
-    }));
+    const formattedLogs = logs.map(log => {
+        const passDetails = log.pass_id || {};
+        return {
+            ...log.toObject(), // Convert Mongoose document to plain JavaScript object
+            event_details: {
+                ...log.event_details,
+                student_name: log.event_details.student_name || 'N/A',
+                pass_type: log.event_details.pass_type || 'N/A',
+                hod_name: passDetails.hod_approver_id ? passDetails.hod_approver_id.fullName : 'N/A',
+                department: passDetails.department || 'N/A',
+                request_reason: passDetails.request_reason || 'N/A',
+                check_in_time: log.timestamp,
+                check_out_time: passDetails.date_valid_to || null,
+            }
+        }
+    });
 
     res.status(200).json({ success: true, data: formattedLogs });
 

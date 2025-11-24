@@ -117,8 +117,13 @@ const HistoryTable = ({ history, loading, error }) => {
       }
       return 'FINAL APPROVED';
     }
-    if (pass.hod_status === 'REJECTED' || pass.faculty_status === 'REJECTED') {
-      return 'REJECTED';
+    if (pass.hod_status === 'REJECTED') {
+      const rejecterName = pass.hod_approver_id?.fullName || 'HOD';
+      return `REJECTED by ${rejecterName}`;
+    }
+    if (pass.faculty_status === 'REJECTED') {
+      const rejecterName = pass.faculty_approver_id?.fullName || 'Faculty';
+      return `REJECTED by ${rejecterName}`;
     }
     if (pass.faculty_status === 'APPROVED' && pass.hod_approver_id) {
       return 'Forwarded to HOD';

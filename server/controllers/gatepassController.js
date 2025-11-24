@@ -814,8 +814,8 @@ exports.logLateReturn = async (req, res) => {
         });
 
         // Emit Socket.IO event for frontend update
-        if (req.io && req.userSocketMap.has(pass.student_id._id.toString())) {
-            req.io.to(pass.student_id._id.toString()).emit('statusUpdate:gatePass', {
+        if (req.io && req.userSocketMap.has(gatePass.student_id._id.toString())) {
+            req.io.to(gatePass.student_id._id.toString()).emit('statusUpdate:gatePass', {
                 recordId: gatePass._id,
                 newStatus: 'LATE_RETURN',
                 userId: gatePass.student_id._id,

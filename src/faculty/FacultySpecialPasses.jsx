@@ -24,6 +24,10 @@ import {
   Modal,
   TablePagination,
   Checkbox, // Import Checkbox
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import apiClient from '../api/client';
 import { useAuth } from '../hooks/useAuth'; // Import useAuth
@@ -159,6 +163,7 @@ const InitiatePass = () => {
     const [selectedStudents, setSelectedStudents] = useState([]); // New state for selected students
     
     const [reason, setReason] = useState('');
+    const [passType, setPassType] = useState(''); // NEW: State for pass type
     const [dateRequired, setDateRequired] = useState(''); // 🔑 CHANGE: Use single date field
     const [startTime, setStartTime] = useState('');     // 🔑 NEW: Start Time
     const [endTime, setEndTime] = useState('');       // 🔑 NEW: End Time
@@ -243,6 +248,7 @@ const InitiatePass = () => {
             for (const student_id of selectedStudents) {
                 await apiClient.post('/api/hod/special-passes/initiate', {
                     student_id,
+                    pass_type: passType, // Add passType to the request
                     request_reason: reason,
                     date_required: dateRequired,
                     start_time: startTime,
@@ -277,17 +283,28 @@ const InitiatePass = () => {
         <Box>
             <form onSubmit={handleSubmit}>
                 <Grid container spacing={2}>
-                    <Grid xs={12}><Typography variant="h6">Enter Pass Details</Typography></Grid>
-                    <Grid xs={12} sm={4}>
+                    <Grid item xs={12}>
+                        <Typography variant="h6">Enter Pass Details</Typography>
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
                         <TextField fullWidth type="date" label="Date Required" value={dateRequired} onChange={e => setDateRequired(e.target.value)} InputLabelProps={{ shrink: true }} required />
                     </Grid>
-                    <Grid xs={12} sm={4}>
+                    <Grid item xs={12} sm={4}>
                         <TextField fullWidth type="time" label="Start Time" value={startTime} onChange={e => setStartTime(e.target.value)} InputLabelProps={{ shrink: true }} required />
                     </Grid>
-                    <Grid xs={12} sm={4}>
+                    <Grid item xs={12} sm={4}>
                         <TextField fullWidth type="time" label="End Time" value={endTime} onChange={e => setEndTime(e.target.value)} InputLabelProps={{ shrink: true }} required />
                     </Grid>
-                    <Grid xs={12}>
+                    <Grid item xs={12}>
+                        <FormControl fullWidth required sx={{ mt: 2 }}>
+                            <InputLabel>Pass Type</InputLabel>
+                            <Select value={passType} label="Pass Type" onChange={(e) => setPassType(e.target.value)}>
+                                <MenuItem value="Mosque Pass">Mosque Pass</MenuItem>
+                                <MenuItem value="Other">Other</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid item xs={12}>
                         <TextField
                             fullWidth
                             label="Reason for Pass"
@@ -299,7 +316,7 @@ const InitiatePass = () => {
                             sx={{ mt: 2 }}
                         />
                     </Grid>
-                    <Grid xs={12} sx={{ display: 'flex', justifyContent: 'center' }}>
+                    <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center' }}>
                         <Button type="submit" variant="contained" disabled={loading || selectedStudents.length === 0 || !reason.trim()}>{loading ? <CircularProgress size={24} /> : 'Initiate Pass for Selected Students'}</Button>
                     </Grid>
                 </Grid>

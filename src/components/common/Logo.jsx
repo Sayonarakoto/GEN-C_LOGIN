@@ -5,7 +5,7 @@ import './Logo.css';
 const Logo = () => {
   return (
     <Box className="profile-avatar-frame">
-      <img src="/images/genc-log.jpeg" alt="Profile Avatar Logo" className="avatar-logo-fix" />
+      <img src="/images/genc-log.jpeg" alt="GEN-C Logo" className="avatar-logo-fix" />
     </Box>
   );
 };

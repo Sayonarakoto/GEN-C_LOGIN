@@ -57,7 +57,6 @@ const StudentProfile = () => {
     const [formData, setFormData] = useState({
         fullName: '',
         registerNumber: '',
-        department: '',
         year: '',
         email: '',
         profilePictureUrl: ''
@@ -73,7 +72,6 @@ const StudentProfile = () => {
             setFormData({
                 fullName: user.fullName || '',
                 registerNumber: user.studentId || '',
-                department: user.department || '',
                 year: user.year || '',
                 email: user.email || '',
                 profilePictureUrl: user.profilePictureUrl || '' // Set to empty string if no URL
@@ -91,7 +89,7 @@ const StudentProfile = () => {
         const file = e.target.files[0];
         if (file) {
             setSelectedFile(file);
-            setPreviewUrl(URL.createObjectURL(file)); // Create a local URL for preview
+            setPreviewUrl(URL.URL.createObjectURL(file)); // Create a local URL for preview
         }
     };
 
@@ -114,6 +112,8 @@ const StudentProfile = () => {
 
             // Then, update the rest of the profile data
             const updatedData = { ...formData, profilePictureUrl };
+            // Remove department from updatedData as it's not editable
+            delete updatedData.department; 
             await apiClient.put('/api/students/profile', updatedData);
 
             // Update the user context with the new data
@@ -192,16 +192,6 @@ const StudentProfile = () => {
                                         name="registerNumber"
                                         value={formData.registerNumber}
                                         InputProps={{ readOnly: true }}
-                                        margin="normal"
-                                    />
-                                </Grid>
-                                <Grid xs={12} sm={6}>
-                                    <TextField
-                                        fullWidth
-                                        label="Department"
-                                        name="department"
-                                        value={formData.department}
-                                        onChange={handleInputChange}
                                         margin="normal"
                                     />
                                 </Grid>

@@ -29,13 +29,16 @@ socketManager.init(server);
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Allow your frontend origins
+  credentials: true,
+}));
 app.use((req, res, next) => {
   req.io = socketManager.getIo();
   req.userSocketMap = socketManager.getUserSocketMap();
   next();
 });
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Changed this line
+app.use('/static/uploads', express.static(path.join(__dirname, 'uploads'))); // Changed this line
 
 // Add debugging middleware
 app.use((req, res, next) => {

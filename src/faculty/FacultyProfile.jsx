@@ -94,7 +94,6 @@ const FacultyProfile = () => {
     const [formData, setFormData] = useState({
         fullName: '',
         facultyId: '',
-        department: '',
         designation: '',
         email: '',
         profilePictureUrl: ''
@@ -117,7 +116,6 @@ const FacultyProfile = () => {
             setFormData({
                 fullName: user.fullName || '',
                 facultyId: user.facultyId || '',
-                department: user.department || '',
                 designation: user.designation || '',
                 email: user.email || '',
                 profilePictureUrl: user.profilePictureUrl || ''
@@ -202,6 +200,8 @@ const FacultyProfile = () => {
             }
 
             const updatedData = { ...formData, profilePictureUrl };
+            // Remove department from updatedData as it's not editable
+            delete updatedData.department; 
             await apiClient.put('/api/faculty/profile', updatedData);
 
             const updatedUser = { ...user, ...updatedData };
@@ -273,7 +273,7 @@ const FacultyProfile = () => {
                         </Grid>
                         <Grid xs={12} md={6} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
                             <Typography variant="h4" component="h2" sx={{ fontWeight: 700 }}>{formData.fullName}</Typography>
-                            <Typography variant="h6" sx={{ opacity: 0.9, mt: 0.5 }}>{formData.designation} - {formData.department}</Typography>
+                            <Typography variant="h6" sx={{ opacity: 0.9, mt: 0.5 }}>{formData.designation} - {user?.department}</Typography>
                             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'center', md: 'flex-start' }, mt: 1 }}>
                                 
                                 <Typography variant="body1">{formData.email}</Typography>
@@ -314,9 +314,6 @@ const FacultyProfile = () => {
                                     </Grid>
                                     <Grid xs={12} sm={6}>
                                         <TextField fullWidth label="Designation" name="designation" value={formData.designation} onChange={handleInputChange} margin="normal" />
-                                    </Grid>
-                                    <Grid xs={12} sm={6}>
-                                        <TextField fullWidth label="Department" name="department" value={formData.department} onChange={handleInputChange} margin="normal" />
                                     </Grid>
                                 </Grid>
                             </Paper>

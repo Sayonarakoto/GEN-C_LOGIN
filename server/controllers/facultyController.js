@@ -246,7 +246,7 @@ const getStudentsByDepartment = async (req, res) => {
 
 const updateFacultyProfile = async (req, res) => {
   try {
-    const { fullName, department, designation, email, profilePictureUrl } = req.body;
+    const { fullName, designation, email } = req.body; // Removed 'profilePictureUrl'
     const faculty = await Faculty.findById(req.user.id);
 
     if (!faculty) {
@@ -254,10 +254,10 @@ const updateFacultyProfile = async (req, res) => {
     }
 
     faculty.fullName = fullName;
-    faculty.department = department;
+    // faculty.department = department; // Removed this line
     faculty.designation = designation;
     faculty.email = email;
-    faculty.profilePictureUrl = profilePictureUrl;
+    // faculty.profilePictureUrl = profilePictureUrl; // Removed this line
 
     await faculty.save();
 
@@ -271,6 +271,28 @@ const updateFacultyProfile = async (req, res) => {
   }
 };
 
+const uploadProfilePicture = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded.' });
+    }
+
+    const faculty = await Faculty.findById(req.user.id);
+    if (!faculty) {
+      return res.status(404).json({ success: false, message: 'Faculty not found.' });
+    }
+
+    // Update the profilePictureUrl field
+    faculty.profilePictureUrl = `/static/uploads/profile-pictures/${req.file.filename}`;
+    await faculty.save();
+
+    res.json({ success: true, filePath: faculty.profilePictureUrl, message: 'Profile picture uploaded successfully.' });
+  } catch (error) {
+    console.error('Error uploading faculty profile picture:', { error, user: req.user.id });
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = { 
   getDashboardStats, 
   getDistinctDepartments, 
@@ -278,6 +300,7 @@ module.exports = {
   getHODByDepartment, 
   getAllFaculty, 
   getDepartmentMembers, 
-  getStudentsByDepartment, // Export the new function
-  updateFacultyProfile
+  getStudentsByDepartment,
+  updateFacultyProfile,
+  uploadProfilePicture // Export the new function
 };

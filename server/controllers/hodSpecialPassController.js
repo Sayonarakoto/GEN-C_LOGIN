@@ -39,11 +39,14 @@ exports.approveSpecialPass = async (req, res) => {
   const hodId = req.user.id; // Assuming HOD ID is attached by auth middleware
 
   try {
-    // The user's suggestion to use .lean() is good, but we need a mongoose document to .save(), so I will fetch the full document.
-    const pass = await SpecialPass.findById(passId).populate('student_id', 'studentId fullName');
-
+    const pass = await SpecialPass.findById(passId);
     if (!pass) {
       return res.status(404).json({ success: false, message: 'Special Pass not found.' });
+    }
+
+    // Ensure the pass belongs to the HOD's department
+    if (pass.department !== req.user.department) {
+        return res.status(403).json({ success: false, message: 'Access denied: This pass does not belong to your department.' });
     }
 
     if (pass.status !== 'Pending') {
@@ -56,16 +59,18 @@ exports.approveSpecialPass = async (req, res) => {
     pass.hod_comment = hodComment;
     pass.approved_at = new Date();
 
-    // Generate OTP (always generate for approved passes)
-    const otp = generateThreeDigitOTP();
-    pass.verification_otp = otp; // Critical: Pass now has the OTP
+    // Fetch HOD's full name and department for the watermark
+    const hod = await Faculty.findById(hodId);
+    const hodName = hod ? hod.fullName : 'Unknown HOD';
+    const hodDepartment = hod ? hod.department : 'N/A';
 
-    // **CRITICAL CONDITIONAL LOGIC**
+    // Populate student_id and hod_approver_id for PDF generation
+    await pass.populate('student_id', 'studentId fullName');
+    await pass.populate('hod_approver_id', 'fullName');
+
+    // Conditional QR Code and OTP Generation
     if (pass.requires_qr_scan) {
-        
-        // --- STEP 1: GENERATE & ASSIGN VERIFICATION ASSETS ---
-        
-        // 1A. Generate QR Code (JWT)
+        // Generate QR Code (JWT)
         const qrCodeJwt = generateToken(
           { pass_id: pass._id, student_id: pass.student_id, pass_type: pass.pass_type, },
           process.env.PASS_TOKEN_SECRET,
@@ -73,27 +78,23 @@ exports.approveSpecialPass = async (req, res) => {
         );
         pass.qr_code_jwt = qrCodeJwt; // 🔑 Critical: Pass now has the JWT
 
-        // --- STEP 2: GENERATE PDF (NOW IT HAS ALL DATA) ---
-
-        // Fetch HOD's full name for the watermark
-        const hod = await Faculty.findById(hodId);
-        const hodName = hod ? hod.fullName : 'Unknown HOD';
-        
-        // 2. Generate PDF (The 'pass' object now contains qr_code_jwt and verification_otp)
-        pass.qr_code_id = pass.qr_code_jwt;
-        pass.one_time_pin = pass.verification_otp;
-        const pdfResult = await generateWatermarkedPDF(pass, hodName); 
-        if (pdfResult.success) {
-          pass.pdf_path = pdfResult.filePath;
-        } else {
-          console.error('Failed to generate PDF:', pdfResult.error);
-        }
+        // Generate OTP
+        const otp = generateThreeDigitOTP();
+        pass.verification_otp = otp; // Critical: Pass now has the OTP
     } else {
-        // --- STEP B: INTERNAL EXEMPTION (No QR/OTP) ---
-        // The status is already 'Approved'. The user suggested 'Approved (Internal)' but that would require a schema change.
         pass.qr_code_jwt = null;
-        pass.pdf_path = null;
-        // OTP is now always generated, so no need to null it here
+        pass.verification_otp = null; // If no QR scan, no OTP needed
+    }
+
+    // Always generate PDF
+    pass.qr_code_id = pass.qr_code_jwt; // Will be null if not generated
+    pass.one_time_pin = pass.verification_otp; // Will be null if not generated
+    const pdfResult = await generateWatermarkedPDF(pass, hodName, hodDepartment); 
+    if (pdfResult.success) {
+      pass.pdf_path = pdfResult.filePath;
+    } else {
+      console.error('Failed to generate PDF:', pdfResult.error);
+      pass.pdf_path = null; // Ensure pdf_path is null on failure
     }
 
     await pass.save(); // Save the final updates
@@ -143,10 +144,14 @@ exports.rejectSpecialPass = async (req, res) => {
   const hodId = req.user.id; // Assuming HOD ID is attached by auth middleware
 
   try {
-    const pass = await SpecialPass.findById(passId).populate('student_id', 'studentId fullName');
-
+    const pass = await SpecialPass.findById(passId);
     if (!pass) {
       return res.status(404).json({ success: false, message: 'Special Pass not found.' });
+    }
+
+    // Ensure the pass belongs to the HOD's department
+    if (pass.department !== req.user.department) {
+        return res.status(403).json({ success: false, message: 'Access denied: This pass does not belong to your department.' });
     }
 
     if (pass.status !== 'Pending') {
@@ -216,6 +221,11 @@ exports.initiateSpecialPass = async (req, res) => {
         const student = await Student.findById(student_id);
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+
+        // Ensure the student belongs to the HOD's department
+        if (student.department !== hod.department) {
+            return res.status(403).json({ success: false, message: 'Access denied: Student does not belong to your department.' });
         }
 
         // -- STEP 2: Validate Input and Dates --

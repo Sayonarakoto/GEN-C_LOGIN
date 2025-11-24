@@ -404,6 +404,12 @@ exports.createLateEntry = async (req, res) => {
         });
       }
 
+      // Validate facultyId: must belong to the student's department
+      const assignedFaculty = await Faculty.findById(facultyId);
+      if (!assignedFaculty || assignedFaculty.department !== userDepartment) {
+        return res.status(403).json({ success: false, message: 'Assigned faculty not found in your department.' });
+      }
+
       const initialStatus = requiresHODApproval ? 'Pending HOD' : 'Pending Faculty';
       const initialHODStatus = requiresHODApproval ? 'Pending' : 'N/A';
       const facultyActionable = !requiresHODApproval;
@@ -472,6 +478,12 @@ exports.updateLateEntry = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cannot update a finalized or currently pending HOD late entry.' });
     }
 
+    // Validate facultyId: must belong to the student's department
+    const assignedFaculty = await Faculty.findById(facultyId);
+    if (!assignedFaculty || assignedFaculty.department !== existingEntry.department) {
+      return res.status(403).json({ success: false, message: 'Assigned faculty not found in the student\'s department.' });
+    }
+
     const newStatus = ['Rejected', 'Resubmitted'].includes(existingEntry.status) ? 'Pending Faculty' : existingEntry.status;
 
     // NOTE: Removed redundant `lastActionAt: new Date()` since timestamps: true handles `updatedAt`
@@ -538,9 +550,19 @@ exports.getLateEntryById = async (req, res) => {
         return res.status(404).json({ message: 'Late entry not found' });
       }
 
-      if (req.user.role === 'student' && (!lateEntry.studentId || lateEntry.studentId._id.toString() !== req.user.id)) {
-        return res.status(403).json({ message: 'Forbidden: You can only view your own late entries' });
+      // Authorization checks
+      if (req.user.role === 'student') {
+        if (!lateEntry.studentId || lateEntry.studentId._id.toString() !== req.user.id) {
+          return res.status(403).json({ message: 'Forbidden: You can only view your own late entries' });
+        }
+      } else if (req.user.role === 'faculty' || req.user.role === 'HOD') {
+        // Faculty and HODs can only view entries within their department
+        if (lateEntry.department !== req.user.department) {
+          return res.status(403).json({ message: 'Forbidden: You can only view late entries from your department' });
+        }
       }
+      // Security role is allowed to view any entry (cross-departmental)
+
 
       res.status(200).json({ success: true, lateEntry });
     } catch (err) {

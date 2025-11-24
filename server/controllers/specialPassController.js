@@ -69,6 +69,15 @@ exports.createSpecialPassRequest = async (req, res) => {
              console.error(`Invalid Date/Time Calculation: From=${dateValidFrom}, To=${dateValidTo}`);
              return res.status(400).json({ success: false, message: 'Invalid date or time slot. Please check your inputs.' });
         }
+
+        // --- Time Range Validation (9:30 AM to 4:00 PM) ---
+        const collegeStartTime = new Date(`${date_required}T09:30:00.000Z`);
+        const collegeEndTime = new Date(`${date_required}T16:00:00.000Z`); // 4:00 PM
+
+        if (dateValidFrom < collegeStartTime || dateValidTo > collegeEndTime) {
+            return res.status(400).json({ success: false, message: 'Requested pass times must be within college hours (9:30 AM - 4:00 PM).' });
+        }
+        // --- End Time Range Validation ---
         
         // 🔑 STEP 3: Create new SpecialPass with the calculated dates
         const newPass = new SpecialPass({

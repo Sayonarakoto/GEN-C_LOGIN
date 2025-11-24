@@ -11,10 +11,22 @@ const PDFDocument = require('pdfkit'); // Import pdfkit
 exports.getAuditLogs = async (req, res) => {
   try {
     const { studentId, eventType, startDate, endDate, page = 1, limit = 10 } = req.query;
-    const filter = {};
+    const department = req.user.department; // Get department from the authenticated user
+
+    if (!department) {
+      return res.status(400).json({ success: false, message: 'User department is missing.' });
+    }
+
+    // Find all audit logs where the associated pass (SpecialPass or GatePass) belongs to this department
+    const departmentSpecialPassIds = await SpecialPass.find({ department: department }).distinct('_id');
+    const departmentGatePassIds = await GatePass.find({ department_id: department }).distinct('_id');
+
+    const allDepartmentPassIds = [...departmentSpecialPassIds, ...departmentGatePassIds];
+
+    const filter = { pass_id: { $in: allDepartmentPassIds } };
 
     if (studentId) {
-      filter.actor_id = studentId; // Assuming actor_id can be studentId
+      filter.actor_id = studentId;
     }
     if (eventType) {
       filter.event_type = eventType;
@@ -53,7 +65,19 @@ exports.getAuditLogs = async (req, res) => {
 exports.exportAuditLogs = async (req, res) => {
   try {
     const { studentId, eventType, startDate, endDate } = req.query;
-    const filter = {};
+    const department = req.user.department; // Get department from the authenticated user
+
+    if (!department) {
+      return res.status(400).json({ success: false, message: 'User department is missing.' });
+    }
+
+    // Find all audit logs where the associated pass (SpecialPass or GatePass) belongs to this department
+    const departmentSpecialPassIds = await SpecialPass.find({ department: department }).distinct('_id');
+    const departmentGatePassIds = await GatePass.find({ department_id: department }).distinct('_id');
+
+    const allDepartmentPassIds = [...departmentSpecialPassIds, ...departmentGatePassIds];
+
+    const filter = { pass_id: { $in: allDepartmentPassIds } };
 
     if (studentId) {
       filter.actor_id = studentId;
@@ -193,7 +217,19 @@ exports.getDepartmentAuditLogs = async (req, res) => {
 exports.exportAuditLogsPdf = async (req, res) => {
   try {
     const { studentId, eventType, startDate, endDate } = req.query;
-    const filter = {};
+    const department = req.user.department; // Get department from the authenticated user
+
+    if (!department) {
+      return res.status(400).json({ success: false, message: 'User department is missing.' });
+    }
+
+    // Find all audit logs where the associated pass (SpecialPass or GatePass) belongs to this department
+    const departmentSpecialPassIds = await SpecialPass.find({ department: department }).distinct('_id');
+    const departmentGatePassIds = await GatePass.find({ department_id: department }).distinct('_id');
+
+    const allDepartmentPassIds = [...departmentSpecialPassIds, ...departmentGatePassIds];
+
+    const filter = { pass_id: { $in: allDepartmentPassIds } };
 
     if (studentId) {
       filter.actor_id = studentId;

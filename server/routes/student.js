@@ -7,38 +7,7 @@ const upload = require('../middleware/upload');
 const studentController = require('../controllers/studentController');
 
 // Add student (by faculty)
-router.post("/StudentForm", async (req, res) => {
-  try {
-    console.log("📩 /student/StudentForm hit");
-    console.log("Request body:", { studentId: req.body.studentId, fullName: req.body.fullName, email: req.body.email });
-
-    const { studentId, fullName, email, department, year, password } = req.body;
-
-    if (!studentId || !fullName || !password) {
-      return res.status(400).json({ message: "All required fields (studentId, fullName, password) are needed." });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const newStudent = new Student({
-      studentId,
-      fullName,
-      email,
-      department,
-      year,
-      password: hashedPassword,
-    });
-
-    await newStudent.save();
-    console.log("✅ Student saved:", newStudent);
-
-    const { password: _, ...studentResponse } = newStudent.toObject();
-    res.status(201).json({ message: "Student added successfully", student: studentResponse });
-  } catch (error) {
-    console.error("❌ Error adding student:", error);
-    res.status(500).json({ message: "Server error", error: error.message });
-  }
-});
+router.post("/StudentForm", requireAuth, requireRole(['faculty', 'HOD']), studentController.addStudent);
 
 router.post('/upload-profile-picture', requireAuth, upload, studentController.uploadProfilePicture);
 

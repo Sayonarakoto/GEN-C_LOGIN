@@ -66,6 +66,11 @@ exports.requestGatePass = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Selected approver not found.' });
         }
 
+        // CRITICAL FIX: Ensure selected approver is from the same department as the student
+        if (selectedApprover.department !== student.department) {
+            return res.status(403).json({ success: false, message: 'Selected approver is not from your department.' });
+        }
+
         let faculty_approver_id = null;
         let hod_approver_id = null;
         let faculty_status = 'PENDING';
@@ -122,6 +127,20 @@ exports.requestGatePass = async (req, res) => {
         if (!isHalfDay && date_valid_to && isNaN(returnDateObj.getTime())) {
             return res.status(400).json({ success: false, message: 'Invalid return date/time provided.' });
         }
+
+        // --- Time Range Validation (9:30 AM to 4:00 PM) ---
+        // Extract date part from exitDate to construct college hours for that specific day
+        const exitDateOnly = exitDate.toISOString().split('T')[0];
+        const collegeStartTime = new Date(`${exitDateOnly}T09:30:00.000Z`);
+        const collegeEndTime = new Date(`${exitDateOnly}T16:00:00.000Z`); // 4:00 PM
+
+        if (exitDate < collegeStartTime || exitDate > collegeEndTime) {
+            return res.status(400).json({ success: false, message: 'Requested exit time must be within college hours (9:30 AM - 4:00 PM).' });
+        }
+        if (returnDateObj && (returnDateObj < collegeStartTime || returnDateObj > collegeEndTime)) {
+             return res.status(400).json({ success: false, message: 'Requested return time must be within college hours (9:30 AM - 4:00 PM).' });
+        }
+        // --- End Time Range Validation ---
 
         const newPass = new GatePass({
             student_id: studentId,

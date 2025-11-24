@@ -107,10 +107,10 @@ const getDistinctDepartments = async (req, res) => {
 
 const getFacultyByDepartment = async (req, res) => {
   try {
-    const { department } = req.params; // e.g., 'CT' from the URL
-    
+    const { department } = req.user; // Get department from the authenticated user
+
     if (!department) {
-      return res.status(400).json({ success: false, message: 'Department is required' });
+      return res.status(400).json({ success: false, message: 'User department is missing.' });
     }
 
     // CRITICAL FIX: Use a case-insensitive regex query
@@ -135,12 +135,12 @@ const getFacultyByDepartment = async (req, res) => {
 
 const getHODByDepartment = async (req, res) => {
   try {
-    const { department } = req.params;
-    console.log(`[getHODByDepartment] Received department param: ${department}`); // DEBUG: Log entry
+    const { department } = req.user; // Get department from the authenticated user
+    console.log(`[getHODByDepartment] Authenticated user's department: ${department}`); // DEBUG: Log entry
 
     if (!department) {
-      console.log('[getHODByDepartment] Department param is missing.');
-      return res.status(400).json({ success: false, message: 'Department is required' });
+      console.log('[getHODByDepartment] User department is missing.');
+      return res.status(400).json({ success: false, message: 'User department is missing.' });
     }
 
     // ✅ FIX 1: Department Regex (case-insensitive and exact match)
@@ -172,7 +172,13 @@ const getHODByDepartment = async (req, res) => {
 
 const getAllFaculty = async (req, res) => {
   try {
-    const facultyList = await Faculty.find({}).select('_id fullName designation department');
+    const { department } = req.user; // Get department from the authenticated user
+
+    if (!department) {
+      return res.status(400).json({ success: false, message: 'User department is missing.' });
+    }
+
+    const facultyList = await Faculty.find({ department: department }).select('_id fullName designation department');
     res.json({ success: true, data: facultyList });
   } catch (error) {
     console.error('Error fetching all faculty:', error);
@@ -206,10 +212,11 @@ const getDepartmentMembers = async (req, res) => {
 // @access  Private (Faculty, HOD)
 const getStudentsByDepartment = async (req, res) => {
   try {
-    const { department, search, page = 1, limit = 5 } = req.query;
+    const { search, page = 1, limit = 5 } = req.query;
+    const department = req.user.department; // Get department from the authenticated user
 
     if (!department) {
-      return res.status(400).json({ success: false, message: 'Department is required.' });
+      return res.status(400).json({ success: false, message: 'User department is missing.' });
     }
 
     const query = { department: department };

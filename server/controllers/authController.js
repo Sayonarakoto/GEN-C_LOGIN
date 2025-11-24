@@ -16,6 +16,12 @@ exports.register = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Faculty with this Employee ID already exists.' });
     }
 
+    // Validate department against a predefined list
+    const validDepartments = ["ct", "mech-a", "mech-b", "eee", "ce", "fs", "auto"];
+    if (!validDepartments.includes(department.toLowerCase())) {
+      return res.status(400).json({ success: false, message: 'Invalid department provided.' });
+    }
+
     // Hash password
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);

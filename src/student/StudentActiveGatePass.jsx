@@ -150,6 +150,8 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast }) => {
                                     onChange={setExitTime}
                                     slots={{ textField: TextField }}
                                     slotProps={{ textField: { required: true, fullWidth: true } }}
+                                    minTime={dayjs().set('hour', 9).set('minute', 30)} // 9:30 AM
+                                    maxTime={dayjs().set('hour', 16).set('minute', 0)} // 4:00 PM
                                 />
                             </Form.Group>
                         </Col>
@@ -163,6 +165,8 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast }) => {
                                         onChange={setReturnTime}
                                         slots={{ textField: TextField }}
                                         slotProps={{ textField: { fullWidth: true, required: !isHalfDay } }} // Conditionally required
+                                        minTime={dayjs().set('hour', 9).set('minute', 30)} // 9:30 AM
+                                        maxTime={dayjs().set('hour', 16).set('minute', 0)} // 4:00 PM
                                     />
                                 </Form.Group>
                             </Col>

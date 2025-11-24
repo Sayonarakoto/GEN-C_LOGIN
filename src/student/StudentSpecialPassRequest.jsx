@@ -281,6 +281,10 @@ export default function StudentSpecialPassRequest() {
               InputLabelProps={{ shrink: true }}
               required
               disabled={formLoading}
+              inputProps={{
+                min: "09:30", // College start time
+                max: "16:00", // College end time (4:00 PM)
+              }}
             />
             <TextField
               label="End Time"
@@ -290,6 +294,10 @@ export default function StudentSpecialPassRequest() {
               InputLabelProps={{ shrink: true }}
               required
               disabled={formLoading}
+              inputProps={{
+                min: "09:30", // College start time
+                max: "16:00", // College end time (4:00 PM)
+              }}
             />
             <FormControlLabel
               control={

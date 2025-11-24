@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { requireHOD } = require('../middleware/hodAuthorization');
+const { enforceDepartmentIsolation } = require('../middleware/departmentIsolation'); // Import the middleware
 const hodSpecialPassController = require('../controllers/hodSpecialPassController');
 
 /**
@@ -13,6 +14,7 @@ router.put(
   '/:passId/approve',
   requireAuth,
   requireHOD,
+  enforceDepartmentIsolation, // Add department isolation
   hodSpecialPassController.approveSpecialPass
 );
 
@@ -25,6 +27,7 @@ router.put(
   '/:passId/reject',
   requireAuth,
   requireHOD,
+  enforceDepartmentIsolation, // Add department isolation
   hodSpecialPassController.rejectSpecialPass
 );
 
@@ -37,6 +40,7 @@ router.get(
   '/',
   requireAuth,
   requireHOD,
+  enforceDepartmentIsolation, // Add department isolation
   hodSpecialPassController.getPendingSpecialPasses
 );
 
@@ -49,6 +53,7 @@ router.post(
   '/initiate',
   requireAuth,
   requireHOD,
+  enforceDepartmentIsolation, // Add department isolation
   hodSpecialPassController.initiateSpecialPass
 );
 
@@ -61,6 +66,7 @@ router.get(
     '/history',
     requireAuth,
     requireHOD,
+    enforceDepartmentIsolation, // Add department isolation
     hodSpecialPassController.getSpecialPassHistory
 );
 

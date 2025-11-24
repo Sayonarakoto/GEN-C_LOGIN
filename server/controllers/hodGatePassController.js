@@ -47,6 +47,11 @@ exports.hodApproveGatePass = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Gate pass not found' });
         }
 
+        // CRITICAL FIX: Ensure the pass belongs to the HOD's department
+        if (pass.department_id.toString() !== req.user.department.toString()) {
+            return res.status(403).json({ success: false, message: 'Access denied: This pass does not belong to your department.' });
+        }
+
         // 1. Authorization & Status Check
         if (pass.hod_status !== 'PENDING' || pass.hod_approver_id.toString() !== req.user.id) {
             return res.status(401).json({ success: false, message: 'Not authorized or pass not awaiting HOD approval.' });
@@ -133,6 +138,11 @@ exports.hodRejectGatePass = async (req, res) => {
 
         if (!pass) {
             return res.status(404).json({ success: false, message: 'Gate pass not found' });
+        }
+
+        // CRITICAL FIX: Ensure the pass belongs to the HOD's department
+        if (pass.department_id.toString() !== req.user.department.toString()) {
+            return res.status(403).json({ success: false, message: 'Access denied: This pass does not belong to your department.' });
         }
 
         if (pass.hod_status !== 'PENDING' || pass.hod_approver_id.toString() !== req.user.id) {

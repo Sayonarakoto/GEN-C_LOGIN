@@ -58,6 +58,30 @@ exports.getStudentActivityReport = async (req, res) => {
     try {
         const { studentId } = req.params;
         const { startDate, endDate } = req.query;
+        const authenticatedUserId = req.user.id;
+        const authenticatedUserRole = req.user.role;
+        const authenticatedUserDepartment = req.user.department;
+
+        // Authorization Check
+        const student = await Student.findById(studentId);
+        if (!student) {
+            return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+
+        if (authenticatedUserRole === 'student') {
+            // A student can only view their own report
+            if (student._id.toString() !== authenticatedUserId) {
+                return res.status(403).json({ success: false, message: 'Forbidden: You can only view your own activity report.' });
+            }
+        } else if (authenticatedUserRole === 'faculty' || authenticatedUserRole === 'HOD') {
+            // Faculty/HOD can only view reports for students in their department
+            if (student.department !== authenticatedUserDepartment) {
+                return res.status(403).json({ success: false, message: 'Forbidden: You can only view reports for students in your department.' });
+            }
+        } else {
+            // Other roles (e.g., Security) are not authorized for this report
+            return res.status(403).json({ success: false, message: 'Forbidden: You are not authorized to view student activity reports.' });
+        }
 
         const dateFilter = {};
         if (startDate) {
@@ -113,11 +137,23 @@ exports.downloadStudentActivityReportPDF = async (req, res) => {
     try {
         const { studentId } = req.params;
         const { startDate, endDate } = req.query;
+        const authenticatedUserRole = req.user.role;
+        const authenticatedUserDepartment = req.user.department;
 
         // Fetch student details
         const student = await Student.findById(studentId);
         if (!student) {
             return res.status(404).json({ success: false, message: 'Student not found.' });
+        }
+
+        // Authorization Check (only Faculty/HOD can download, and only for their department)
+        if (authenticatedUserRole === 'faculty' || authenticatedUserRole === 'HOD') {
+            if (student.department !== authenticatedUserDepartment) {
+                return res.status(403).json({ success: false, message: 'Forbidden: You can only download reports for students in your department.' });
+            }
+        } else {
+            // Other roles (e.g., Student, Security) are not authorized to download this report
+            return res.status(403).json({ success: false, message: 'Forbidden: You are not authorized to download student activity reports.' });
         }
 
         const dateFilter = {};
@@ -185,4 +221,54 @@ exports.downloadStudentActivityReportPDF = async (req, res) => {
         console.error('Error generating student activity report PDF:', error);
         res.status(500).json({ success: false, message: 'Server error generating PDF.' });
     }
+};
+
+// New function to add a student (by faculty/HOD)
+exports.addStudent = async (req, res) => {
+  try {
+    console.log("📩 studentController.addStudent hit");
+    console.log("Request body:", { studentId: req.body.studentId, fullName: req.body.fullName, email: req.body.email });
+
+    const { studentId, fullName, email, department, year, password } = req.body;
+    const userDepartment = req.user.department; // Department of the authenticated faculty/HOD
+
+    if (!studentId || !fullName || !password || !department || !year) {
+      return res.status(400).json({ message: "All required fields (studentId, fullName, password, department, year) are needed." });
+    }
+
+    // CRITICAL FIX: Department Isolation Check
+    if (department !== userDepartment) {
+        return res.status(403).json({ success: false, message: 'You can only add students to your own department.' });
+    }
+
+    // Check if studentId already exists
+    const existingStudent = await Student.findOne({ studentId });
+    if (existingStudent) {
+        return res.status(400).json({ success: false, message: 'Student with this ID already exists.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const newStudent = new Student({
+      studentId,
+      fullName,
+      email,
+      department,
+      year,
+      password: hashedPassword,
+    });
+
+    await newStudent.save();
+    console.log("✅ Student saved:", newStudent);
+
+    const { password: _, ...studentResponse } = newStudent.toObject();
+    res.status(201).json({ message: "Student added successfully", student: studentResponse });
+  } catch (error) {
+    console.error("❌ Error adding student:", error);
+    // Handle duplicate email error
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
+        return res.status(400).json({ success: false, message: 'Email already in use. Please use a different email.' });
+    }
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
 };

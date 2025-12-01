@@ -15,150 +15,106 @@
     font-family: 'Poppins', sans-serif
 }
 
-/* Light theme for auth pages */
+/* General Auth Page Styling */
 .auth-page-wrapper {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: #f0f2f5; /* Light grey background */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f0f2f5 0%, #e0e5ec 100%); /* Light gradient background */
+  padding: 20px;
 }
 
-/* Converted from glass-morphism to a standard light-theme card */
 .auth-container {
-    position: relative;
-    width: 450px;
-    height: auto;
-    background: #fff; /* Solid white background */
-    border-radius: 8px;
-    overflow: hidden;
-    z-index: 1;
-    border: 1px solid #e0e0e0; /* Light border */
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Softer shadow */
-    padding: 40px;
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  max-width: 450px; /* Constrain maximum width */
+  width: 100%; /* Ensure it takes full width up to max-width */
+  text-align: center;
 }
 
-.auth-box {
-    position: relative;
-    z-index: 10;
-    display: flex;
-    flex-direction: column;
+.auth-container h3 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 15px;
+  color: #333;
 }
 
-.auth-box h2 {
-    color: #1f1f1f; /* Dark text color */
-    font-weight: 500;
-    text-align: center;
-    letter-spacing: .1em;
-    margin-bottom: 24px; /* Added for Register.jsx */
+.auth-container p {
+  font-size: 16px;
+  color: #666;
+  margin-bottom: 30px;
+  line-height: 1.5;
 }
 
-.cursor-pointer {
-  cursor: pointer;
+/* Bootstrap overrides for form controls within auth-container */
+.auth-container .form-control {
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  padding: 12px 15px;
+  font-size: 16px;
+  margin-bottom: 15px;
+}
+
+.auth-container .form-control:focus {
+  border-color: #007bff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.auth-container .btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 18px;
+  font-weight: 600;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.auth-container .btn-primary:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.auth-container .btn-secondary {
+  background-color: #6c757d;
+  border-color: #6c757d;
+  border-radius: 8px;
+  padding: 12px 20px;
+  font-size: 18px;
+  font-weight: 600;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.auth-container .btn-secondary:hover {
+  background-color: #545b62;
+  border-color: #545b62;
 }
 
 
-.inputBox {
-    position: relative;
-    width: 100%;
-    margin-top: 35px;
+/* Media queries for responsiveness */
+@media (max-width: 576px) {
+  .auth-container {
+    padding: 25px;
+    margin: 15px;
+  }
+
+  .auth-container h3 {
+    font-size: 24px;
+  }
+
+  .auth-container p {
+    font-size: 14px;
+  }
+
+  .auth-container .btn {
+    font-size: 16px;
+    padding: 10px 15px;
+  }
 }
 
-.inputBox input {
-    position: relative;
-    width: 100%;
-    padding: 20px 10px 10px;
-    background: transparent;
-    border: none;
-    outline: none;
-    color: #1f1f1f; /* Dark text color */
-    font-size: 1em;
-    letter-spacing: .05em;
-    z-index: 10;
-    border-bottom: 1px solid #ccc; /* Standard bottom border */
-}
-
-.inputBox span {
-    position: absolute;
-    left: 0;
-    padding: 20px 10px 10px;
-    font-size: 1em;
-    color: #6c757d; /* Secondary text color */
-    pointer-events: none;
-    letter-spacing: .05em;
-    transition: .5s;
-}
-
-.inputBox input:valid~span,
-.inputBox input:focus~span {
-    color: #007bff; /* Standard primary blue color on focus */
-    transform: translateX(0px) translateY(-34px);
-    font-size: .75em
-}
-
-.eye-icon {
-    position: absolute;
-    top: 50%;
-    right: 10px;
-    transform: translateY(-50%);
-    cursor: pointer;
-    color: #6c757d;
-    font-size: 1.2em;
-    z-index: 11;
-    padding: 5px;
-}
-
-.eye-icon:hover {
-  color: #007bff;
-}
-
-.password-input-container input {
-  padding-right: 40px !important;
-}
-
-.password-toggle-button {
-  margin-left: 5px; /* Add some space between the input and the button */
-}
-
-.links {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 20px;
-}
-
-.links a {
-    margin: 10px 0;
-    font-size: .75em;
-    color: #6c757d; /* Secondary text color */
-    text-decoration: none
-}
-
-.links a:hover,
-.links a:nth-child(2) {
-    color: #007bff; /* Standard primary blue color on hover */
-}
-
-.ant-btn-primary {
-    border: none;
-    outline: none;
-    background: #007bff; /* Standard primary blue */
-    padding: 11px 25px;
-    width: 100%;
-    margin-top: 30px;
-    border-radius: 4px;
-    font-weight: 600;
-    cursor: pointer;
-    color: #fff;
-    transition: background-color 0.2s ease-in-out;
-}
-
-.ant-btn-primary:hover {
-    background: #0056b3; /* Darker blue on hover */
-}
-
-.ant-btn-primary:active {
-    opacity: .8;
-}
 
 /* The rest of the styles below are dark-theme specific and may not be used now */
 

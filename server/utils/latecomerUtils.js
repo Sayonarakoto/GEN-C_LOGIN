@@ -43,11 +43,10 @@ async function finalizeAction(entry, actorId, action, updates) {
     await entry.save();
 
     await AuditLog.create({
-        action: action,
-        entityType: 'LateEntry',
-        entityId: entry._id,
-        userId: actorId,
-        changes: updates,
+        event_type: action,
+        pass_id: entry._id,
+        actor_id: actorId,
+        event_details: updates,
     });
 }
 

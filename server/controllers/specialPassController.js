@@ -242,7 +242,7 @@ exports.verifyPass = async (req, res) => {
     } else if (passType === 'gate') {
         passModel = GatePass;
     } else {
-        await logAuditAttempt('Unknown', 'Verified', securityUser, 'FAILED: Invalid pass type provided.');
+        await logAuditAttempt('Unknown', null, 'Verified', securityUser, 'FAILED: Invalid pass type provided.');
         return res.status(400).json({
             is_valid: false,
             display_status: "INPUT REQUIRED",
@@ -275,7 +275,7 @@ exports.verifyPass = async (req, res) => {
                 .populate('hod_approver_id', 'fullName');
         }
     } else { // 🔑 FAILURE: Missing QR token OR (Student ID and OTP)
-        await logAuditAttempt('Unknown', 'Verified', securityUser, 'FAILED: Missing QR token or Student ID/OTP.');
+        await logAuditAttempt('Unknown', passType, 'Verified', securityUser, 'FAILED: Missing QR token or Student ID/OTP.');
         return res.status(400).json({
             is_valid: false,
             display_status: "INPUT REQUIRED",
@@ -287,7 +287,7 @@ exports.verifyPass = async (req, res) => {
     // Handle invalid verification result (from either QR or OTP path)
     if (!verificationResult.isValid || !pass) {
         const logPassId = verificationResult.payload?.pass_id || 'Unknown';
-        await logAuditAttempt(logPassId, 'Verified', securityUser, `FAILED (${verificationMethod}): ${verificationResult.reason || 'Pass not found or invalid.'}`);
+        await logAuditAttempt(logPassId, passType, 'Verified', securityUser, `FAILED (${verificationMethod}): ${verificationResult.reason || 'Pass not found or invalid.'}`);
         return res.status(200).json({
             is_valid: false,
             display_status: "ENTRY DENIED",
@@ -298,15 +298,20 @@ exports.verifyPass = async (req, res) => {
 
     // --- ADDED: Duplicate Verification Check ---
     const sixtySecondsAgo = new Date(Date.now() - 60000);
-    const recentVerification = await AuditLog.findOne({
-        pass_id: pass._id,
+    const duplicateCheckQuery = {
         event_type: 'Verified',
         timestamp: { $gte: sixtySecondsAgo },
         'event_details.result': { $regex: /^SUCCESS/ }
-    });
+    };
+    if (passType === 'gate') {
+        duplicateCheckQuery.gatepass_id = pass._id;
+    } else {
+        duplicateCheckQuery.pass_id = pass._id;
+    }
+    const recentVerification = await AuditLog.findOne(duplicateCheckQuery);
 
     if (recentVerification) {
-        await logAuditAttempt(pass._id, 'Verified', securityUser, `FAILED (${verificationMethod}): Duplicate scan attempted within 60 seconds.`);
+        await logAuditAttempt(pass._id, passType, 'Verified', securityUser, `FAILED (${verificationMethod}): Duplicate scan attempted within 60 seconds.`);
         return res.status(200).json({
             is_valid: false,
             display_status: "DUPLICATE SCAN",
@@ -327,7 +332,7 @@ exports.verifyPass = async (req, res) => {
         const statusReason = `Status is ${passStatusField}`;
 
         // Log failure (Task 5)
-        await logAuditAttempt(pass._id, 'Verified', securityUser, `FAILED (${verificationMethod}): ${statusReason}`);
+        await logAuditAttempt(pass._id, passType, 'Verified', securityUser, `FAILED (${verificationMethod}): ${statusReason}`);
 
         return res.status(200).json({
             is_valid: false,
@@ -356,7 +361,7 @@ exports.verifyPass = async (req, res) => {
         pass_start_time: pass.date_valid_from, // Add pass start time
         pass_end_time: pass.date_valid_to,   // Add pass end time
     };
-    await logAuditAttempt(pass._id, 'Verified', securityUser, `SUCCESS (${verificationMethod}): ${finalStatus}`, auditDetails);
+    await logAuditAttempt(pass._id, passType, 'Verified', securityUser, `SUCCESS (${verificationMethod}): ${finalStatus}`, auditDetails);
 
     // --- 5. Response Formatting (DFD 5.6) ---
     const response = {

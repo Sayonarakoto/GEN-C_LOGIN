@@ -4,7 +4,8 @@ const userSocketMap = new Map();
 function init(server) {
   io = require('socket.io')(server, {
     cors: {
-      origin: '*',
+      origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Allow specific frontend origins
+      credentials: true,
     }
   });
 

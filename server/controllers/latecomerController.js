@@ -363,13 +363,18 @@ exports.createLateEntry = async (req, res) => {
     }
 
     try {
-      const { reason, facultyId, reasonCategory, date: rawDate, HODId: studentSelectedHODId } = req.body; 
+      const { reason, facultyId, reasonCategory, HODId: studentSelectedHODId } = req.body; 
       let requiresHODApproval = false; 
       let hodIdToUse = null; 
 
-      const date = rawDate ? new Date(rawDate) : new Date();
+      // Create a date string for the current time in IST
+      const istDateString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+      // Create a new Date object from the IST string.
+      const date = new Date(istDateString);
+
       if (isNaN(date.getTime())) { 
-        return res.status(400).json({ success: false, message: 'Invalid date provided.' });
+        // This should not happen with the new implementation, but keeping as a safeguard
+        return res.status(500).json({ success: false, message: 'Failed to create a valid timestamp.' });
       }
 
       // 🛑 FIX: Correctly structure the HOD determination logic

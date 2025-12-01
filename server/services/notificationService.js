@@ -2,7 +2,12 @@ const { sendSocketNotification } = require('../socket');
 
 const sendNotification = async (recipientId, message, subject) => {
   console.log(`[Notification] To: ${recipientId}, Subject: ${subject}, Message: "${message}"`);
-  sendSocketNotification(recipientId, subject, message);
+  try {
+    sendSocketNotification(recipientId, subject, message);
+  } catch (error) {
+    console.error(`Error sending socket notification to ${recipientId}:`, error);
+    // Optionally, add a fallback mechanism here, e.g., push notification, email, etc.
+  }
 };
 
 const sendPassUsedNotification = async (pass) => {

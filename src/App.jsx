@@ -2,17 +2,20 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 import { Routes, Route } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
-import StudentLogin from './Pages/StudentLogin';
+
 import Frontpage from './Pages/Frontpage';
+import StudentLogin from './Pages/StudentLogin';
 import StudentDashboard, { DashboardHome } from './Dashboards/StudentDashboard';
 import FacultyDashboard from './Dashboards/FacultyDashboard';
-import Register from './Pages/Register';
+import FacultyRegister from './Pages/FacultyRegister';
 import FacultyLogin from './Pages/FacultyLogin';
 import ErrorPage from './Pages/ErrorPage';
 import SecurityLogin from './Pages/SecurityLogin';
 import SecurityDashboard from './Dashboards/SecurityDashboard';
 import ForgotPassword from './Pages/ForgotPassword';
 import ResetPassword from './Pages/ResetPassword';
+import LibrarianLogin from './Pages/LibrarianLogin';
+import LibrarianRegister from './Pages/LibrarianRegister';
 import InterceptorWrapper from './components/InterceptorWrapper';
 import { useAuth } from './hooks/useAuth';
 import StudentSpecialPassRequest from './student/StudentSpecialPassRequest';
@@ -35,11 +38,13 @@ const MainRoutes = () => {
       <Route path="/faculty-login" element={<FacultyLogin />} />
       <Route path="/student-login" element={<StudentLogin />} />
       <Route path="/security-login" element={<SecurityLogin />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/faculty-register" element={<FacultyRegister />} />
+      <Route path="/librarian-register" element={<LibrarianRegister />} />
       <Route path="/signin" element={<StudentLogin />} />
       <Route path="/unauthorized" element={<ErrorPage title="Access Denied" subTitle="You do not have permission to view this page. Please log in with an authorized account." />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
+      <Route path="/librarian-login" element={<LibrarianLogin />} />
 
       {/* Protected Routes */}
       <Route element={<ProtectedRoute allowedRoles={['FACULTY', 'HOD']} />}>

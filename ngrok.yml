@@ -1,0 +1,9 @@
+version: "2"
+authtoken: 369ec5fJ5fSqfrGpSEsGtAQ3HJ3_6QkrsxKUM3rsvhni4sqUh # Optional - skip if no account
+tunnels:
+  frontend:
+    addr: 5173
+    proto: http
+  backend:
+    addr: 3001
+    proto: http

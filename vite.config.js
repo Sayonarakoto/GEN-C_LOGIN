@@ -3,13 +3,28 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  base: "/",   // Important for correct asset paths
+  base: "/",
   server: {
     port: 5173,
     host: true,
     cors: true,
-    // This tells Vite to serve index.html for any route not found
-    // which is essential for BrowserRouter
-    historyApiFallback: true
+    historyApiFallback: true,
+    // ✅ FIXED: Add exact ngrok domain + wildcard
+    allowedHosts: [
+      'aeruginous-sharon-accountably.ngrok-free.dev',  // Your exact domain
+      '.ngrok-free.app', 
+      '.ngrok.io',
+      'localhost'
+    ],
+    proxy: {
+      "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
+      "/socket.io": {
+        target: "http://localhost:3001",
+        ws: true,
+      },
+    },
   }
 });

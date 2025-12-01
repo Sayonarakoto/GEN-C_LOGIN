@@ -66,15 +66,15 @@ const LiveLogTable = ({ logs, loading }) => (
           ) : Array.isArray(logs) && logs.length > 0 ? (
             logs.map((log) => (
               <TableRow key={log._id}>
-                <TableCell>{log.event_details?.student_name || 'N/A'}</TableCell>
-                <TableCell>{log.event_details?.pass_type || 'N/A'}</TableCell>
-                <TableCell>{log.event_details?.request_reason || 'N/A'}</TableCell>
-                <TableCell>{log.event_details?.department || 'N/A'}</TableCell>
-                <TableCell>{log.event_details?.hod_name || 'N/A'}</TableCell>
-                <TableCell>{new Date(log.event_details?.check_in_time).toLocaleDateString()}</TableCell>
-                <TableCell>{new Date(log.event_details?.check_in_time).toLocaleDateString('en-US', { weekday: 'long' })}</TableCell>
-                <TableCell>{new Date(log.event_details?.check_in_time).toLocaleTimeString()}</TableCell>
-                <TableCell>{log.event_details?.check_out_time ? new Date(log.event_details.check_out_time).toLocaleTimeString() : 'N/A'}</TableCell>
+                <TableCell>{log.studentName || 'N/A'}</TableCell>
+                <TableCell>{log.passType || 'N/A'}</TableCell>
+                <TableCell>{log.reason || 'N/A'}</TableCell>
+                <TableCell>{log.department || 'N/A'}</TableCell>
+                <TableCell>{log.approver || 'N/A'}</TableCell>
+                <TableCell>{log.date || 'N/A'}</TableCell>
+                <TableCell>{log.day || 'N/A'}</TableCell>
+                <TableCell>{log.time || 'N/A'}</TableCell>
+                <TableCell>{log.returnTime || 'N/A'}</TableCell>
               </TableRow>
             ))
           ) : (
@@ -108,7 +108,7 @@ export default function SecurityDashboard() {
   const uniqueLogs = useMemo(() => {
     const map = new Map();
     logs.forEach(log => {
-      const key = log.pass_id || log._id;
+      const key = log.pass_id || log.gatepass_id || log._id;
       const existing = map.get(key);
       if (!existing || new Date(log.timestamp) > new Date(existing.timestamp)) {
         map.set(key, log);
@@ -171,12 +171,30 @@ export default function SecurityDashboard() {
     let endpoint = "";
     let payload = {};
 
-    if (data.type === 'otp') {
-        endpoint = passType === 'gate' ? '/api/gatepass/verify-otp' : '/api/special-passes/verify-otp';
-        payload = { studentIdString: data.studentId, otp: data.otp };
-    } else if (data.type === 'qr') {
-        endpoint = passType === 'gate' ? '/api/gatepass/verify-qr' : '/api/special-passes/verify';
-        payload = { qr_token: data.token };
+    if (passType === 'gate') {
+        if (data.type === 'otp') {
+            endpoint = '/api/gatepass/verify-otp';
+            payload = { studentIdString: data.studentId, otp: data.otp };
+        } else if (data.type === 'qr') {
+            endpoint = '/api/gatepass/verify-qr';
+            payload = { qr_token: data.token };
+        }
+    } else if (passType === 'special') {
+        endpoint = '/api/special-passes/verify';
+        if (data.type === 'otp') {
+            payload = { student_id: data.studentId, verification_otp: data.otp, passType: 'special' };
+        } else if (data.type === 'qr') {
+            payload = { qr_token: data.token, passType: 'special' };
+        }
+    }
+
+    if (!endpoint) {
+        handleApiResponse({
+            is_valid: false,
+            display_status: "ERROR",
+            message: "Invalid pass type selected.",
+        });
+        return;
     }
 
     try {

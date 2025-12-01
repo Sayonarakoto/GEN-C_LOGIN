@@ -3,9 +3,10 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from '../hooks/useAuth';
 import client from '../api/client';
 import useToastService from '../hooks/useToastService';
+import '../Pages/Auth.css'; // Import Auth.css
 import { Form, Button, InputGroup } from 'react-bootstrap';
 import Logo from '../components/common/Logo';
-import './Auth.css'; // Import the CSS file
+
 
 const SecurityLogin = () => {
   const navigate = useNavigate();

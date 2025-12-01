@@ -5,6 +5,7 @@ const Faculty = require('../models/Faculty'); // Needed to check faculty role
 const AuditLog = require('../models/AuditLog'); // New import
 const { generateToken } = require('../config/jwt');
 const { generateThreeDigitOTP } = require('../utils/otpUtils');
+const { getISTTimeInMinutes } = require('../utils/timeUtils');
 const { sendNotification } = require('../services/notificationService');
 const { generateWatermarkedPDF } = require('../services/pdfGenerationService'); // New import
 const { verifyOTPPass, verifyQRPass } = require('../services/verificationService'); // Import verification services
@@ -128,17 +129,28 @@ exports.requestGatePass = async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid return date/time provided.' });
         }
 
-        // --- Time Range Validation (9:30 AM to 4:00 PM) ---
-        // Extract date part from exitDate to construct college hours for that specific day
-        const exitDateOnly = exitDate.toISOString().split('T')[0];
-        const collegeStartTime = new Date(`${exitDateOnly}T09:30:00.000Z`);
-        const collegeEndTime = new Date(`${exitDateOnly}T16:00:00.000Z`); // 4:00 PM
+        // --- Time Range Validation (9:30 AM to 4:00 PM IST) ---
+        const collegeStartHour = 9;
+        const collegeStartMinute = 30;
+        const collegeEndHour = 16;
+        const collegeEndMinute = 0;
 
-        if (exitDate < collegeStartTime || exitDate > collegeEndTime) {
+        const collegeStartTimeInMinutes = collegeStartHour * 60 + collegeStartMinute;
+        const collegeEndTimeInMinutes = collegeEndHour * 60 + collegeEndMinute;
+
+        // Function to get IST hour and minute from a Date object
+        const exitTimeInMinutes = getISTTimeInMinutes(exitDate);
+
+        if (exitTimeInMinutes < collegeStartTimeInMinutes || exitTimeInMinutes > collegeEndTimeInMinutes) {
             return res.status(400).json({ success: false, message: 'Requested exit time must be within college hours (9:30 AM - 4:00 PM).' });
         }
-        if (returnDateObj && (returnDateObj < collegeStartTime || returnDateObj > collegeEndTime)) {
-             return res.status(400).json({ success: false, message: 'Requested return time must be within college hours (9:30 AM - 4:00 PM).' });
+
+        if (returnDateObj) {
+            const returnTimeInMinutes = getISTTimeInMinutes(returnDateObj);
+
+            if (returnTimeInMinutes < collegeStartTimeInMinutes || returnTimeInMinutes > collegeEndTimeInMinutes) {
+                return res.status(400).json({ success: false, message: 'Requested return time must be within college hours (9:30 AM - 4:00 PM).' });
+            }
         }
         // --- End Time Range Validation ---
 
@@ -160,7 +172,7 @@ exports.requestGatePass = async (req, res) => {
 
         // Log the request in AuditLog
         await AuditLog.create({
-            pass_id: newPass._id,
+            gatepass_id: newPass._id,
             event_type: 'Request',
             actor_role: 'Student',
             actor_id: studentId,
@@ -308,7 +320,7 @@ exports.facultyApproveGatePass = async (req, res) => {
 
     // Log faculty approval in AuditLog (moved after save to ensure pass._id is available)
     await AuditLog.create({
-        pass_id: pass._id,
+        gatepass_id: pass._id,
         event_type: 'Approved',
         actor_role: 'faculty',
         actor_id: req.user.id,
@@ -345,7 +357,7 @@ exports.facultyRejectGatePass = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Gate pass not found' });
         }
 
-        if (pass.faculty_status !== 'PENDING' || pass.faculty_approver_id.toString() !== req.user.id) {
+        if (pass.faculty_status !== 'PENDING' || !pass.faculty_approver_id || pass.faculty_approver_id.toString() !== req.user.id) {
             return res.status(401).json({ success: false, message: 'Not authorized or pass not in correct status for faculty rejection.' });
         }
 
@@ -360,7 +372,7 @@ exports.facultyRejectGatePass = async (req, res) => {
 
         // Log faculty rejection in AuditLog
         await AuditLog.create({
-            pass_id: pass._id,
+            gatepass_id: pass._id,
             event_type: 'Rejected',
             actor_role: 'faculty',
             actor_id: req.user.id,
@@ -371,7 +383,7 @@ exports.facultyRejectGatePass = async (req, res) => {
         });
 
         // Emit Socket.IO event for frontend update
-        if (req.io && req.userSocketMap.has(pass.student_id._id.toString())) {
+        if (req.io && pass.student_id && req.userSocketMap.has(pass.student_id._id.toString())) {
             req.io.to(pass.student_id._id.toString()).emit('statusUpdate:gatePass', {
                 recordId: pass._id,
                 newStatus: pass.faculty_status,
@@ -382,11 +394,13 @@ exports.facultyRejectGatePass = async (req, res) => {
             });
         }
 
-        await sendNotification(
-            pass.student_id,
-            `Your Gate Pass to ${pass.destination} has been REJECTED by your faculty.`, 
-            'Gate Pass Rejected'
-        );
+        if (pass.student_id) {
+            await sendNotification(
+                pass.student_id._id,
+                `Your Gate Pass to ${pass.destination} has been REJECTED by your faculty.`, 
+                'Gate Pass Rejected'
+            );
+        }
 
         res.status(200).json({ success: true, data: pass });
     } catch (error) {
@@ -453,7 +467,7 @@ exports.hodApproveGatePass = async (req, res) => {
 
     // Log HOD approval and credential generation in AuditLog
     await AuditLog.create({
-        pass_id: pass._id,
+        gatepass_id: pass._id,
         event_type: 'Approved',
         actor_role: 'HOD',
         actor_id: req.user.id,
@@ -520,7 +534,7 @@ exports.hodRejectGatePass = async (req, res) => {
 
         // Log HOD rejection in AuditLog
         await AuditLog.create({
-            pass_id: pass._id,
+            gatepass_id: pass._id,
             event_type: 'Rejected',
             actor_role: 'HOD',
             actor_id: req.user.id,
@@ -567,7 +581,7 @@ exports.verifyGatePassByOTP = async (req, res) => {
 
     try {
         if (!studentIdString || !otp) {
-            await logAuditAttempt('Unknown', 'Verified', securityUser, 'FAILED: Missing Student ID or OTP for Gate Pass verification.');
+            await logAuditAttempt('Unknown', 'gate', 'Verified', securityUser, 'FAILED: Missing Student ID or OTP for Gate Pass verification.');
             return res.status(400).json({
                 is_valid: false,
                 display_status: "INPUT REQUIRED",
@@ -581,7 +595,7 @@ exports.verifyGatePassByOTP = async (req, res) => {
 
         if (!verificationResult.isValid) {
             // Log the failure reason provided by the service
-            await logAuditAttempt('Unknown', 'Verified', securityUser, `FAILED (OTP): ${verificationResult.reason}`);
+            await logAuditAttempt('Unknown', 'gate', 'Verified', securityUser, `FAILED (OTP): ${verificationResult.reason}`);
             let displayStatus = "ENTRY DENIED";
             if (verificationResult.reason.includes('Student ID not found')) {
                 displayStatus = "STUDENT NOT FOUND";
@@ -607,14 +621,14 @@ exports.verifyGatePassByOTP = async (req, res) => {
         // --- Duplicate Verification Check ---
         const sixtySecondsAgo = new Date(Date.now() - 60000);
         const recentVerification = await AuditLog.findOne({
-            pass_id: gatePass._id,
+            gatepass_id: gatePass._id,
             event_type: 'Verified',
             timestamp: { $gte: sixtySecondsAgo },
             'event_details.result': { $regex: /^SUCCESS/ }
         });
 
         if (recentVerification) {
-            await logAuditAttempt(gatePass._id, 'Verified', securityUser, `FAILED (OTP): Duplicate scan attempted within 60 seconds.`);
+            await logAuditAttempt(gatePass._id, 'gate', 'Verified', securityUser, `FAILED (OTP): Duplicate scan attempted within 60 seconds.`);
             return res.status(200).json({
                 is_valid: false,
                 display_status: "DUPLICATE SCAN",
@@ -633,7 +647,7 @@ exports.verifyGatePassByOTP = async (req, res) => {
             pass_start_time: gatePass.date_valid_from,
             pass_end_time: gatePass.date_valid_to,
         };
-        await logAuditAttempt(gatePass._id, 'Verified', securityUser, `SUCCESS (OTP): ENTRY GRANTED`, auditDetails);
+        await logAuditAttempt(gatePass._id, 'gate', 'Verified', securityUser, `SUCCESS (OTP): ENTRY GRANTED`, auditDetails);
 
         // Send notification to student
         await sendNotification(
@@ -661,7 +675,7 @@ exports.verifyGatePassByOTP = async (req, res) => {
 
     } catch (error) {
         console.error('Error in verifyGatePassByOTP:', error);
-        await logAuditAttempt('Unknown', 'Verified', securityUser, `FAILED (OTP): Server Error - ${error.message}`);
+        await logAuditAttempt('Unknown', 'gate', 'Verified', securityUser, `FAILED (OTP): Server Error - ${error.message}`);
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 };
@@ -678,7 +692,7 @@ exports.verifyGatePassByQR = async (req, res) => {
 
     try {
         if (!qr_token) {
-            await logAuditAttempt('Unknown', 'Verified', securityUser, 'FAILED: Missing QR Token for Gate Pass verification.');
+            await logAuditAttempt('Unknown', 'gate', 'Verified', securityUser, 'FAILED: Missing QR Token for Gate Pass verification.');
             return res.status(400).json({
                 is_valid: false,
                 display_status: "INPUT REQUIRED",
@@ -692,7 +706,7 @@ exports.verifyGatePassByQR = async (req, res) => {
 
         if (!verificationResult.isValid) {
             // Log the failure reason provided by the service
-            await logAuditAttempt('Unknown', 'Verified', securityUser, `FAILED (QR): ${verificationResult.reason}`);
+            await logAuditAttempt('Unknown', 'gate', 'Verified', securityUser, `FAILED (QR): ${verificationResult.reason}`);
             let displayStatus = "ENTRY DENIED";
             if (verificationResult.reason.includes('Invalid QR')) {
                 displayStatus = "INVALID QR";
@@ -718,14 +732,14 @@ exports.verifyGatePassByQR = async (req, res) => {
         // --- Duplicate Verification Check ---
         const sixtySecondsAgo = new Date(Date.now() - 60000);
         const recentVerification = await AuditLog.findOne({
-            pass_id: gatePass._id,
+            gatepass_id: gatePass._id,
             event_type: 'Verified',
             timestamp: { $gte: sixtySecondsAgo },
             'event_details.result': { $regex: /^SUCCESS/ }
         });
 
         if (recentVerification) {
-            await logAuditAttempt(gatePass._id, 'Verified', securityUser, `FAILED (QR): Duplicate scan attempted within 60 seconds.`);
+            await logAuditAttempt(gatePass._id, 'gate', 'Verified', securityUser, `FAILED (QR): Duplicate scan attempted within 60 seconds.`);
             return res.status(200).json({
                 is_valid: false,
                 display_status: "DUPLICATE SCAN",
@@ -744,7 +758,7 @@ exports.verifyGatePassByQR = async (req, res) => {
             pass_start_time: gatePass.date_valid_from,
             pass_end_time: gatePass.date_valid_to,
         };
-        await logAuditAttempt(gatePass._id, 'Verified', securityUser, `SUCCESS (QR): ENTRY GRANTED`, auditDetails);
+        await logAuditAttempt(gatePass._id, 'gate', 'Verified', securityUser, `SUCCESS (QR): ENTRY GRANTED`, auditDetails);
 
         // Send notification to student
         await sendNotification(
@@ -772,7 +786,7 @@ exports.verifyGatePassByQR = async (req, res) => {
 
     } catch (error) {
         console.error('Error in verifyGatePassByQR:', error);
-        await logAuditAttempt('Unknown', 'Verified', securityUser, `FAILED (QR): Server Error - ${error.message}`);
+        await logAuditAttempt('Unknown', 'gate', 'Verified', securityUser, `FAILED (QR): Server Error - ${error.message}`);
         res.status(500).json({ success: false, message: 'Server Error' });
     }
 };

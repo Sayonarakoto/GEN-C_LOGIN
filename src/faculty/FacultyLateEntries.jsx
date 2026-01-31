@@ -140,24 +140,41 @@ const FacultyLateEntries = ({ currentFilter }) => {
     {
       dataField: 'createdAt',
       text: 'Date',
-      formatter: (cell) => cell ? new Date(cell).toLocaleString() : 'N/A',
+      formatter: (cell) => cell ? dayjs(cell).format('DD-MM-YYYY HH:mm') : 'N/A',
     },
     { dataField: 'reason', text: 'Reason' },
     { dataField: 'status', text: 'Status' },
     {
       dataField: 'approvedBy',
-      text: 'Approved By',
+      text: 'Approved/Rejected By',
       formatter: (cell, row) => {
-        // If the entry is approved and an HOD ID is present, the HOD is the final approver.
-        if (row.status === 'Approved' && row.HODId) {
-          // The optional chaining ?. is critical because HODId might be just an ID string instead of a populated object
-          return `[HOD] ${row.HODId?.fullName || 'Details Missing'}`;
+        // Handle Rejected status
+        if (row.status === 'Rejected') {
+          // If HODStatus is 'Rejected', then HOD rejected it
+          if (row.HODStatus === 'Rejected' && row.HODId) {
+            return `[HOD] ${row.HODId?.fullName || 'Details Missing'}`;
+          }
+          // Otherwise, faculty rejected it
+          if (row.facultyId) {
+            return `[Faculty] ${row.facultyId?.fullName || 'Details Missing'}`;
+          }
+          return 'N/A';
         }
-        // If it's approved but no HOD, it must have been the faculty.
-        if (row.status === 'Approved' && row.facultyId) {
-          return row.facultyId?.fullName || 'Details Missing';
+        
+        // Handle Approved status
+        if (row.status === 'Approved') {
+          // If the entry is approved and an HOD ID is present, the HOD is the final approver.
+          if (row.HODId) {
+            // The optional chaining ?. is critical because HODId might be just an ID string instead of a populated object
+            return `[HOD] ${row.HODId?.fullName || 'Details Missing'}`;
+          }
+          // If it's approved but no HOD, it must have been the faculty.
+          if (row.facultyId) {
+            return `[Faculty] ${row.facultyId?.fullName || 'Details Missing'}`;
+          }
         }
-        // For any other status, it's not yet approved.
+        
+        // For any other status (Pending, Resubmitted), no action taken yet
         return 'N/A';
       },
     },

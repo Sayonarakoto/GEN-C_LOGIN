@@ -7,7 +7,7 @@ import Avatar from '@mui/material/Avatar';
 import IconButton from '@mui/material/IconButton';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import { styled } from '@mui/material/styles';
-import { Grid, Paper, TextField, Button, Typography, Box } from '@mui/material';
+import { Grid, Paper, TextField, Button, Typography, Box, CircularProgress } from '@mui/material';
 
 // Styled components for the avatar and upload button to match desgintemp.html
 const AvatarContainer = styled('div')({
@@ -64,6 +64,7 @@ const StudentProfile = () => {
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null); // State for image preview
     const [alert, setAlert] = useState(null); // { message, type }
+    const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
         // Assuming the 'user' object from useAuth contains the student details
@@ -76,7 +77,11 @@ const StudentProfile = () => {
                 email: user.email || '',
                 profilePictureUrl: user.profilePictureUrl || '' // Set to empty string if no URL
             });
-            setPreviewUrl(user.profilePictureUrl ? `http://localhost:3001${user.profilePictureUrl}` : null);
+            
+            if (user.profilePictureUrl) {
+                const normalizedPath = user.profilePictureUrl.replace(/\\/g, '/');
+                setPreviewUrl(`http://localhost:3001${normalizedPath.startsWith('/') ? '' : '/'}${normalizedPath.replace('/static/uploads', '/uploads')}?t=${new Date().getTime()}`);
+            }
         }
     }, [user]);
 
@@ -88,8 +93,13 @@ const StudentProfile = () => {
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                setAlert({ message: 'File size exceeds 5MB limit.', type: 'error' });
+                return;
+            }
+            setAlert(null);
             setSelectedFile(file);
-            setPreviewUrl(URL.URL.createObjectURL(file)); // Create a local URL for preview
+            setPreviewUrl(URL.createObjectURL(file));
         }
     };
 
@@ -100,13 +110,14 @@ const StudentProfile = () => {
     const handleUpdate = async (e) => {
         e.preventDefault();
         setAlert(null); // Clear previous alerts
+        setUploading(true);
         try {
             // First, upload image if a new one is selected
             let profilePictureUrl = formData.profilePictureUrl;
             if (selectedFile) {
                 const uploadData = new FormData();
                 uploadData.append('profileImage', selectedFile);
-                const res = await apiClient.post('/api/student/upload-profile-picture', uploadData);
+                const res = await apiClient.post('/api/students/upload-profile-picture', uploadData);
                 profilePictureUrl = res.data.filePath;
             }
 
@@ -132,12 +143,20 @@ const StudentProfile = () => {
             else {
                 toast.error('Failed to update profile.');
             }
+        } finally {
+            setUploading(false);
         }
     };
 
     console.log('formData.profilePictureUrl', formData.profilePictureUrl);
 
-    const fullProfilePictureUrl = previewUrl || (formData.profilePictureUrl ? `http://localhost:3001${formData.profilePictureUrl}` : 'https://via.placeholder.com/150');
+    let fullProfilePictureUrl = 'https://via.placeholder.com/150';
+    if (previewUrl) {
+        fullProfilePictureUrl = previewUrl;
+    } else if (formData.profilePictureUrl) {
+        const normalizedPath = formData.profilePictureUrl.replace(/\\/g, '/');
+        fullProfilePictureUrl = `http://localhost:3001${normalizedPath.startsWith('/') ? '' : '/'}${normalizedPath.replace('/static/uploads', '/uploads')}`;
+    }
 
     return (
         <Box sx={{ mt: 5, p: 3 }}>
@@ -154,6 +173,25 @@ const StudentProfile = () => {
                                 >
                                     {formData.fullName ? formData.fullName.charAt(0).toUpperCase() : ''}
                                 </StyledAvatar>
+                                {uploading && (
+                                    <Box
+                                        sx={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            width: '100%',
+                                            height: '100%',
+                                            borderRadius: '50%',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                            zIndex: 1,
+                                        }}
+                                    >
+                                        <CircularProgress color="inherit" />
+                                    </Box>
+                                )}
                                 <input
                                     type="file"
                                     ref={fileInputRef}

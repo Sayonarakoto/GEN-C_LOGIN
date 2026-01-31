@@ -29,7 +29,7 @@ exports.uploadProfilePicture = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Student not found.' });
     }
 
-    student.profilePictureUrl = `/static/uploads/profile-pictures/${req.file.filename}`;
+    student.profilePictureUrl = `/uploads/profile-pictures/${req.file.filename}`;
     await student.save();
 
     res.json({ success: true, filePath: student.profilePictureUrl });

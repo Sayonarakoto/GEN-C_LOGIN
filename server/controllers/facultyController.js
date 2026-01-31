@@ -282,11 +282,12 @@ const uploadProfilePicture = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Faculty not found.' });
     }
 
-    // Update the profilePictureUrl field
-    faculty.profilePictureUrl = `/static/uploads/profile-pictures/${req.file.filename}`;
+    // Update the profilePhoto field (Faculty model uses profilePhoto, not profilePictureUrl)
+    // FIX: Use '/uploads' to match server/index.js static serve, not '/static/uploads'
+    faculty.profilePhoto = `/uploads/profile-pictures/${req.file.filename}`;
     await faculty.save();
 
-    res.json({ success: true, filePath: faculty.profilePictureUrl, message: 'Profile picture uploaded successfully.' });
+    res.json({ success: true, filePath: faculty.profilePhoto, message: 'Profile picture uploaded successfully.' });
   } catch (error) {
     console.error('Error uploading faculty profile picture:', { error, user: req.user.id });
     res.status(500).json({ success: false, message: 'Server error' });

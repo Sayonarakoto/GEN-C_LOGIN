@@ -12,7 +12,6 @@ const hodSpecialPassRoutes = require('./routes/hodSpecialPasses'); // New HOD Sp
 const hodGatePassRoutes = require('./routes/hodGatePass'); // Corrected HOD Gate Pass routes
 const gatepassRoutes = require('./routes/gatepass'); // Import gatepass routes
 const auditRoutes = require('./routes/audit'); // New Audit route
-const librarianRoutes = require('./routes/librarianRoutes');
 const libraryRoutes = require('./routes/libraryRoutes');
 
 const latecomerRoutes = require('./routes/latecomers');
@@ -40,7 +39,7 @@ app.use((req, res, next) => {
   req.userSocketMap = socketManager.getUserSocketMap();
   next();
 });
-app.use('/static/uploads', express.static(path.join(__dirname, 'uploads'))); // Changed this line
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Add debugging middleware
 app.use((req, res, next) => {
@@ -71,8 +70,8 @@ app.use('/api/gatepass', gatepassRoutes);
 app.use('/api/latecomers', latecomerRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/stats', statsRoutes);
-app.use('/api/librarian', librarianRoutes);
 app.use('/api/library', libraryRoutes);
+app.use('/api/librarian', require('./routes/librarian')); // Register librarian routes
 app.use('/api/qr-gatepass', require('./routes/qrGatePass'));
 
 // Serve static files from the React app

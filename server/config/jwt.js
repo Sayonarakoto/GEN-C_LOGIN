@@ -10,7 +10,7 @@ if (!PASS_TOKEN_SECRET) {
   throw new Error('PASS_TOKEN_SECRET environment variable is required');
 }
 
-const JWT_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES || '24h';
+const JWT_EXPIRES_IN = process.env.ACCESS_TOKEN_EXPIRES || '15m';
 
 exports.generateToken = (payload, secret = JWT_SECRET, expiresIn = JWT_EXPIRES_IN) => {
   return jwt.sign(payload, secret, { expiresIn });

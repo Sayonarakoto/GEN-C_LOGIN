@@ -16,6 +16,7 @@ import ForgotPassword from './Pages/ForgotPassword';
 import ResetPassword from './Pages/ResetPassword';
 import LibrarianLogin from './Pages/LibrarianLogin';
 import LibrarianRegister from './Pages/LibrarianRegister';
+import LibrarianDashboard from './Dashboards/LibrarianDashboard';
 import InterceptorWrapper from './components/InterceptorWrapper';
 import { useAuth } from './hooks/useAuth';
 import StudentSpecialPassRequest from './student/StudentSpecialPassRequest';
@@ -25,9 +26,9 @@ import StudentActiveGatePass from './student/StudentActiveGatePass';
 import FacultyGatePass from './faculty/FacultyGatePass';
 import StudentProfile from './student/StudentProfile';
 import DeclinedRequestDetails from './student/DeclinedRequestDetails';
-import React, { useEffect, useState, createContext, useContext } from 'react';
-import io from 'socket.io-client';
+import LibraryActivationRequestForm from './components/common/LibraryActivationRequestForm';
 import { NotificationProvider } from './context/NotificationContext';
+import BookBorrowRequest from './student/BookBorrowRequest';
 
 // Create a component to hold the main Routes logic
 const MainRoutes = () => {
@@ -51,10 +52,15 @@ const MainRoutes = () => {
         <Route path="/faculty/*" element={<FacultyDashboard />} />
         <Route path="/faculty/special-passes" element={<FacultySpecialPasses />} />
         <Route path="/faculty/gate-pass" element={<FacultyGatePass />} />
+        <Route path="/faculty/library-activation" element={<LibraryActivationRequestForm />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['SECURITY']} />}>
         <Route path="/security-dashboard" element={<SecurityDashboard />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={['LIBRARIAN']} />}>
+        <Route path="/librarian/dashboard" element={<LibrarianDashboard />} />
       </Route>
 
       <Route element={<ProtectedRoute allowedRoles={['STUDENT']} />}>
@@ -63,6 +69,8 @@ const MainRoutes = () => {
           <Route path="late-entry" element={<StudentLateEntry />} />
           <Route path="special-pass" element={<StudentSpecialPassRequest />} />
           <Route path="active-pass" element={<StudentActiveGatePass />} />
+          <Route path="library-activation" element={<LibraryActivationRequestForm />} />
+          <Route path="borrow-book" element={<BookBorrowRequest />} />
           <Route path="profile" element={<StudentProfile />} />
           <Route path="request/edit/:requestId" element={<DeclinedRequestDetails />} />
           <Route path="submit-entry/:requestId" element={<StudentLateEntry />} />

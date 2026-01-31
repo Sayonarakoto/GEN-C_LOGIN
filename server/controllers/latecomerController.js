@@ -79,7 +79,9 @@ exports.getHODPending = async (req, res) => {
     const query = {
         // Ensure department is used here!
         department: department, 
-        status: { $in: ['Pending HOD', 'Pending Faculty', 'Resubmitted'] }
+        // Only show requests that require HOD approval and are pending HOD action
+        requiresHODApproval: true,
+        status: 'Pending HOD'
     };
 
     console.log('DEBUG: getHODPending - Executing database query:', JSON.stringify(query, null, 2));
@@ -165,8 +167,18 @@ exports.facultyAction = async (req, res) => {
         status: newStatus,
         isFinal: isFinal,
         remarks: remarks,
-        facultyId: facultyId, 
+        facultyId: facultyId,
     };
+
+    // Update date field if this is a resubmitted entry being acted upon
+    if (entry.status === 'Resubmitted') {
+        // Create a date string for the current time in IST
+        const istDateString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+        const currentDate = new Date(istDateString);
+        if (!isNaN(currentDate.getTime())) {
+            updates.date = currentDate;
+        }
+    }
 
     await finalizeAction(entry, facultyId, auditAction, updates);
     res.status(200).json({ success: true, data: entry });
@@ -222,6 +234,17 @@ exports.hodAction = async (req, res) => {
         FacultyActionable: action === 'approve' ? true : false,
         isFinal: isFinal // HOD action finalizes the entry
     };
+
+    // Update date field if this is a resubmitted entry being acted upon
+    // Check if entry was previously resubmitted by checking resubmittedAt field
+    if (entry.resubmittedAt) {
+        // Create a date string for the current time in IST
+        const istDateString = new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+        const currentDate = new Date(istDateString);
+        if (!isNaN(currentDate.getTime())) {
+            updates.date = currentDate;
+        }
+    }
 
     await finalizeAction(entry, hodId, auditAction, updates);
 
@@ -413,6 +436,14 @@ exports.createLateEntry = async (req, res) => {
       const assignedFaculty = await Faculty.findById(facultyId);
       if (!assignedFaculty || assignedFaculty.department !== userDepartment) {
         return res.status(403).json({ success: false, message: 'Assigned faculty not found in your department.' });
+      }
+
+      // 🛑 FIX: If student selected an HOD as faculty member directly, require HOD approval
+      const isSelectedFacultyHOD = assignedFaculty.designation && /^HOD/i.test(assignedFaculty.designation);
+      if (isSelectedFacultyHOD && !requiresHODApproval) {
+        // Student selected HOD directly, so route through HOD approval workflow
+        requiresHODApproval = true;
+        hodIdToUse = assignedFaculty._id; // Use the selected HOD as the approver
       }
 
       const initialStatus = requiresHODApproval ? 'Pending HOD' : 'Pending Faculty';

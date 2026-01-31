@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Modal, Button, Form, ListGroup } from 'react-bootstrap';
+import dayjs from 'dayjs';
 import useToastService from '../hooks/useToastService';
 
 import { useAuth } from '../hooks/useAuth';
@@ -46,8 +47,7 @@ const LateEntryModal = ({ entry, visible, onClose, onSave, isSaving }) => {
               (() => {
                 const dateValue = entry.createdAt || entry.date || entry.lastActionAt || entry.entryTime;
                 if (dateValue) {
-                  const dateObj = new Date(dateValue);
-                  return isNaN(dateObj.getTime()) ? 'N/A' : dateObj.toLocaleString();
+                  return dayjs(dateValue).format('DD-MM-YYYY HH:mm');
                 }
                 return 'N/A';
               })()

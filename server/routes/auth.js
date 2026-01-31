@@ -4,11 +4,16 @@ const authController = require('../controllers/authController');
 const { passwordResetLimiter } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/'); // Files will be stored in the 'uploads/' directory
+    const uploadPath = path.join(__dirname, '../uploads/profile-pictures');
+    if (!fs.existsSync(uploadPath)) {
+      fs.mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath); // Files will be stored in 'uploads/profile-pictures'
   },
   filename: (req, file, cb) => {
     cb(null, Date.now() + path.extname(file.originalname)); // Append timestamp to filename
@@ -34,6 +39,10 @@ router.post("/faculty-login", authController.facultyLogin);
 
 // ---------------- Security Auth ----------------
 router.post('/security-login', authController.securityLogin);
+
+// ---------------- Librarian Auth ----------------
+router.post("/librarian-register", upload.single('profilePhoto'), authController.librarianRegister);
+router.post("/librarian-login", authController.librarianLogin);
 
 // ---------------- Token Handling ----------------
 router.post("/refresh", authController.refreshToken);

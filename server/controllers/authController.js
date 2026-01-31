@@ -3,12 +3,13 @@ const bcrypt = require('bcrypt');
 const Faculty = require('../models/Faculty');
 const Student = require('../models/student');
 const Security = require('../models/security');
+const User = require('../models/User');
 
 // ----------------- REGISTER -----------------
 exports.register = async (req, res) => {
   try {
     const { fullName, email, employeeId, department, designation, password } = req.body;
-    const profilePhotoPath = req.file ? req.file.path : null; // Get the path of the uploaded file
+    const profilePhotoPath = req.file ? `/uploads/profile-pictures/${req.file.filename}` : null; // Save web-accessible path
 
     // Check if faculty already exists
     let faculty = await Faculty.findOne({ employeeId });
@@ -84,6 +85,9 @@ exports.studentLogin = async (req, res) => {
       });
     }
 
+    // Sanitize profile picture URL (remove /static if present from legacy uploads)
+    const profilePictureUrl = student.profilePictureUrl ? student.profilePictureUrl.replace('/static/uploads', '/uploads') : '';
+
     const token = generateToken({
       id: student._id,
       role: 'student',
@@ -92,13 +96,13 @@ exports.studentLogin = async (req, res) => {
       year: student.year,
       studentId: student.studentId,
       email: student.email,
-      profilePictureUrl: student.profilePictureUrl
+      profilePictureUrl: profilePictureUrl
     });
 
     res.json({
       success: true,
       token,
-      user: { id: student._id, role: 'student', studentId: student.studentId, fullName: student.fullName, department: student.department, profilePictureUrl: student.profilePictureUrl }
+      user: { id: student._id, role: 'student', studentId: student.studentId, fullName: student.fullName, department: student.department, profilePictureUrl: profilePictureUrl }
     });
   } catch (error) {
     console.error('Student login error:', error);
@@ -320,4 +324,82 @@ exports.unifiedLogin = async (req, res) => {
     console.error("Login error:", err);
     res.status(500).json({ message: "Server error" });
   }
+};
+
+// ----------------- LIBRARIAN AUTH -----------------
+
+exports.librarianRegister = async (req, res, next) => {
+    const { facultyId, email, password, fullName } = req.body;
+    const profilePictureUrl = req.file ? `/uploads/profile-pictures/${req.file.filename}` : null;
+
+    try {
+        // Create user
+        const user = await User.create({
+            facultyId,
+            email,
+            password,
+            fullName,
+            role: 'librarian', // Ensure role is set, using lowercase to match schema
+            profilePictureUrl
+        });
+
+        res.status(201).json({
+            success: true,
+            message: 'Librarian registered successfully'
+        });
+    } catch (error) {
+        // Handle validation errors or other issues
+        res.status(400).json({ success: false, message: error.message });
+    }
+};
+
+exports.librarianLogin = async (req, res, next) => {
+    const { facultyId, password } = req.body;
+
+    // Validate input
+    if (!facultyId || !password) {
+        return res.status(400).json({ success: false, message: 'Please provide a faculty ID and password' });
+    }
+
+    try {
+        // Check for user
+        const user = await User.findOne({ facultyId, role: 'librarian' }).select('+password');
+
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        }
+
+        // Check if password matches
+        const isMatch = await user.matchPassword(password); // Assumes matchPassword method exists on User model
+
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        }
+
+        // Create token
+        const token = user.getSignedJwtToken(); // Assumes getSignedJwtToken method exists on User model
+
+        // Sanitize profile picture URL
+        let profilePictureUrl = user.profilePictureUrl;
+        if (profilePictureUrl) {
+            profilePictureUrl = profilePictureUrl.replace('/static/uploads', '/uploads').replace(/\\/g, '/');
+        }
+        
+        // Return user and token
+        res.status(200).json({
+            success: true,
+            token,
+            user: {
+                id: user._id,
+                role: user.role,
+                fullName: user.fullName,
+                department: user.department,
+                facultyId: user.facultyId,
+                email: user.email,
+                profilePictureUrl: profilePictureUrl
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Server Error' });
+    }
 };

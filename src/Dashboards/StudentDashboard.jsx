@@ -21,8 +21,9 @@ import {
   LightModeOutlined,
   DarkModeOutlined,
   CardMembership,
+  LibraryBooks,
 } from '@mui/icons-material';
-
+import BookBorrowRequest from '../student/BookBorrowRequest';
 import { useAuth } from '../hooks/useAuth';
 import { useTheme } from '../hooks/useTheme';
 import useToastService from '../hooks/useToastService';
@@ -56,7 +57,9 @@ const QuickActions = () => {
   const actions = [
     { icon: <AddOutlined />, label: "New Gate Pass", path: "active-pass" },
     { icon: <StarOutlined />, label: "Special Pass", path: "special-pass" },
-    { icon: <PersonOutlined />, label: "Late Comer", path: "late-entry" }
+    { icon: <PersonOutlined />, label: "Late Comer", path: "late-entry" },
+    { icon: <LibraryBooks />, label: "Activate Library ID", path: "library-activation" },
+    { icon: <DescriptionOutlined />, label: "Borrow Book", path: "borrow-book" }
   ];
 
   return (
@@ -256,8 +259,9 @@ export const DashboardHome = () => {
       <Row className="align-items-center mb-4">
         <Col xs="auto">
           <Avatar
-            src={user?.profilePictureUrl ? `http://localhost:3001${user.profilePictureUrl}` : undefined}
+            src={user?.profilePictureUrl ? `http://localhost:3001${user.profilePictureUrl.startsWith('/') ? '' : '/'}${user.profilePictureUrl.replace('/static/uploads', '/uploads')}` : undefined}
             alt={user?.fullName ? user.fullName.charAt(0).toUpperCase() : ''}
+            imgProps={{ onError: (e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150'; } }}
             sx={{ width: 80, height: 80, border: `2.5px solid var(--primary-color)`, cursor: 'pointer' }}
             onClick={() => navigate('profile')}
           >
@@ -284,7 +288,6 @@ export default function StudentDashboard() {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
-  const toast = useToastService();
   const { unreadCount, markAllAsRead } = useNotifications();
 
   const [siderVisible, setSiderVisible] = useState(false);
@@ -347,6 +350,9 @@ export default function StudentDashboard() {
             </NavLink>
             <NavLink to="special-pass" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
               <CardMembership className="me-2" /> Special Pass
+            </NavLink>
+            <NavLink to="library-activation" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
+              <LibraryBooks className="me-2" /> Activate Library ID
             </NavLink>
             <NavLink to="active-pass" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
               <AddOutlined className="me-2" /> Gate Pass

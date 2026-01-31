@@ -43,7 +43,7 @@ const LibrarianRegister = () => {
 
             setLoading(true);
 
-            const response = await api.post('/api/librarian/register', {
+            const response = await api.post('/api/auth/librarian-register', {
                 facultyId: formData.facultyId,
                 fullName: formData.fullName,
                 email: formData.email,

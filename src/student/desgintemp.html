@@ -3,672 +3,575 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Avatar Profile System</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <title>Digital Library ID System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        body {
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100%;
-            margin: 0;
-            padding: 20px;
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 10px rgba(34, 197, 94, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.6); }
         }
-
-        .profile-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-            overflow: hidden;
+        .glow-effect {
+            animation: glow 2s ease-in-out infinite;
         }
-
-        .profile-header {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            padding: 2rem;
-            position: relative;
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
-
-        .profile-header::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="25" cy="25" r="1" fill="white" opacity="0.1"/><circle cx="75" cy="75" r="1" fill="white" opacity="0.1"/><circle cx="50" cy="10" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
-            opacity: 0.3;
+        .pulse-dot {
+            animation: pulse-dot 2s ease-in-out infinite;
         }
-
-        .avatar-section {
-            position: relative;
-            z-index: 2;
+        @keyframes slide-in {
+            from { transform: translateX(-100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
         }
-
-        .avatar-container {
-            position: relative;
-            display: inline-block;
+        .slide-in {
+            animation: slide-in 0.5s ease-out;
         }
-
-        .avatar {
-            width: 120px;
-            height: 120px;
-            border-radius: 50%;
-            border: 4px solid white;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-            object-fit: cover;
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 48px;
-            color: white;
-            font-weight: 600;
+        @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
-
-        .avatar-upload {
-            position: absolute;
-            bottom: 8px;
-            right: 8px;
-            width: 32px;
-            height: 32px;
-            background: #6366f1;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transition: all 0.3s ease;
+        .fade-in {
+            animation: fade-in 0.3s ease-out;
         }
-
-        .avatar-upload:hover {
-            background: #4f46e5;
-            transform: scale(1.1);
+        .time-stamp {
+            font-variant-numeric: tabular-nums;
         }
-
-        .profile-info h2 {
-            margin: 0;
-            font-size: 2rem;
-            font-weight: 700;
+        .card-flip {
+            perspective: 1000px;
         }
-
-        .profile-info p {
-            margin: 0.5rem 0 0 0;
-            opacity: 0.9;
-            font-size: 1.1rem;
-        }
-
-        .profile-content {
-            padding: 2rem;
-        }
-
-        .nav-tabs {
-            border-bottom: 2px solid #f1f5f9;
-            margin-bottom: 2rem;
-        }
-
-        .nav-tabs .nav-link {
-            border: none;
-            color: #64748b;
-            font-weight: 500;
-            padding: 1rem 1.5rem;
-            border-radius: 8px 8px 0 0;
-            transition: all 0.3s ease;
-        }
-
-        .nav-tabs .nav-link.active {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            border: none;
-        }
-
-        .nav-tabs .nav-link:hover:not(.active) {
-            background: #f8fafc;
-            color: #6366f1;
-        }
-
-        .form-section {
-            background: #f8fafc;
-            border-radius: 12px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
-
-        .form-section h5 {
-            color: #1e293b;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .form-control, .form-select {
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus, .form-select:focus {
-            border-color: #6366f1;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            border: none;
-            border-radius: 8px;
-            padding: 0.75rem 2rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
-        }
-
-        .btn-outline-secondary {
-            border: 2px solid #e2e8f0;
-            color: #64748b;
-            border-radius: 8px;
-            padding: 0.75rem 2rem;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-
-        .btn-outline-secondary:hover {
-            background: #f1f5f9;
-            border-color: #cbd5e1;
-        }
-
-        .stats-card {
-            background: white;
-            border-radius: 12px;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
-        }
-
-        .stats-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-        }
-
-        .stats-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: #6366f1;
-            margin-bottom: 0.5rem;
-        }
-
-        .stats-label {
-            color: #64748b;
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
-
-        .activity-item {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 1rem;
-            background: white;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
-
-        .activity-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-            color: white;
-        }
-
-        .activity-icon.course { background: #10b981; }
-        .activity-icon.assignment { background: #f59e0b; }
-        .activity-icon.quiz { background: #ef4444; }
-
-        .table-responsive {
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        }
-
-        .table {
-            margin-bottom: 0;
-        }
-
-        .table thead th {
-            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-            color: white;
-            border: none;
-            font-weight: 600;
-            padding: 1rem;
-        }
-
-        .table tbody td {
-            padding: 1rem;
-            vertical-align: middle;
-            border-color: #f1f5f9;
-        }
-
-        .badge {
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            font-weight: 500;
-        }
-
-        .progress {
-            height: 8px;
-            border-radius: 4px;
-            background: #f1f5f9;
-        }
-
-        .progress-bar {
-            border-radius: 4px;
-        }
-
-        @media (max-width: 768px) {
-            .profile-header {
-                text-align: center;
-            }
-            
-            .profile-content {
-                padding: 1rem;
-            }
-            
-            .avatar {
-                width: 100px;
-                height: 100px;
-                font-size: 40px;
-            }
+        .flip-content {
+            transition: transform 0.3s ease-out;
         }
     </style>
 </head>
-<body>
-    <div class="profile-container">
-        <!-- Profile Header -->
-        <div class="profile-header">
-            <div class="row align-items-center">
-                <div class="col-md-auto">
-                    <div class="avatar-section">
-                        <div class="avatar-container">
-                            <div class="avatar" id="avatarDisplay">JD</div>
-                            <div class="avatar-upload" onclick="document.getElementById('avatarInput').click()">
-                                <span class="material-icons" style="color: white; font-size: 18px;">camera_alt</span>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        <!-- Navigation -->
+        <nav class="bg-blue-900 text-white shadow-lg sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-blue-400 rounded-lg flex items-center justify-center font-bold">DLI</div>
+                    <span class="text-xl font-bold">Digital Library ID</span>
+                </div>
+                <div class="flex space-x-4">
+                    <button onclick="switchView('student')" class="px-4 py-2 rounded hover:bg-blue-800 transition font-semibold">Student View</button>
+                    <button onclick="switchView('librarian')" class="px-4 py-2 rounded hover:bg-blue-800 transition font-semibold">Librarian Dashboard</button>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Student View -->
+        <div id="studentView" class="view hidden">
+            <div class="max-w-md mx-auto p-6 pt-8">
+                <!-- Overlay for Active Pass (shown when pass is approved) -->
+                <div id="activePassOverlay" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-40 p-4">
+                    <div class="w-full max-w-md">
+                        <!-- Status Banner -->
+                        <div class="bg-gradient-to-r from-green-400 to-green-600 text-white rounded-t-2xl p-6 text-center shadow-lg">
+                            <div class="flex justify-center items-center space-x-2 mb-2">
+                                <span class="text-4xl">✅</span>
                             </div>
-                            <input type="file" id="avatarInput" accept="image/*" style="display: none;">
+                            <h1 class="text-2xl font-bold">ACTIVE ENTRY PASS</h1>
+                            <p class="text-sm font-semibold mt-1">One-Time Use</p>
+                        </div>
+
+                        <!-- Active Pass Card -->
+                        <div class="bg-white rounded-b-2xl shadow-2xl overflow-hidden pb-6 fade-in">
+                            <!-- Student Photo -->
+                            <div class="bg-gradient-to-b from-blue-50 to-white pt-6 pb-4 flex justify-center">
+                                <div class="w-32 h-32 rounded-full bg-gradient-to-br from-blue-300 to-blue-500 flex items-center justify-center text-white text-5xl font-bold shadow-lg border-4 border-white">
+                                    AK
+                                </div>
+                            </div>
+
+                            <!-- Pass ID & Status -->
+                            <div class="px-6 py-4 border-b border-gray-200">
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="text-gray-600 text-sm font-semibold">PASS ID</p>
+                                        <p class="text-2xl font-bold text-blue-900">LP-12345</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-gray-600 text-sm font-semibold">STATUS</p>
+                                        <p class="text-lg font-bold text-green-600">APPROVED</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Key Info Block -->
+                            <div class="px-6 py-6 space-y-4 border-b border-gray-200">
+                                <div class="grid grid-cols-2 gap-6">
+                                    <div>
+                                        <p class="text-gray-500 text-xs font-bold uppercase tracking-wide">Name</p>
+                                        <p class="text-lg font-semibold text-gray-900 mt-1">Arjun Kumar</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-gray-500 text-xs font-bold uppercase tracking-wide">Roll No.</p>
+                                        <p class="text-lg font-semibold text-gray-900 mt-1">S-12345</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <p class="text-gray-500 text-xs font-bold uppercase tracking-wide">Department</p>
+                                    <p class="text-lg font-semibold text-gray-900 mt-1">Computer Science & Engineering</p>
+                                </div>
+                            </div>
+
+                            <!-- Validity/Time -->
+                            <div class="px-6 py-6 bg-green-50 border-b border-gray-200">
+                                <p class="text-gray-700 font-semibold">
+                                    Valid for <span class="text-green-900 font-bold">ONE ENTRY</span> on <span class="text-green-900 font-bold">Dec 4, 2025</span>
+                                </p>
+                                <p class="text-gray-600 text-sm mt-2">Approved: <span class="font-semibold">Dec 4, 2025 at 2:30 PM</span></p>
+                            </div>
+
+                            <!-- QR Code -->
+                            <div class="px-6 py-8 flex justify-center bg-white">
+                                <div id="activeQrcode" class="border-4 border-gray-300 p-3 rounded-lg bg-white"></div>
+                            </div>
+
+                            <!-- Live Timestamp -->
+                            <div class="px-6 pb-6 text-center border-t border-gray-200 pt-4">
+                                <p class="text-gray-600 text-xs font-semibold uppercase tracking-widest mb-1">Verification Timestamp</p>
+                                <p class="text-2xl font-mono font-bold text-gray-900 time-stamp" id="activePassTime">--:--:--</p>
+                            </div>
+
+                            <!-- Footer -->
+                            <div class="px-6 text-center text-gray-500 text-xs border-t border-gray-200 pt-4">
+                                <p>📱 Show this screen to library staff for entry</p>
+                            </div>
+
+                            <!-- Close Button -->
+                            <div class="px-6 pt-4">
+                                <button onclick="closeActivePass()" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-900 py-2 rounded-lg font-semibold transition-colors">
+                                    Back to Profile
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div class="col-md">
-                    <div class="profile-info">
-                        <h2 id="displayName">John Doe</h2>
-                        <p id="displayRole">Computer Science Student</p>
-                        <p><span class="material-icons" style="vertical-align: middle; margin-right: 8px;">email</span>john.doe@university.edu</p>
+
+                <!-- Permanent Digital Library ID Card (Default State) -->
+                <div id="permanentCardContainer">
+                    <!-- Status Banner -->
+                    <div class="bg-gradient-to-r from-indigo-500 to-indigo-700 text-white rounded-t-2xl p-6 text-center shadow-lg">
+                        <div class="flex justify-center items-center space-x-2 mb-2">
+                            <span class="text-4xl">🎓</span>
+                        </div>
+                        <h1 class="text-2xl font-bold">PERMANENT DIGITAL</h1>
+                        <h2 class="text-2xl font-bold">LIBRARY ID</h2>
                     </div>
-                </div>
-                <div class="col-md-auto">
-                    <div class="row g-3">
-                        <div class="col-6 col-md-12">
-                            <div class="stats-card">
-                                <div class="stats-number">12</div>
-                                <div class="stats-label">Courses</div>
+
+                    <!-- Main Card -->
+                    <div class="bg-white rounded-b-2xl shadow-2xl overflow-hidden pb-6">
+                        <!-- Student Photo -->
+                        <div class="bg-gradient-to-b from-indigo-50 to-white pt-6 pb-4 flex justify-center">
+                            <div class="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-300 to-indigo-600 flex items-center justify-center text-white text-5xl font-bold shadow-lg border-4 border-white">
+                                AK
                             </div>
                         </div>
-                        <div class="col-6 col-md-12">
-                            <div class="stats-card">
-                                <div class="stats-number">85%</div>
-                                <div class="stats-label">Progress</div>
+
+                        <!-- Library ID & Status -->
+                        <div class="px-6 py-4 border-b border-gray-200">
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <p class="text-gray-600 text-sm font-semibold">LIBRARY ID</p>
+                                    <p class="text-2xl font-bold text-indigo-900">LID-5678</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-gray-600 text-sm font-semibold">STATUS</p>
+                                    <p class="text-lg font-bold text-green-600">ACTIVE</p>
+                                </div>
                             </div>
+                        </div>
+
+                        <!-- Key Info Block -->
+                        <div class="px-6 py-6 space-y-4 border-b border-gray-200">
+                            <div class="grid grid-cols-2 gap-6">
+                                <div>
+                                    <p class="text-gray-500 text-xs font-bold uppercase tracking-wide">Name</p>
+                                    <p class="text-lg font-semibold text-gray-900 mt-1">Arjun Kumar</p>
+                                </div>
+                                <div>
+                                    <p class="text-gray-500 text-xs font-bold uppercase tracking-wide">Roll No.</p>
+                                    <p class="text-lg font-semibold text-gray-900 mt-1">S-12345</p>
+                                </div>
+                            </div>
+                            <div>
+                                <p class="text-gray-500 text-xs font-bold uppercase tracking-wide">Department</p>
+                                <p class="text-lg font-semibold text-gray-900 mt-1">Computer Science & Engineering</p>
+                            </div>
+                        </div>
+
+                        <!-- Profile Info -->
+                        <div class="px-6 py-6 bg-indigo-50 border-b border-gray-200">
+                            <p class="text-gray-700 font-semibold text-sm mb-3">📋 Profile Information</p>
+                            <div class="space-y-2 text-sm">
+                                <p class="text-gray-700">Profile Status: <span class="font-bold text-indigo-900">In Good Standing</span></p>
+                                <p class="text-gray-700">Issued: <span class="font-bold">Jan 15, 2025</span></p>
+                                <p class="text-gray-700">Valid Until: <span class="font-bold">Jan 15, 2026</span></p>
+                            </div>
+                        </div>
+
+                        <!-- QR Code -->
+                        <div class="px-6 py-8 flex justify-center bg-white">
+                            <div id="permanentQrcode" class="border-4 border-indigo-300 p-3 rounded-lg bg-white"></div>
+                        </div>
+
+                        <!-- Security Element -->
+                        <div class="px-6 pb-6 text-center border-t border-gray-200 pt-4">
+                            <p class="text-gray-600 text-xs font-semibold uppercase tracking-widest mb-1">Profile ID</p>
+                            <p class="text-sm font-mono text-gray-900">LID-5678-2025</p>
+                        </div>
+
+                        <!-- Request Active Entry Pass Button -->
+                        <div class="px-6 space-y-3">
+                            <button onclick="requestActivePass()" class="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white py-3 rounded-lg font-bold transition-all shadow-md hover:shadow-lg">
+                                🚀 REQUEST ACTIVE ENTRY PASS
+                            </button>
+                            <p class="text-center text-gray-600 text-xs">Need temporary access today? Request an active entry pass above.</p>
+                        </div>
+
+                        <!-- Footer Note -->
+                        <div class="px-6 pt-4 text-center text-gray-500 text-xs border-t border-gray-200 mt-4">
+                            <p>This is your permanent library profile ID</p>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Profile Content -->
-        <div class="profile-content">
-            <!-- Navigation Tabs -->
-            <ul class="nav nav-tabs" id="profileTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="account-tab" data-bs-toggle="tab" data-bs-target="#account" type="button" role="tab">
-                        <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">person</span>
-                        Account Settings
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="courses-tab" data-bs-toggle="tab" data-bs-target="#courses" type="button" role="tab">
-                        <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">school</span>
-                        My Courses
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="activity-tab" data-bs-toggle="tab" data-bs-target="#activity" type="button" role="tab">
-                        <span class="material-icons" style="vertical-align: middle; margin-right: 8px;">timeline</span>
-                        Activity
-                    </button>
-                </li>
-            </ul>
-
-            <!-- Tab Content -->
-            <div class="tab-content" id="profileTabContent">
-                <!-- Account Settings Tab -->
-                <div class="tab-pane fade show active" id="account" role="tabpanel">
-                    <form id="profileForm">
-                        <!-- Personal Information -->
-                        <div class="form-section">
-                            <h5>
-                                <span class="material-icons">person_outline</span>
-                                Personal Information
-                            </h5>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="firstName" class="form-label">First Name</label>
-                                    <input type="text" class="form-control" id="firstName" value="John">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="lastName" class="form-label">Last Name</label>
-                                    <input type="text" class="form-control" id="lastName" value="Doe">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="email" class="form-label">Email</label>
-                                    <input type="email" class="form-control" id="email" value="john.doe@university.edu">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="phone" class="form-label">Phone</label>
-                                    <input type="tel" class="form-control" id="phone" value="+1 (555) 123-4567">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Academic Information -->
-                        <div class="form-section">
-                            <h5>
-                                <span class="material-icons">school</span>
-                                Academic Information
-                            </h5>
-                            <div class="row g-3">
-                                <div class="col-md-6">
-                                    <label for="studentId" class="form-label">Student ID</label>
-                                    <input type="text" class="form-control" id="studentId" value="CS2024001">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="major" class="form-label">Major</label>
-                                    <select class="form-select" id="major">
-                                        <option value="cs" selected>Computer Science</option>
-                                        <option value="math">Mathematics</option>
-                                        <option value="physics">Physics</option>
-                                        <option value="engineering">Engineering</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="year" class="form-label">Academic Year</label>
-                                    <select class="form-select" id="year">
-                                        <option value="1">1st Year</option>
-                                        <option value="2" selected>2nd Year</option>
-                                        <option value="3">3rd Year</option>
-                                        <option value="4">4th Year</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="gpa" class="form-label">Current GPA</label>
-                                    <input type="text" class="form-control" id="gpa" value="3.75">
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Bio Section -->
-                        <div class="form-section">
-                            <h5>
-                                <span class="material-icons">description</span>
-                                Bio
-                            </h5>
-                            <div class="row">
-                                <div class="col-12">
-                                    <label for="bio" class="form-label">About Me</label>
-                                    <textarea class="form-control" id="bio" rows="4" placeholder="Tell us about yourself...">Passionate computer science student with interests in artificial intelligence and web development. Always eager to learn new technologies and collaborate on innovative projects.</textarea>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Action Buttons -->
-                        <div class="d-flex gap-3 justify-content-end">
-                            <button type="button" class="btn btn-outline-secondary">Cancel</button>
-                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                        </div>
-                    </form>
+        <!-- Librarian View: Approval Queue -->
+        <div id="librarianView" class="view hidden">
+            <div class="max-w-6xl mx-auto p-6 pt-8">
+                <!-- Header -->
+                <div class="mb-8">
+                    <h1 class="text-3xl font-bold text-gray-900 mb-2">Pending Entry Pass Requests</h1>
+                    <p class="text-gray-600">Review and approve/reject student active entry pass requests</p>
                 </div>
 
-                <!-- My Courses Tab -->
-                <div class="tab-pane fade" id="courses" role="tabpanel">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th>Course</th>
-                                    <th>Instructor</th>
-                                    <th>Progress</th>
-                                    <th>Grade</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <div>
-                                            <strong>Data Structures & Algorithms</strong>
-                                            <br><small class="text-muted">CS 201</small>
-                                        </div>
-                                    </td>
-                                    <td>Dr. Sarah Johnson</td>
-                                    <td>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-success" style="width: 85%"></div>
-                                        </div>
-                                        <small class="text-muted">85%</small>
-                                    </td>
-                                    <td><strong>A-</strong></td>
-                                    <td><span class="badge bg-success">Active</span></td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div>
-                                            <strong>Web Development</strong>
-                                            <br><small class="text-muted">CS 301</small>
-                                        </div>
-                                    </td>
-                                    <td>Prof. Michael Chen</td>
-                                    <td>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-warning" style="width: 60%"></div>
-                                        </div>
-                                        <small class="text-muted">60%</small>
-                                    </td>
-                                    <td><strong>B+</strong></td>
-                                    <td><span class="badge bg-warning">In Progress</span></td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div>
-                                            <strong>Database Systems</strong>
-                                            <br><small class="text-muted">CS 250</small>
-                                        </div>
-                                    </td>
-                                    <td>Dr. Emily Rodriguez</td>
-                                    <td>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-info" style="width: 92%"></div>
-                                        </div>
-                                        <small class="text-muted">92%</small>
-                                    </td>
-                                    <td><strong>A</strong></td>
-                                    <td><span class="badge bg-success">Active</span></td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <div>
-                                            <strong>Machine Learning</strong>
-                                            <br><small class="text-muted">CS 401</small>
-                                        </div>
-                                    </td>
-                                    <td>Dr. Alex Kumar</td>
-                                    <td>
-                                        <div class="progress">
-                                            <div class="progress-bar bg-primary" style="width: 45%"></div>
-                                        </div>
-                                        <small class="text-muted">45%</small>
-                                    </td>
-                                    <td><strong>B</strong></td>
-                                    <td><span class="badge bg-primary">Starting</span></td>
-                                </tr>
-                            </tbody>
-                        </table>
+                <!-- Queue Items -->
+                <div class="space-y-4">
+                    <!-- Queue Item 1 - NEW -->
+                    <div class="bg-white rounded-lg shadow-md border-l-4 border-green-500 glow-effect slide-in hover:shadow-lg transition-shadow p-6" data-queue-id="1">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center space-x-4 flex-1">
+                                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-purple-300 to-purple-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                                    AK
+                                </div>
+                                
+                                <div class="flex-1">
+                                    <div class="flex items-center space-x-2 mb-1">
+                                        <h3 class="text-lg font-bold text-gray-900">Arjun Kumar</h3>
+                                        <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold pulse-dot">● NEW</span>
+                                    </div>
+                                    <p class="text-gray-600 text-sm">Roll No: <span class="font-semibold">S-12345</span></p>
+                                    <p class="text-gray-600 text-sm">Requested: <span class="font-semibold">2 minutes ago</span></p>
+                                </div>
+                            </div>
+                            
+                            <!-- Quick Actions -->
+                            <div class="flex space-x-2 flex-shrink-0">
+                                <button onclick="approvePass(1)" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+                                    ✓ Approve
+                                </button>
+                                <button onclick="rejectPass(1)" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+                                    ✕ Reject
+                                </button>
+                                <button onclick="expandDetail(1)" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-semibold transition-colors">
+                                    ℹ Info
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Request Type -->
+                        <div class="bg-blue-50 rounded p-3 mt-4">
+                            <p class="text-gray-700 text-sm"><span class="font-semibold">Request Type:</span> Active Entry Pass (One-time use)</p>
+                            <p class="text-gray-700 text-sm mt-1"><span class="font-semibold">Reason:</span> Lost physical library card - needs immediate access</p>
+                        </div>
+                    </div>
+
+                    <!-- Queue Item 2 -->
+                    <div class="bg-white rounded-lg shadow-md border-l-4 border-yellow-500 slide-in hover:shadow-lg transition-shadow p-6" data-queue-id="2" style="animation-delay: 0.1s;">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center space-x-4 flex-1">
+                                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-pink-300 to-pink-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                                    SJ
+                                </div>
+                                
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-bold text-gray-900">Sneha Joshi</h3>
+                                    <p class="text-gray-600 text-sm">Roll No: <span class="font-semibold">S-12346</span></p>
+                                    <p class="text-gray-600 text-sm">Requested: <span class="font-semibold">15 minutes ago</span></p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex space-x-2 flex-shrink-0">
+                                <button onclick="approvePass(2)" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+                                    ✓ Approve
+                                </button>
+                                <button onclick="rejectPass(2)" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+                                    ✕ Reject
+                                </button>
+                                <button onclick="expandDetail(2)" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-semibold transition-colors">
+                                    ℹ Info
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-50 rounded p-3 mt-4">
+                            <p class="text-gray-700 text-sm"><span class="font-semibold">Request Type:</span> Active Entry Pass (One-time use)</p>
+                            <p class="text-gray-700 text-sm mt-1"><span class="font-semibold">Reason:</span> Forgot physical card at home - research work needed today</p>
+                        </div>
+                    </div>
+
+                    <!-- Queue Item 3 -->
+                    <div class="bg-white rounded-lg shadow-md border-l-4 border-gray-300 slide-in hover:shadow-lg transition-shadow p-6" data-queue-id="3" style="animation-delay: 0.2s;">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="flex items-center space-x-4 flex-1">
+                                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-300 to-blue-600 flex items-center justify-center text-white text-2xl font-bold flex-shrink-0">
+                                    RV
+                                </div>
+                                
+                                <div class="flex-1">
+                                    <h3 class="text-lg font-bold text-gray-900">Raj Verma</h3>
+                                    <p class="text-gray-600 text-sm">Roll No: <span class="font-semibold">S-12347</span></p>
+                                    <p class="text-gray-600 text-sm">Requested: <span class="font-semibold">45 minutes ago</span></p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex space-x-2 flex-shrink-0">
+                                <button onclick="approvePass(3)" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+                                    ✓ Approve
+                                </button>
+                                <button onclick="rejectPass(3)" class="bg-red-500 hover:bg-red-600 text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+                                    ✕ Reject
+                                </button>
+                                <button onclick="expandDetail(3)" class="bg-blue-100 hover:bg-blue-200 text-blue-700 px-4 py-2 rounded-lg font-semibold transition-colors">
+                                    ℹ Info
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-blue-50 rounded p-3 mt-4">
+                            <p class="text-gray-700 text-sm"><span class="font-semibold">Request Type:</span> Active Entry Pass (One-time use)</p>
+                            <p class="text-gray-700 text-sm mt-1"><span class="font-semibold">Reason:</span> Physical card damaged - needs replacement access</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Activity Tab -->
-                <div class="tab-pane fade" id="activity" role="tabpanel">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h5 class="mb-3">Recent Activity</h5>
-                            <div class="activity-item">
-                                <div class="activity-icon course">
-                                    <span class="material-icons">school</span>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <strong>Completed Module 5: Binary Trees</strong>
-                                    <br><small class="text-muted">Data Structures & Algorithms • 2 hours ago</small>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-icon assignment">
-                                    <span class="material-icons">assignment</span>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <strong>Submitted Assignment: React Portfolio</strong>
-                                    <br><small class="text-muted">Web Development • 1 day ago</small>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-icon quiz">
-                                    <span class="material-icons">quiz</span>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <strong>Scored 95% on SQL Queries Quiz</strong>
-                                    <br><small class="text-muted">Database Systems • 2 days ago</small>
-                                </div>
-                            </div>
-                            <div class="activity-item">
-                                <div class="activity-icon course">
-                                    <span class="material-icons">play_circle</span>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <strong>Started new course: Machine Learning</strong>
-                                    <br><small class="text-muted">3 days ago</small>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <h5 class="mb-3">Quick Stats</h5>
-                            <div class="stats-card mb-3">
-                                <div class="stats-number">24</div>
-                                <div class="stats-label">Assignments Completed</div>
-                            </div>
-                            <div class="stats-card mb-3">
-                                <div class="stats-number">156</div>
-                                <div class="stats-label">Study Hours</div>
-                            </div>
-                            <div class="stats-card mb-3">
-                                <div class="stats-number">8</div>
-                                <div class="stats-label">Certificates Earned</div>
-                            </div>
-                        </div>
+                <!-- Stats -->
+                <div class="grid grid-cols-3 gap-4 mt-12">
+                    <div class="bg-white rounded-lg shadow p-6 text-center">
+                        <p class="text-4xl font-bold text-yellow-600">3</p>
+                        <p class="text-gray-600 font-semibold mt-2">Pending</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6 text-center">
+                        <p class="text-4xl font-bold text-green-600">24</p>
+                        <p class="text-gray-600 font-semibold mt-2">Approved Today</p>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6 text-center">
+                        <p class="text-4xl font-bold text-red-600">2</p>
+                        <p class="text-gray-600 font-semibold mt-2">Rejected</p>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Detail Modal -->
+        <div id="detailModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 slide-in">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900">Student Details</h2>
+                    <button onclick="closeDetail()" class="text-gray-500 hover:text-gray-700 text-2xl">×</button>
+                </div>
+                
+                <div id="detailContent" class="space-y-4">
+                    <!-- Content populated by JavaScript -->
+                </div>
+                
+                <div class="mt-6 flex space-x-3">
+                    <button onclick="approveFromDetail()" class="flex-1 bg-green-500 hover:bg-green-600 text-white py-2 rounded-lg font-semibold transition-colors">
+                        Approve
+                    </button>
+                    <button onclick="rejectFromDetail()" class="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 rounded-lg font-semibold transition-colors">
+                        Reject
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Feedback Toast -->
+        <div id="toast" class="hidden fixed bottom-6 right-6 bg-white rounded-lg shadow-lg p-4 flex items-center space-x-3 z-40">
+            <span id="toastIcon" class="text-2xl"></span>
+            <span id="toastMessage" class="font-semibold text-gray-900"></span>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Avatar upload functionality
-        document.getElementById('avatarInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const avatarDisplay = document.getElementById('avatarDisplay');
-                    avatarDisplay.innerHTML = `<img src="${e.target.result}" alt="Avatar" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">`;
-                };
-                reader.readAsDataURL(file);
+        let currentDetailId = null;
+        let activePassRequested = false;
+
+        const students = {
+            1: { name: 'Arjun Kumar', roll: 'S-12345', dept: 'CSE', reason: 'Lost physical library card - needs immediate access', overdueBooks: 0, history: 'First time requester' },
+            2: { name: 'Sneha Joshi', roll: 'S-12346', dept: 'ECE', reason: 'Forgot physical card at home - research work needed today', overdueBooks: 1, history: '5 passes approved this semester' },
+            3: { name: 'Raj Verma', roll: 'S-12347', dept: 'ME', reason: 'Physical card damaged - needs replacement access', overdueBooks: 0, history: '3 passes approved this semester' }
+        };
+
+        function switchView(view) {
+            document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
+            if (view === 'student') {
+                document.getElementById('studentView').classList.remove('hidden');
+                initializePermanentQR();
+                if (activePassRequested) {
+                    showActivePass();
+                }
+            } else {
+                document.getElementById('librarianView').classList.remove('hidden');
             }
-        });
+        }
 
-        // Form submission
-        document.getElementById('profileForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Get form values
-            const firstName = document.getElementById('firstName').value;
-            const lastName = document.getElementById('lastName').value;
-            const major = document.getElementById('major').options[document.getElementById('major').selectedIndex].text;
-            
-            // Update header display
-            document.getElementById('displayName').textContent = `${firstName} ${lastName}`;
-            document.getElementById('displayRole').textContent = `${major} Student`;
-            
-            // Show success message
-            const originalText = e.target.querySelector('button[type="submit"]').textContent;
-            const submitBtn = e.target.querySelector('button[type="submit"]');
-            submitBtn.textContent = 'Saved!';
-            submitBtn.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-            
-            setTimeout(() => {
-                submitBtn.textContent = originalText;
-                submitBtn.style.background = 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)';
-            }, 2000);
-        });
-
-        // Tab switching animation
-        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-            tab.addEventListener('shown.bs.tab', function(e) {
-                const targetPane = document.querySelector(e.target.getAttribute('data-bs-target'));
-                targetPane.style.opacity = '0';
-                targetPane.style.transform = 'translateY(20px)';
-                
-                setTimeout(() => {
-                    targetPane.style.transition = 'all 0.3s ease';
-                    targetPane.style.opacity = '1';
-                    targetPane.style.transform = 'translateY(0)';
-                }, 50);
+        function initializePermanentQR() {
+            const qrContainer = document.getElementById('permanentQrcode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: 'LID-5678-2025',
+                width: 200,
+                height: 200,
+                colorDark: '#312e81',
+                colorLight: '#ffffff'
             });
-        });
+        }
 
-        // Interactive course progress
-        document.querySelectorAll('.progress-bar').forEach(bar => {
-            const width = bar.style.width;
-            bar.style.width = '0%';
-            
+        function initializeActiveQR() {
+            const qrContainer = document.getElementById('activeQrcode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: 'LP-12345',
+                width: 200,
+                height: 200,
+                colorDark: '#1e3a8a',
+                colorLight: '#ffffff'
+            });
+        }
+
+        function updateLiveTime() {
+            const updateTime = () => {
+                const now = new Date();
+                const time = now.toLocaleTimeString();
+                document.getElementById('activePassTime').textContent = time;
+            };
+            updateTime();
+            setInterval(updateTime, 1000);
+        }
+
+        function requestActivePass() {
+            showToast('📤 Active Entry Pass request submitted!', 'bg-blue-500');
+            // In real scenario, this would send to backend
+            // For now, we'll simulate the librarian approving it
             setTimeout(() => {
-                bar.style.transition = 'width 1s ease-in-out';
-                bar.style.width = width;
-            }, 500);
-        });
+                activePassRequested = true;
+                showToast('✓ Pass approved! Showing active entry pass...', 'bg-green-500');
+                showActivePass();
+            }, 2000);
+        }
+
+        function showActivePass() {
+            document.getElementById('permanentCardContainer').classList.add('hidden');
+            document.getElementById('activePassOverlay').classList.remove('hidden');
+            initializeActiveQR();
+            updateLiveTime();
+        }
+
+        function closeActivePass() {
+            document.getElementById('activePassOverlay').classList.add('hidden');
+            document.getElementById('permanentCardContainer').classList.remove('hidden');
+            activePassRequested = false;
+        }
+
+        function expandDetail(id) {
+            currentDetailId = id;
+            const student = students[id];
+            const detailContent = document.getElementById('detailContent');
+            detailContent.innerHTML = `
+                <div class="space-y-4">
+                    <div class="bg-blue-50 rounded p-4">
+                        <p class="text-gray-600 text-sm font-semibold">NAME</p>
+                        <p class="text-lg font-bold text-gray-900">${student.name}</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-blue-50 rounded p-4">
+                            <p class="text-gray-600 text-sm font-semibold">ROLL NO</p>
+                            <p class="text-lg font-bold text-gray-900">${student.roll}</p>
+                        </div>
+                        <div class="bg-blue-50 rounded p-4">
+                            <p class="text-gray-600 text-sm font-semibold">DEPT</p>
+                            <p class="text-lg font-bold text-gray-900">${student.dept}</p>
+                        </div>
+                    </div>
+                    <div class="bg-yellow-50 rounded p-4 border-l-4 border-yellow-400">
+                        <p class="text-gray-600 text-sm font-semibold">OVERDUE BOOKS</p>
+                        <p class="text-2xl font-bold ${student.overdueBooks > 0 ? 'text-red-600' : 'text-green-600'}">${student.overdueBooks}</p>
+                    </div>
+                    <div class="bg-gray-100 rounded p-4">
+                        <p class="text-gray-600 text-sm font-semibold">PROFILE HISTORY</p>
+                        <p class="text-gray-900">${student.history}</p>
+                    </div>
+                    <div class="bg-blue-100 rounded p-4 border-l-4 border-blue-500">
+                        <p class="text-gray-600 text-sm font-semibold">REQUEST REASON</p>
+                        <p class="text-gray-900">${student.reason}</p>
+                    </div>
+                </div>
+            `;
+            document.getElementById('detailModal').classList.remove('hidden');
+        }
+
+        function closeDetail() {
+            document.getElementById('detailModal').classList.add('hidden');
+        }
+
+        function approvePass(id) {
+            showToast('✓ Pass approved successfully!', 'bg-green-500');
+            removeQueueItem(id);
+        }
+
+        function rejectPass(id) {
+            showToast('✕ Pass rejected', 'bg-red-500');
+            removeQueueItem(id);
+        }
+
+        function approveFromDetail() {
+            approvePass(currentDetailId);
+            closeDetail();
+        }
+
+        function rejectFromDetail() {
+            rejectPass(currentDetailId);
+            closeDetail();
+        }
+
+        function removeQueueItem(id) {
+            const items = document.querySelectorAll('[data-queue-id]');
+            items.forEach(item => {
+                if (item.getAttribute('data-queue-id') == id) {
+                    item.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => item.remove(), 300);
+                }
+            });
+        }
+
+        function showToast(message, bgColor) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            toastMessage.textContent = message;
+            toast.className = `fixed bottom-6 right-6 ${bgColor} text-white rounded-lg shadow-lg p-4 flex items-center space-x-3 z-40`;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        // Initialize student view
+        switchView('student');
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'98b87f1db7422fe1',t:'MTc1OTk1NjQ4MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>

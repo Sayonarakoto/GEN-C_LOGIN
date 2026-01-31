@@ -37,6 +37,7 @@ const UserSchema = new mongoose.Schema({
         type: String,
         default: 'Library'
     },
+    profilePictureUrl: String,
     resetPasswordToken: String,
     resetPasswordExpire: Date
 });
@@ -64,7 +65,8 @@ UserSchema.methods.getSignedJwtToken = function () {
             role: this.role,
             fullName: this.fullName,
             department: this.department,
-            facultyId: this.facultyId
+            facultyId: this.facultyId,
+            email: this.email
         }, 
         process.env.JWT_SECRET, 
         {

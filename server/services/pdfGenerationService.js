@@ -1,8 +1,9 @@
-const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { PDFDocument, rgb, StandardFonts, degrees } = require('pdf-lib');
 const fs = require('fs');
 const path = require('path');
 const QRCode = require('qrcode'); // Keep QRCode for generateWatermarkedPDF if it uses it.
 const fetch = require('node-fetch'); // For embedding images if needed later
+const Student = require('../models/student');
 
 
 
@@ -24,86 +25,236 @@ async function generateWatermarkedPDF(passData, hodName, hodDepartment = 'N/A') 
     }
     const PDF_PATH = path.join(uploadDir, `${passData._id}.pdf`);
 
-    // Generate QR Code Image Data if a token exists
-    let qrDataUrl = null;
-    if (passData.qr_code_id) { // Use qr_code_id
+    const pdfDoc = await PDFDocument.create();
+    const page = pdfDoc.addPage([595.28, 841.89]); // Standard A4 size
+    const { width, height } = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    // --- 1. Background Watermark ---
+    const watermarkText = 'GEN-C OFFICIAL';
+    page.drawText(watermarkText, {
+        x: width / 2 - 200,
+        y: height / 2,
+        size: 60,
+        font: boldFont,
+        color: rgb(0.85, 0.85, 0.85),
+        rotate: degrees(45),
+        opacity: 0.3,
+    });
+
+    // --- 2. Institutional Header ---
+    const headerHeight = 80;
+    page.drawRectangle({
+        x: 0,
+        y: height - headerHeight,
+        width: width,
+        height: headerHeight,
+        color: rgb(0.1, 0.15, 0.3), // Dark Blue
+    });
+
+    // Header Text
+    page.drawText('GEN-C CAMPUS', {
+        x: 30,
+        y: height - 45,
+        size: 24,
+        font: boldFont,
+        color: rgb(1, 1, 1),
+    });
+    
+    page.drawText('OFFICIAL GATE PASS SYSTEM', {
+        x: 30,
+        y: height - 65,
+        size: 10,
+        font,
+        color: rgb(0.8, 0.8, 0.8),
+    });
+
+    const dateStr = new Date().toLocaleDateString();
+    page.drawText(`Issued: ${dateStr}`, {
+        x: width - 150,
+        y: height - 50,
+        size: 12,
+        font,
+        color: rgb(1, 1, 1),
+    });
+
+    // --- 3. Content Layout ---
+    const contentStartY = height - 120;
+    
+    // Resolve Student Data: Fetch if missing or incomplete (e.g. HOD initiated passes)
+    let student = passData.student_id;
+    if (!student || !student.fullName || !student.department) {
         try {
-            qrDataUrl = await QRCode.toDataURL(passData.qr_code_id);
-        } catch (err) {
-            console.error('Error generating QR code for PDF:', err);
-            // Proceeding without QR code
+            let idToFetch = null;
+            if (student && student._id) idToFetch = student._id;
+            else if (student) idToFetch = student; // Assuming it's an ID string/ObjectId
+            else if (passData.studentId) idToFetch = passData.studentId;
+
+            if (idToFetch) {
+                const fetched = await Student.findById(idToFetch);
+                if (fetched) student = fetched;
+            }
+        } catch (e) { console.error("PDF Student Fetch Error:", e); }
+    }
+    student = student || {};
+
+    // Student Photo (Left Column)
+    let photoAdded = false;
+    const photoPath = student.profilePictureUrl || student.profilePhoto;
+    
+    if (photoPath) {
+        try {
+            let relativePath = photoPath.startsWith('/') || photoPath.startsWith('\\') ? photoPath.slice(1) : photoPath;
+            // Remove 'server' or 'src' prefix if present to avoid incorrect path resolution
+            relativePath = relativePath.replace(/^(server|src)[\\/]/, '');
+            const fullPath = path.join(__dirname, '..', relativePath);
+            if (fs.existsSync(fullPath)) {
+                const imageBytes = fs.readFileSync(fullPath);
+                const isPng = fullPath.toLowerCase().endsWith('.png');
+                const profileImage = isPng ? await pdfDoc.embedPng(imageBytes) : await pdfDoc.embedJpg(imageBytes);
+                
+                page.drawImage(profileImage, {
+                    x: 50,
+                    y: contentStartY - 120,
+                    width: 120,
+                    height: 120,
+                });
+                // Photo Border
+                page.drawRectangle({
+                    x: 50,
+                    y: contentStartY - 120,
+                    width: 120,
+                    height: 120,
+                    borderColor: rgb(0, 0, 0),
+                    borderWidth: 1,
+                    opacity: 0,
+                    borderOpacity: 1
+                });
+                photoAdded = true;
+            }
+        } catch (e) {
+            console.error("Error embedding photo in Gate Pass:", e);
         }
     }
 
-    // Using pdf-lib for watermarked PDF as well for consistency
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage();
-    const { width, height } = page.getSize();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-
-    // 1. Add Pass Details
-    let passTitle = 'OFFICIAL GATE PASS'; // Default to Gate Pass
-    const specialPassTypes = ['ID Lost', 'Improper Uniform', 'Other', 'HOD Initiated']; // These are considered 'special'
-    if (specialPassTypes.includes(passData.pass_type)) {
-        passTitle = 'OFFICIAL SPECIAL PASS';
+    if (!photoAdded) {
+        page.drawRectangle({
+            x: 50,
+            y: contentStartY - 120,
+            width: 120,
+            height: 120,
+            color: rgb(0.9, 0.9, 0.9),
+            borderColor: rgb(0.6, 0.6, 0.6),
+            borderWidth: 1,
+        });
+        page.drawText('No Photo', { x: 75, y: contentStartY - 60, size: 12, font, color: rgb(0.5, 0.5, 0.5) });
     }
-    page.drawText(passTitle, { x: 50, y: height - 50, font, size: 18, color: rgb(0, 0, 0) });
 
-    let currentY = height - 100;
-    const lineHeight = 15;
+    // Student Details (Right Column)
+    const textX = 200;
+    let textY = contentStartY - 10;
+    const lineHeight = 20;
 
-    page.drawText(`Student Name: ${passData.student_id && passData.student_id.fullName ? passData.student_id.fullName : 'N/A'}`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
-    currentY -= lineHeight;
-    page.drawText(`Pass Type: ${passData.pass_type || 'Gate Pass'}`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
-    currentY -= lineHeight;
-    // Corrected from passData.reason to passData.request_reason
-    page.drawText(`Reason: ${passData.request_reason || 'N/A'}`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
-    currentY -= lineHeight;
-    page.drawText(`Valid Date: ${new Date(passData.date_valid_from).toLocaleDateString('en-GB', { dateStyle: 'short' })}`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
-    currentY -= lineHeight;
-    page.drawText(`Start Time (IST): ${new Date(passData.date_valid_from).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
-    currentY -= lineHeight;
-           
+    page.drawText(`NAME: ${student.fullName || 'N/A'}`, { x: textX, y: textY, size: 14, font: boldFont });
+    textY -= lineHeight;
+    page.drawText(`ID: ${student.studentId || 'N/A'}`, { x: textX, y: textY, size: 12, font });
+    textY -= lineHeight;
+    page.drawText(`DEPT: ${student.department || 'N/A'}`, { x: textX, y: textY, size: 12, font });
+    textY -= lineHeight;
+    page.drawText(`YEAR: ${student.year || 'N/A'}`, { x: textX, y: textY, size: 12, font });
+
+    // Divider Line
+    textY -= 30;
+    page.drawLine({ start: { x: 50, y: textY }, end: { x: width - 50, y: textY }, thickness: 1, color: rgb(0.8, 0.8, 0.8) });
+    textY -= 30;
+
+    // Pass Information
+    page.drawText(`PASS TYPE: ${passData.pass_type || 'Gate Pass'}`, { x: 50, y: textY, size: 14, font: boldFont, color: rgb(0, 0.2, 0.4) });
+    textY -= 25;
+    
+    const validFrom = new Date(passData.date_valid_from).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+    page.drawText(`VALID FROM: ${validFrom}`, { x: 50, y: textY, size: 12, font });
+    textY -= lineHeight;
+
     if (passData.date_valid_to) {
-        page.drawText(`End Time (IST): ${new Date(passData.date_valid_to).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
-        currentY -= lineHeight;
+        const validTo = new Date(passData.date_valid_to).toLocaleString('en-US', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' });
+        page.drawText(`VALID TO: ${validTo}`, { x: 50, y: textY, size: 12, font });
     } else {
-        page.drawText(`End Time (IST): N/A (Return Not Required)`, { x: 50, y: currentY, font, size: 12, color: rgb(0, 0, 0) });
-        currentY -= lineHeight;
+        page.drawText(`VALID TO: N/A (One Way)`, { x: 50, y: textY, size: 12, font });
+    }
+    textY -= lineHeight;
+    page.drawText(`REASON: ${passData.request_reason || 'N/A'}`, { x: 50, y: textY, size: 12, font });
+
+    // --- 4. Security Features (Footer) ---
+    const footerY = textY - 80;
+
+    // OTP Display
+    const otpCode = passData.one_time_pin || passData.otp;
+    if (otpCode) {
+        page.drawText('OTP', { x: width / 2 - 20, y: footerY + 30, size: 10, font, color: rgb(0.5, 0.5, 0.5) });
+        page.drawText(`${otpCode}`, { x: width / 2 - 35, y: footerY, size: 36, font: boldFont, color: rgb(0, 0, 0) });
     }
 
-    currentY -= (lineHeight * 2); // Move down 2 lines
-
-    // 2. Apply Digital Watermark (Corrected)
-    // Use the hodDepartment passed into the function, which comes from the HOD's own record.
-    const approvedDate = passData.approved_at ? new Date(passData.approved_at).toLocaleDateString() : 'N/A';
-    const watermarkText = `APPROVED BY: ${hodName.toUpperCase()} - DEPT: ${hodDepartment.toUpperCase()} - ${approvedDate}`; 
-
-    page.drawText(watermarkText, {
-        x: 50,
-        y: currentY,
-        font,
-        size: 14, // Adjusted size
-        color: rgb(0.5, 0.5, 0.5), // Darker gray for readability
-        opacity: 0.5,
+    // Dynamic QR Code
+    const qrData = JSON.stringify({
+        id: passData._id,
+        uid: student.studentId,
+        type: passData.pass_type,
+        valid: true
     });
-    currentY -= (lineHeight * 2);
-
-    // 3. Add QR Code and OTP at the bottom (Corrected)
-    const bottomY = 150; // Position near the bottom
-
-    if (qrDataUrl) {
-        const qrImage = await pdfDoc.embedPng(qrDataUrl);
-        page.drawImage(qrImage, { x: 50, y: bottomY, width: 100, height: 100 });
-    } else {
-        page.drawText('QR Scan Not Required', { x: 50, y: bottomY + 40, font, size: 10, color: rgb(0.5, 0.5, 0.5) });
+    try {
+        const qrUrl = await QRCode.toDataURL(qrData);
+        // Remove header "data:image/png;base64,"
+        const qrImageBytes = Buffer.from(qrUrl.split(',')[1], 'base64');
+        const qrImage = await pdfDoc.embedPng(qrImageBytes);
+        page.drawImage(qrImage, {
+            x: 50,
+            y: footerY - 20,
+            width: 80,
+            height: 80,
+        });
+        page.drawText('Scan to Verify', { x: 55, y: footerY - 35, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
+    } catch (e) {
+        console.error("Error generating QR for PDF:", e);
     }
 
-    if (passData.one_time_pin) {
-        page.drawText(`OTP: ${passData.one_time_pin}`, { x: 200, y: bottomY + 40, font, size: 16, color: rgb(0, 0, 0) });
-    } else {
-        page.drawText('OTP: N/A', { x: 200, y: bottomY + 40, font, size: 12, color: rgb(0.5, 0.5, 0.5) });
-    }
+    // Digital Stamp
+    const stampX = width - 150;
+    const stampY = footerY + 20;
+    
+    page.drawCircle({
+        x: stampX + 40,
+        y: stampY + 10,
+        size: 40,
+        borderColor: rgb(0, 0.6, 0), // Green
+        borderWidth: 2,
+        opacity: 0,
+        borderOpacity: 0.8
+    });
+    
+    page.drawText('APPROVED', {
+        x: stampX + 10,
+        y: stampY,
+        size: 12,
+        font: boldFont,
+        color: rgb(0, 0.6, 0),
+        rotate: degrees(15),
+        opacity: 0.8
+    });
+    
+    page.drawText(`By: ${hodName}`, {
+        x: stampX,
+        y: stampY - 20,
+        size: 8,
+        font,
+        color: rgb(0, 0.6, 0),
+        opacity: 0.8
+    });
+
+    // Footer Text
+    page.drawText(`Pass ID: ${passData._id}`, { x: 50, y: 30, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
+    page.drawText('System Generated - Possession does not guarantee exit.', { x: width / 2 - 100, y: 30, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
 
     const pdfBytes = await pdfDoc.save();
     fs.writeFileSync(PDF_PATH, pdfBytes);
@@ -417,4 +568,74 @@ async function generateStudentActivityReportPDF(studentDetails, reportData, star
     return PDF_PATH;
 }
 
-module.exports = { generateWatermarkedPDF, generateStudentActivityReportPDF };
+/**
+ * @function generateLibraryPassPDF
+ * @description Generates a PDF for the Digital Library Card.
+ * @param {object} passData - The populated library pass data.
+ * @returns {Promise<object>} - { success: true, filePath: string }
+ */
+async function generateLibraryPassPDF(passData) {
+    const uploadDir = path.join(__dirname, '..', 'generated_pdfs');
+    if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+    }
+    const PDF_PATH = path.join(uploadDir, `library_card_${passData._id}.pdf`);
+
+    const pdfDoc = await PDFDocument.create();
+    // Create a small card-sized page (approx 3.375 x 2.125 inches -> 243 x 153 points)
+    // We'll make it slightly larger for better readability: 300 x 180
+    const page = pdfDoc.addPage([300, 180]); 
+    const { width, height } = page.getSize();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    // Background
+    page.drawRectangle({ x: 0, y: 0, width, height, color: rgb(0.95, 0.97, 1) });
+
+    // Header Strip
+    page.drawRectangle({ x: 0, y: height - 40, width, height: 40, color: rgb(0.1, 0.14, 0.49) });
+    page.drawText('DIGITAL LIBRARY PASS', { x: 20, y: height - 25, font: boldFont, size: 14, color: rgb(1, 1, 1) });
+    page.drawText('GEN-C CAMPUS LIBRARY', { x: 20, y: height - 38, font, size: 8, color: rgb(0.8, 0.8, 0.8) });
+
+    // User Info
+    const requester = passData.requester || {};
+    
+    // Embed Profile Picture
+    let photoPath = requester.profilePictureUrl || requester.profilePhoto;
+    if (photoPath) {
+        try {
+            // Normalize path: remove leading slash if present to make it relative to root for path.join
+            // Assuming uploads are stored in 'uploads/' at the project root
+            // If path is like 'uploads/file.jpg' or '/uploads/file.jpg'
+            let relativePath = photoPath.startsWith('/') || photoPath.startsWith('\\') ? photoPath.slice(1) : photoPath;
+            // Remove 'server' or 'src' prefix if present to avoid incorrect path resolution
+            relativePath = relativePath.replace(/^(server|src)[\\/]/, '');
+            const fullPath = path.join(__dirname, '..', relativePath);
+
+            if (fs.existsSync(fullPath)) {
+                const imageBytes = fs.readFileSync(fullPath);
+                // Simple check for extension, ideally use file signature
+                const isPng = fullPath.toLowerCase().endsWith('.png');
+                const profileImage = isPng ? await pdfDoc.embedPng(imageBytes) : await pdfDoc.embedJpg(imageBytes);
+                
+                // Draw image on the right side
+                page.drawImage(profileImage, { x: width - 80, y: height - 90, width: 60, height: 60 });
+            }
+        } catch (err) {
+            console.error('Error embedding profile picture in PDF:', err);
+        }
+    }
+
+    page.drawText(requester.fullName || 'N/A', { x: 20, y: height - 70, font: boldFont, size: 16, color: rgb(0, 0, 0) });
+    page.drawText(`${passData.requesterModel} | ${requester.department || 'N/A'}`, { x: 20, y: height - 85, font, size: 10, color: rgb(0.3, 0.3, 0.3) });
+    page.drawText(`ID: ${requester.studentId || requester.employeeId || 'N/A'}`, { x: 20, y: height - 100, font: boldFont, size: 10, color: rgb(0, 0, 0) });
+
+    // Footer / Approved By
+    page.drawText(`Approved By: ${passData.approvedBy?.fullName || 'Librarian Staff'}`, { x: 20, y: 20, font, size: 8, color: rgb(0.5, 0.5, 0.5) });
+
+    const pdfBytes = await pdfDoc.save();
+    fs.writeFileSync(PDF_PATH, pdfBytes);
+    return { success: true, filePath: PDF_PATH };
+}
+
+module.exports = { generateWatermarkedPDF, generateStudentActivityReportPDF, generateLibraryPassPDF };

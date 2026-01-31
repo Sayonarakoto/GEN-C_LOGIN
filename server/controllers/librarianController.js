@@ -1,81 +1,53 @@
 const User = require('../models/User');
 
-// @desc    Register a new librarian
-// @route   POST /api/librarian/register
-// @access  Public
-exports.register = async (req, res, next) => {
-    const { facultyId, email, password, fullName } = req.body;
-
+// @desc    Upload profile picture for librarian
+// @route   POST /api/librarian/upload-profile-picture
+// @access  Private (Librarian)
+exports.uploadProfilePicture = async (req, res) => {
     try {
-        // Create user
-        const user = await User.create({
-            facultyId,
-            email,
-            password,
-            fullName,
-            role: 'librarian' // Ensure role is set
-        });
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded.' });
+        }
 
-        res.status(201).json({
-            success: true,
-            message: 'Librarian registered successfully'
-        });
+        const user = await User.findById(req.user.id);
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found.' });
+        }
+
+        // Use '/uploads' to match server/index.js static serve
+        user.profilePictureUrl = `/uploads/profile-pictures/${req.file.filename}`;
+        await user.save();
+
+        res.json({ success: true, filePath: user.profilePictureUrl, message: 'Profile picture uploaded successfully.' });
     } catch (error) {
-        // Handle validation errors or other issues
-        res.status(400).json({ success: false, message: error.message });
+        console.error('Error uploading librarian profile picture:', error);
+        res.status(500).json({ success: false, message: 'Server error' });
     }
 };
 
-// @desc    Login a librarian
-// @route   POST /api/librarian/login
-// @access  Public
-exports.login = async (req, res, next) => {
-    const { facultyId, password } = req.body;
-
-    // Validate input
-    if (!facultyId || !password) {
-        return res.status(400).json({ success: false, message: 'Please provide a faculty ID and password' });
-    }
-
+// @desc    Update librarian profile details
+// @route   PUT /api/librarian/profile
+// @access  Private (Librarian)
+exports.updateProfile = async (req, res) => {
     try {
-        // Check for user
-        const user = await User.findOne({ facultyId }).select('+password');
+        const { fullName, email } = req.body;
+        const user = await User.findById(req.user.id);
 
         if (!user) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
+            return res.status(404).json({ success: false, message: 'User not found.' });
         }
 
-        // Check if password matches
-        const isMatch = await user.matchPassword(password);
+        if (fullName) user.fullName = fullName;
+        if (email) user.email = email;
 
-        if (!isMatch) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
-        }
+        await user.save();
 
-        // Create token
-        const token = user.getSignedJwtToken();
-        
-        // Return user and token
-        const userData = {
-            id: user._id,
-            role: user.role,
-            fullName: user.fullName,
-            department: user.department,
-            facultyId: user.facultyId
-        };
-
-        res.status(200).json({
-            success: true,
-            token,
-            user: userData
-        });
+        res.json({ success: true, message: 'Profile updated successfully.' });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Server Error' });
+        console.error('Error updating librarian profile:', error);
+        if (error.code === 11000) {
+             return res.status(400).json({ success: false, message: 'Email already in use.' });
+        }
+        res.status(500).json({ success: false, message: 'Server error' });
     }
-};
-
-
-exports.forgotPassword = (req, res, next) => {
-    // Logic: 1.3 Forgot Password (Email Reset)
-    res.status(200).json({ success: true, message: 'Forgot password placeholder' });
 };

@@ -25,6 +25,7 @@ import AuditTrail from "../faculty/AuditTrail";
 import useToastService from '../hooks/useToastService';
 import FacultyGatePass from "../faculty/FacultyGatePass";
 import FacultyProfile from "../faculty/FacultyProfile";
+import LibraryActivationRequestForm from "../components/common/LibraryActivationRequestForm";
 import { useNotifications } from '../context/NotificationContext';
 import NotificationList from '../components/NotificationList';
 
@@ -115,6 +116,7 @@ const FacultyDashboard = () => {
     { key: 'manageStudents', icon: 'group', label: 'Manage Students' },
     { key: 'specialPasses', icon: 'bxs-purchase-tag', label: 'Special Passes' },
     { key: 'gatePass', icon: 'exit', label: 'Gate Pass' },
+    { key: 'libraryActivation', icon: 'id-card', label: 'Activate Library ID' },
     { key: 'auditLogs', icon: 'list-ul', label: 'Audit Logs' },
     { key: 'profile', icon: 'user', label: 'Profile' },
   ];
@@ -131,6 +133,7 @@ const FacultyDashboard = () => {
         return user?.role === 'HOD' ? <FacultySpecialPasses /> : <p>You are not authorized to view Special Passes.</p>;
       case 'auditLogs': return <AuditTrail />;
       case 'gatePass': return <FacultyGatePass />;
+      case 'libraryActivation': return <LibraryActivationRequestForm />;
       case 'profile': return <FacultyProfile />;
       default: return <p>Select an option from the menu.</p>;
     }
@@ -200,8 +203,14 @@ const FacultyDashboard = () => {
               <NotificationList onClose={handleNotificationClose} />
             </Popover>
             <Avatar
-              src={user?.profilePictureUrl ? `http://localhost:3001${user.profilePictureUrl}` : undefined}
+              src={(() => {
+                const path = user?.profilePhoto || user?.profilePictureUrl;
+                if (!path) return undefined;
+                const normalized = path.replace(/\\/g, '/');
+                return `http://localhost:3001${normalized.startsWith('/') ? '' : '/'}${normalized.replace('/static/uploads', '/uploads')}`;
+              })()}
               alt={user?.fullName?.charAt(0).toUpperCase() || ''}
+              imgProps={{ onError: (e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150'; } }}
               sx={{ width: 32, height: 32, cursor: 'pointer' }}
               onClick={() => handleMenuClick('profile')}
             >
@@ -240,7 +249,7 @@ const FacultyDashboard = () => {
           <FooterNavItem icon="dashboard" text="Dashboard" active={selectedKey === 'approvals'} onClick={() => handleMenuClick('approvals')} />
           <FooterNavItem icon="check-circle" text="Approvals" active={selectedKey === 'approvals'} onClick={() => handleMenuClick('approvals')} />
           <FooterNavItem icon="group" text="Students" active={selectedKey === 'manageStudents'} onClick={() => handleMenuClick('manageStudents')} />
-          <FooterNavItem icon="ticket" text="Passes" active={selectedKey === 'specialPasses'} onClick={() => handleMenuClick('specialPasses')} />
+          <FooterNavItem icon="ticket" text="Special Passes" active={selectedKey === 'specialPasses'} onClick={() => handleMenuClick('specialPasses')} />
           <FooterNavItem icon="list-ul" text="Audit" active={selectedKey === 'auditLogs'} onClick={() => handleMenuClick('auditLogs')} />
           <FooterNavItem icon="user" text="Profile" active={selectedKey === 'profile'} onClick={() => handleMenuClick('profile')} />
           <FooterNavItem icon="log-out" text="Logout" onClick={() => handleMenuClick('logout')} />

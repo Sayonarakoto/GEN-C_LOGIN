@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
+import { useAuth } from '../hooks/useAuth';
+import api from '../api/client';
 import './LibrarianLogin.css'; // Custom styles extracted from the original CSS
 
 const LibrarianLogin = () => {
@@ -10,20 +11,26 @@ const LibrarianLogin = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const togglePassword = () => setShowPassword(!showPassword);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    // Replace with your API login logic here
     try {
-      // Example: login request simulation
-      await new Promise((res) => setTimeout(res, 1500));
-      // After success:
+      const response = await api.post('/api/auth/librarian-login', {
+        facultyId,
+        password,
+      });
+
+      const { token, user } = response.data;
+      login(token, user);
       navigate('/librarian/dashboard');
+
     } catch (error) {
       console.error('Login failed:', error);
+      // You can add a toast notification here to show the error to the user
     } finally {
       setLoading(false);
     }

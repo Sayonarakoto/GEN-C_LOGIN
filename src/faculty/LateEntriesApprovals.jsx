@@ -16,6 +16,7 @@ import {
   Stack,
 } from '@mui/material';
 import { VisibilityOutlined, CheckOutlined, CloseOutlined, ArrowBack } from '@mui/icons-material';
+import dayjs from 'dayjs';
 import api from '../api/client';
 import useToastService from '../hooks/useToastService';
 import { useAuth } from '../hooks/useAuth';
@@ -122,13 +123,23 @@ export default function LateEntriesApprovals({ onActionComplete }) {
 
       await api.put(endpoint, { action, remarks });
       toast.success(`Request ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
-      await fetchActionableRequests();
+      handleClose(); // Close modal first
+      await fetchActionableRequests(); // Then refresh the list
       if (onActionComplete) {
         onActionComplete();
       }
-      handleClose();
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to update status');
+      console.error('Error updating late entry:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to update status';
+      toast.error(errorMessage);
+      
+      // Even if there's an error, refresh the list to reflect any changes that might have occurred
+      // This handles cases where the backend processed the request but returned an error (e.g., audit log failure)
+      try {
+        await fetchActionableRequests();
+      } catch (refreshError) {
+        console.error('Error refreshing requests after action:', refreshError);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -185,7 +196,11 @@ export default function LateEntriesApprovals({ onActionComplete }) {
                   <Typography variant="body2" color="text.secondary">ID: {req.studentId?.studentId}</Typography>
                   <Typography variant="body2" color="text.secondary">Department: {req.studentId?.department}</Typography>
                   <Typography variant="body2" color="text.secondary"><strong>Reason:</strong> {req.reason}</Typography>
-                  <Typography variant="caption" color="text.secondary">{new Date(req.date || req.lastActionAt).toLocaleString()}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {req.date || req.lastActionAt 
+                      ? dayjs(req.date || req.lastActionAt).format('DD-MM-YYYY HH:mm')
+                      : 'N/A'}
+                  </Typography>
                 </Box>
                 <IconButton onClick={() => handleView(req)}><VisibilityOutlined /></IconButton>
               </Box>
@@ -270,7 +285,11 @@ export default function LateEntriesApprovals({ onActionComplete }) {
                 <Typography variant="h6" gutterBottom>Entry Details</Typography>
                 <Stack direction="row" justifyContent="space-between" sx={{ borderBottom: '1px solid #eee', pb: 1, mb: 2 }}>
                   <Typography>Date & Time</Typography>
-                  <Typography>{new Date(selected.date || selected.lastActionAt).toLocaleString()}</Typography>
+                  <Typography>
+                    {selected.date || selected.lastActionAt 
+                      ? dayjs(selected.date || selected.lastActionAt).format('DD-MM-YYYY HH:mm')
+                      : 'N/A'}
+                  </Typography>
                 </Stack>
                 <Box>
                   <Typography>Reason</Typography>

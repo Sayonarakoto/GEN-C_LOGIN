@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import apiClient from '../api/client';
-import { useAuth } from '../hooks/useAuth';
-import useToastService from '../hooks/useToastService';
-import AlertMessage from '../components/AlertMessage';
+import apiClient from '../../api/client';
+import { useAuth } from '../../hooks/useAuth';
+import useToastService from '../../hooks/useToastService';
+import AlertMessage from '../../components/AlertMessage';
 import Avatar from '@mui/material/Avatar';
 import IconButton from '@mui/material/IconButton';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
@@ -20,7 +20,7 @@ const StyledAvatar = styled(Avatar)(() => ({
     border: '4px solid white',
     boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
     objectFit: 'cover',
-    background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    background: 'linear-gradient(135deg, #1e293b 0%, #3b82f6 100%)',
     fontSize: 48,
     fontWeight: 600,
     color: 'white',
@@ -47,18 +47,17 @@ const UploadButton = styled(IconButton)(() => ({
     color: 'white',
 }));
 
-const FacultyProfile = () => {
+const LibrarianProfile = () => {
     const { user, updateUser } = useAuth();
     const toast = useToastService();
     const fileInputRef = useRef(null);
 
     const [formData, setFormData] = useState({
         fullName: '',
-        employeeId: '',
+        facultyId: '',
         department: '',
-        designation: '',
         email: '',
-        profilePhoto: ''
+        profilePictureUrl: ''
     });
     const [selectedFile, setSelectedFile] = useState(null);
     const [previewUrl, setPreviewUrl] = useState(null);
@@ -69,17 +68,15 @@ const FacultyProfile = () => {
         if (user) {
             setFormData({
                 fullName: user.fullName || '',
-                employeeId: user.employeeId || user.facultyId || '',
-                department: user.department || '',
-                designation: user.designation || '',
+                facultyId: user.facultyId || '',
+                department: user.department || 'Library',
                 email: user.email || '',
-                profilePhoto: user.profilePhoto || user.profilePictureUrl || ''
+                profilePictureUrl: user.profilePictureUrl || ''
             });
             
-            const photoPath = user.profilePhoto || user.profilePictureUrl;
-            if (photoPath) {
-                const normalizedPath = photoPath.replace(/\\/g, '/');
-                setPreviewUrl(`http://localhost:3001${normalizedPath.startsWith('/') ? '' : '/'}${normalizedPath.replace('/static/uploads', '/uploads')}?t=${new Date().getTime()}`); // Add timestamp to force refresh
+            if (user.profilePictureUrl) {
+                const normalizedPath = user.profilePictureUrl.replace(/\\/g, '/');
+                setPreviewUrl(`http://localhost:3001${normalizedPath.startsWith('/') ? '' : '/'}${normalizedPath.replace('/static/uploads', '/uploads')}?t=${new Date().getTime()}`);
             }
         }
     }, [user]);
@@ -111,19 +108,16 @@ const FacultyProfile = () => {
         setAlert(null);
         setUploading(true);
         try {
-            let profilePhoto = formData.profilePhoto;
+            let profilePictureUrl = formData.profilePictureUrl;
             if (selectedFile) {
                 const uploadData = new FormData();
                 uploadData.append('profileImage', selectedFile);
-                const res = await apiClient.post('/api/faculty/upload-profile-picture', uploadData);
-                profilePhoto = res.data.filePath;
-                // Update local form data immediately with the new path
-                setFormData(prev => ({ ...prev, profilePhoto: profilePhoto }));
+                const res = await apiClient.post('/api/librarian/upload-profile-picture', uploadData);
+                profilePictureUrl = res.data.filePath;
             }
 
-            const updatedData = { ...formData, profilePhoto };
-            // Remove fields that shouldn't be updated directly if needed
-            await apiClient.put('/api/faculty/profile', updatedData);
+            const updatedData = { ...formData, profilePictureUrl };
+            await apiClient.put('/api/librarian/profile', updatedData);
 
             const updatedUser = { ...user, ...updatedData };
             updateUser(updatedUser);
@@ -145,8 +139,8 @@ const FacultyProfile = () => {
     let fullProfilePictureUrl = 'https://via.placeholder.com/150';
     if (previewUrl) {
         fullProfilePictureUrl = previewUrl;
-    } else if (formData.profilePhoto) {
-        const normalizedPath = formData.profilePhoto.replace(/\\/g, '/');
+    } else if (formData.profilePictureUrl) {
+        const normalizedPath = formData.profilePictureUrl.replace(/\\/g, '/');
         fullProfilePictureUrl = `http://localhost:3001${normalizedPath.startsWith('/') ? '' : '/'}${normalizedPath.replace('/static/uploads', '/uploads')}`;
     }
 
@@ -196,7 +190,7 @@ const FacultyProfile = () => {
                                 </UploadButton>
                             </AvatarContainer>
                             <Typography variant="h6" sx={{ mt: 2 }}>{formData.fullName}</Typography>
-                            <Typography variant="body2" color="text.secondary">{formData.designation}</Typography>
+                            <Typography variant="body2" color="text.secondary">Librarian</Typography>
                         </Paper>
                     </Grid>
                     <Grid item xs={12} md={8}>
@@ -218,9 +212,9 @@ const FacultyProfile = () => {
                                 <Grid item xs={12} sm={6}>
                                     <TextField
                                         fullWidth
-                                        label="Employee ID"
-                                        name="employeeId"
-                                        value={formData.employeeId}
+                                        label="Librarian ID"
+                                        name="facultyId"
+                                        value={formData.facultyId}
                                         InputProps={{ readOnly: true }}
                                         margin="normal"
                                     />
@@ -236,16 +230,6 @@ const FacultyProfile = () => {
                                     />
                                 </Grid>
                                 <Grid item xs={12} sm={6}>
-                                    <TextField
-                                        fullWidth
-                                        label="Designation"
-                                        name="designation"
-                                        value={formData.designation}
-                                        InputProps={{ readOnly: true }}
-                                        margin="normal"
-                                    />
-                                </Grid>
-                                <Grid item xs={12}>
                                     <TextField
                                         fullWidth
                                         label="Email"
@@ -274,4 +258,4 @@ const FacultyProfile = () => {
     );
 };
 
-export default FacultyProfile;
+export default LibrarianProfile;

@@ -1,9 +1,8 @@
+# GEN-C_LOGIN 🚀
 
-# GEN-C\_LOGIN 🚀
+A full-stack system for faculty, students, and security built with:
 
-A full-stack login system for faculty, students, and security built with:
-
-* **Frontend:** React + Vite + Bootstrap + Ant Design
+* **Frontend:** React + Vite + Bootstrap
 * **Backend:** Node.js + Express.js + MongoDB
 
 ---
@@ -12,164 +11,78 @@ A full-stack login system for faculty, students, and security built with:
 
 ```
 GEN-C_LOGIN/
-│── client/       # React frontend
-│── server/       # Node.js + Express backend
-│── README.md
+├───server/       # Backend (Node.js + Express + MongoDB)
+├───src/          # Frontend (React + Vite)
+└───README.md
 ```
 
 ---
 
-## ⚡ Prerequisites
+## 🛠️ Local Development
 
-Make sure you have installed:
-
+### 1. Prerequisites
 * [Node.js](https://nodejs.org/) (v18+ recommended)
-* [MongoDB](https://www.mongodb.com/try/download/community) or MongoDB Atlas
+* [MongoDB](https://www.mongodb.com/try/download/community)
 
----
+### 2. Install Dependencies
 
-## 🛠️ Installation
+* **Backend:**
+  ```bash
+  cd server
+  npm install
+  ```
 
-### 1️⃣ Clone the Repository
+* **Frontend:**
+  ```bash
+  npm install
+  ```
 
-```bash
-git clone https://github.com/your-username/GEN-C_LOGIN.git
-cd GEN-C_LOGIN
+### 3. Backend Setup
+Create a `.env` file in the `server/` directory:
 ```
-
----
-
-### 2️⃣ Install Dependencies
-
-* **Backend dependencies** (inside `/server`):
-
-```bash
-cd server
-npm install
-```
-
-* **Frontend dependencies** (inside `/client`):
-
-```bash
-cd ../client
-npm install
-```
-
-✅ That’s it — all dependencies will be installed from `package.json`.
-
----
-
-## 📦 Major Dependencies
-
-### Backend (server)
-
-* `express` → Web framework
-* `mongoose` → MongoDB ODM
-* `bcryptjs` → Password hashing
-* `jsonwebtoken` → JWT authentication
-* `cors` → Cross-origin requests
-* `dotenv` → Environment variable management
-* `multer` → File uploads
-
-### Frontend (client)
-
-* `react` → Frontend library
-* `react-dom` → React DOM rendering
-* `react-router-dom` → Routing
-* `axios` → HTTP client
-* `bootstrap` → UI framework
-* `antd` → Ant Design components
-
----
-
-## ⚙️ Backend Setup
-
-#### 📌 Environment Variables
-
-Create a `.env` file in the **server/** folder:
-
-```
-MONGO_URI=mongodb://127.0.0.1:27017/genclogin
+MONGO_URI=mongodb://127.0.0.1:27017/paperlessCampus
 PORT=3001
-JWT_SECRET=yourSuperSecretKey
+JWT_SECRET=your_super_secret_key
+PASS_TOKEN_SECRET=your_pass_token_secret
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_app_password
+FROM_EMAIL=your_email@gmail.com
 ```
 
-#### 🚀 Start Backend
-
-```bash
-npm start
-```
-
-Runs at [http://localhost:3001](http://localhost:3001).
+### 4. Running Locally
+* **Start Backend:** `cd server && npm start` (Runs on `http://localhost:3001`)
+* **Start Frontend:** `npm run dev` (Runs on `http://localhost:5173`)
 
 ---
 
-## 🎨 Frontend Setup
+## ☁️ Production Deployment
 
-#### 🚀 Start Frontend
+### 1. Backend (e.g., Render)
+1. Set up a Web Service on Render.
+2. Set Build Command: `npm install` (in `server/` directory)
+3. Set Start Command: `node server/index.js`
+4. Add Environment Variables in the **Render Dashboard -> Environment** tab:
+   - `NODE_ENV=production`
+   - `MONGO_URI`, `JWT_SECRET`, `PASS_TOKEN_SECRET`, SMTP settings as listed in Backend Setup.
 
-```bash
-cd ../client
-npm run dev
-```
-
-Runs at [http://localhost:5173](http://localhost:5173).
-
----
-
-## 🔑 Test Faculty Login
-
-Sample data for MongoDB:
-
-```json
-{
-  "fullName": "Test Faculty",
-  "email": "faculty@test.com",
-  "employeeId": "2141",
-  "department": "CT",
-  "password": "214121",
-  "designation": "faculty"
-}
-```
+### 2. Frontend (e.g., Vercel)
+1. Deploy as a Vite project.
+2. Set Environment Variables in **Vercel Project Settings -> Environment Variables**:
+   - `VITE_API_BASE_URL=https://<your-backend-url>`
+   - `VITE_API_URL=https://<your-backend-url>`
 
 ---
 
-## 🧪 API Testing with cURL
-
-```bash
-curl -X POST http://localhost:3001/auth/faculty-login \
-  -H "Content-Type: application/json" \
-  -d '{"employeeId":"2141","password":"214121"}'
-```
-
----
-
-## 📖 Scripts
+## 📖 Available Scripts
 
 ### Backend
-
-* `npm start` → Run server
-* `npm run dev` → Run server with nodemon
+* `npm start`: Runs the server using nodemon.
 
 ### Frontend
-
-* `npm run dev` → Start dev server
-* `npm run build` → Build for production
-
----
-
-## 🤝 Contributing
-
-1. Fork the repo
-2. Create a new branch (`feature/my-feature`)
-3. Commit changes (`git commit -m "Added X feature"`)
-4. Push to branch and open a PR
+* `npm run dev`: Starts the development server.
+* `npm run build`: Builds the application for production.
 
 ---
 
 ## 📜 License
-
-MIT License © 2025
-
----
-
+MIT License © 2026

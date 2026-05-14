@@ -453,18 +453,6 @@ exports.hodApproveGatePass = async (req, res) => {
 
     await pass.save();
 
-    // Generate PDF and save path
-    const hod = await Faculty.findById(req.user.id); // The HOD approving
-    if (hod) {
-        const pdfResult = await generateWatermarkedPDF(pass, hod.fullName);
-        if (pdfResult.success) {
-            pass.pdf_path = pdfResult.filePath;
-            await pass.save(); // Save again to persist pdf_path
-        } else {
-            console.error('Failed to generate PDF for gate pass:', pdfResult.error);
-        }
-    }
-
     // Log HOD approval and credential generation in AuditLog
     await AuditLog.create({
         gatepass_id: pass._id,
@@ -475,7 +463,7 @@ exports.hodApproveGatePass = async (req, res) => {
             status_change: 'hod_status: PENDING -> APPROVED',
             qr_code_generated: true,
             one_time_pin_generated: true,
-            pdf_generated: !!pass.pdf_path, // Added pdf_generated status
+            pdf_generated: false, // Updated to reflect no disk file
         },
     });
 
@@ -881,21 +869,23 @@ exports.getStudentGatePassHistory = async (req, res) => {
 
 // @desc    Download a gate pass PDF
 // @route   GET /api/gatepass/download-pdf/:id
-// @access  Private (Student, HOD, Security - authorized to view this pass)
+// @access  Private (Student, HOD, Security)
 exports.downloadGatePassPDF = async (req, res) => {
   try {
     const passId = req.params.id;
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    const gatePass = await GatePass.findById(passId);
+    const gatePass = await GatePass.findById(passId)
+      .populate('student_id', 'fullName studentId department year profilePictureUrl')
+      .populate('hod_approver_id', 'fullName');
 
     if (!gatePass) {
       return res.status(404).json({ success: false, message: 'Gate Pass not found.' });
     }
 
     // Authorization: Only the student who requested it, or an HOD/Security can download
-    const isStudent = userRole === 'student' && gatePass.student_id.toString() === userId;
+    const isStudent = userRole === 'student' && gatePass.student_id._id.toString() === userId;
     const isHOD = userRole === 'HOD' && gatePass.department_id.toString() === req.user.department.toString();
     const isSecurity = userRole === 'security';
 
@@ -903,29 +893,14 @@ exports.downloadGatePassPDF = async (req, res) => {
       return res.status(403).json({ success: false, message: 'Not authorized to download this gate pass.' });
     }
 
-    if (!gatePass.pdf_path) {
-      return res.status(404).json({ success: false, message: 'PDF not generated for this gate pass.' });
-    }
+    // Regenerate the PDF on-demand
+    const hodName = gatePass.hod_approver_id ? gatePass.hod_approver_id.fullName : 'N/A';
+    const pdfBytes = await generateWatermarkedPDF(gatePass, hodName);
 
-    const absolutePath = gatePass.pdf_path; // gatePass.pdf_path is already an absolute path
-
-    // Ensure the path is safe and within the expected directory
-    const safePdfDir = path.join(__dirname, '..' , 'generated_pdfs'); // Base directory for generated PDFs
-    if (!absolutePath.startsWith(safePdfDir)) {
-        console.error(`Attempted to access PDF outside safe directory. Path: ${absolutePath}, Safe Dir: ${safePdfDir}`);
-        return res.status(400).json({ success: false, message: 'Invalid PDF path or PDF not found in expected directory.' });
-    }
-
-    res.download(absolutePath, (err) => {
-      if (err) {
-        console.error('Error downloading PDF:', err);
-        // Check if the error is due to file not found
-        if (err.code === 'ENOENT') {
-            return res.status(404).json({ success: false, message: 'PDF file not found on server.' });
-        }
-        return res.status(500).json({ success: false, message: 'Error downloading PDF.' });
-      }
-    });
+    // Stream the PDF to the client
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="gate_pass_${passId}.pdf"`);
+    res.send(Buffer.from(pdfBytes));
 
   } catch (error) {
     console.error('Error in downloadGatePassPDF:', error);

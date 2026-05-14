@@ -83,21 +83,6 @@ exports.hodApproveGatePass = async (req, res) => {
         pass.qr_code_id = generateToken(tokenPayload, PASS_TOKEN_SECRET, expiresInDuration); 
         pass.one_time_pin = generateThreeDigitOTP(); // Changed from verification_otp to one_time_pin to match schema
 
-        // Fetch HOD's full name for the watermark
-        const hod = await Faculty.findById(req.user.id);
-        const hodName = hod ? hod.fullName : 'Unknown HOD';
-
-        // Generate PDF
-        console.log('--- Pass data before PDF generation ---');
-        console.log(pass);
-        console.log('------------------------------------');
-        const pdfResult = await generateWatermarkedPDF(pass, hodName);
-        if (pdfResult.success) {
-            pass.pdf_path = pdfResult.filePath;
-        } else {
-            console.error('Failed to generate PDF for Gate Pass:', pdfResult.error);
-        }
-
         await pass.save();
 
         // 4. Log and Notify
@@ -109,7 +94,7 @@ exports.hodApproveGatePass = async (req, res) => {
             event_details: {
                 status_change: 'hod_status: PENDING -> APPROVED',
                 credentials_generated: true,
-                pdfPath: pass.pdf_path, // Include PDF path in audit log
+                pdfPath: null, // PDF is generated on demand now
             },
         });
 

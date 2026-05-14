@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import apiClient from '../api/client'; // Assuming you have an axios client setup
-import { useAuth } from '../hooks/useAuth'; // Assuming you have an auth hook
-import useToastService from '../hooks/useToastService'; // Import the toast service
-import AlertMessage from '../components/AlertMessage'; // Import AlertMessage
+import apiClient from '../api/client';
+import { useAuth } from '../hooks/useAuth';
+import useToastService from '../hooks/useToastService';
+import AlertMessage from '../components/AlertMessage';
 import Avatar from '@mui/material/Avatar';
 import IconButton from '@mui/material/IconButton';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import { styled } from '@mui/material/styles';
 import { Grid, Paper, TextField, Button, Typography, Box, CircularProgress } from '@mui/material';
+import { upload } from '@vercel/blob/client'; // Import upload
+import { resolveProfileImageUrl } from '../utils/resolveProfileImageUrl'; // Import utility
 
-// Styled components for the avatar and upload button to match desgintemp.html
+// Styled components (unchanged)
 const AvatarContainer = styled('div')({
     position: 'relative',
     display: 'inline-block',
@@ -79,8 +81,7 @@ const StudentProfile = () => {
             });
             
             if (user.profilePictureUrl) {
-                const normalizedPath = user.profilePictureUrl.replace(/\\/g, '/');
-                setPreviewUrl(`http://localhost:3001${normalizedPath.startsWith('/') ? '' : '/'}${normalizedPath.replace('/static/uploads', '/uploads')}?t=${new Date().getTime()}`);
+                setPreviewUrl(resolveProfileImageUrl(user.profilePictureUrl));
             }
         }
     }, [user]);
@@ -115,10 +116,20 @@ const StudentProfile = () => {
             // First, upload image if a new one is selected
             let profilePictureUrl = formData.profilePictureUrl;
             if (selectedFile) {
-                const uploadData = new FormData();
-                uploadData.append('profileImage', selectedFile);
-                const res = await apiClient.post('/api/students/upload-profile-picture', uploadData);
-                profilePictureUrl = res.data.filePath;
+                const useBlob = import.meta.env.VITE_USE_VERCEL_BLOB === 'true';
+
+                if (useBlob) {
+                    const blob = await upload(selectedFile.name, selectedFile, {
+                        access: 'public',
+                        handleUploadUrl: '/api/blob/profile-picture-upload',
+                    });
+                    profilePictureUrl = blob.url;
+                } else {
+                    const uploadData = new FormData();
+                    uploadData.append('profileImage', selectedFile);
+                    const res = await apiClient.post('/api/students/upload-profile-picture', uploadData);
+                    profilePictureUrl = res.data.filePath;
+                }
             }
 
             // Then, update the rest of the profile data
@@ -154,9 +165,9 @@ const StudentProfile = () => {
     if (previewUrl) {
         fullProfilePictureUrl = previewUrl;
     } else if (formData.profilePictureUrl) {
-        const normalizedPath = formData.profilePictureUrl.replace(/\\/g, '/');
-        fullProfilePictureUrl = `http://localhost:3001${normalizedPath.startsWith('/') ? '' : '/'}${normalizedPath.replace('/static/uploads', '/uploads')}`;
+        fullProfilePictureUrl = resolveProfileImageUrl(formData.profilePictureUrl);
     }
+
 
     return (
         <Box sx={{ mt: 5, p: 3 }}>

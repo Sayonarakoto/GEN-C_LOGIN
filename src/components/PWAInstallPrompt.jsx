@@ -12,8 +12,11 @@ export default function PWAInstallPrompt() {
 
   useEffect(() => {
     const handler = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
+      // Prevent the mini-infobar from appearing on mobile
+      if (e.type === 'beforeinstallprompt') {
+          e.preventDefault();
+          setDeferredPrompt(e);
+      }
       const wasDismissed = localStorage.getItem('pwa-install-dismissed');
       if (!wasDismissed) setShowPrompt(true);
     };
@@ -23,7 +26,11 @@ export default function PWAInstallPrompt() {
     if (alreadyInstalled) return;
 
     window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    window.addEventListener('trigger-pwa-install', handler);
+    return () => {
+        window.removeEventListener('beforeinstallprompt', handler);
+        window.removeEventListener('trigger-pwa-install', handler);
+    };
   }, []);
 
   const handleInstall = async () => {

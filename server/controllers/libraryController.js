@@ -498,9 +498,11 @@ exports.downloadLibraryPass = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Pass not found' });
         }
 
-        const result = await generateLibraryPassPDF(pass);
+        const pdfBytes = await generateLibraryPassPDF(pass);
         
-        res.download(result.filePath);
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="library_card_${id}.pdf"`);
+        res.send(Buffer.from(pdfBytes));
     } catch (error) {
         console.error('Download Library Pass Error:', error);
         res.status(500).json({ success: false, message: 'Server Error' });

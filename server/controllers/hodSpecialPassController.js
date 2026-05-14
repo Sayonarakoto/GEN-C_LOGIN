@@ -87,15 +87,11 @@ exports.approveSpecialPass = async (req, res) => {
     }
 
     // Always generate PDF
-    pass.qr_code_id = pass.qr_code_jwt; // Will be null if not generated
-    pass.one_time_pin = pass.verification_otp; // Will be null if not generated
-    const pdfResult = await generateWatermarkedPDF(pass, hodName, hodDepartment); 
-    if (pdfResult.success) {
-      pass.pdf_path = pdfResult.filePath;
-    } else {
-      console.error('Failed to generate PDF:', pdfResult.error);
-      pass.pdf_path = null; // Ensure pdf_path is null on failure
-    }
+    // Pass HOD's full details to the PDF service
+    // We are no longer saving PDF to disk, so we skip file writing
+    pass.qr_code_id = pass.qr_code_jwt; 
+    pass.one_time_pin = pass.verification_otp; 
+    pass.pdf_path = null; 
 
     await pass.save(); // Save the final updates
 
@@ -108,7 +104,7 @@ exports.approveSpecialPass = async (req, res) => {
       event_details: { 
         hodComment: hodComment, 
         otp: pass.verification_otp, // will be null for internal passes
-        pdfPath: pass.pdf_path, // will be null for internal passes
+        pdfPath: null, // will be null for internal passes
         requires_qr_scan: pass.requires_qr_scan 
       },
       timestamp: new Date()
@@ -127,7 +123,6 @@ exports.approveSpecialPass = async (req, res) => {
     if (pass.requires_qr_scan) {
       responsePayload.qrCodeJwt = pass.qr_code_jwt;
       responsePayload.otp = pass.verification_otp;
-      responsePayload.pdfPath = pass.pdf_path;
     }
 
     res.status(200).json(responsePayload);

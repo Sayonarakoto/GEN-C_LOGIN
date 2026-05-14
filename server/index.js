@@ -92,9 +92,21 @@ app.use('/api/qr-gatepass', require('./routes/qrGatePass'));
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      message: 'File too large. Max file size is 10MB.',
+    });
+  }
+  if (err && err.message && /not an image/i.test(err.message)) {
+    return res.status(400).json({
+      success: false,
+      message: err.message,
+    });
+  }
+  return res.status(500).json({
     success: false,
-    message: 'Something went wrong!'
+    message: 'Something went wrong!',
   });
 });
 

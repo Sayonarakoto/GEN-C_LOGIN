@@ -47,7 +47,7 @@ exports.updateStudentProfile = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Student not found.' });
         }
 
-        const allowedUpdates = ['fullName', 'year', 'email'];
+        const allowedUpdates = ['fullName', 'year', 'email', 'profilePictureUrl'];
         Object.keys(req.body).forEach(key => {
             if (allowedUpdates.includes(key)) {
                 if (key === 'email' && req.body[key]) {
@@ -159,77 +159,35 @@ exports.downloadStudentActivityReportPDF = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Forbidden: You are not authorized to download this student activity report.' });
         }
 
-        if (startDate && !dayjs(startDate).isValid()) {
-            return res.status(400).json({ success: false, message: 'Invalid start date format.' });
-        }
-        if (endDate && !dayjs(endDate).isValid()) {
-            return res.status(400).json({ success: false, message: 'Invalid end date format.' });
-        }
-
         const dateFilter = {};
-        if (startDate) {
-            dateFilter.$gte = dayjs(startDate).startOf('day').toDate();
-        }
-        if (endDate) {
-            dateFilter.$lte = dayjs(endDate).endOf('day').toDate();
-        }
+        if (startDate) dateFilter.$gte = dayjs(startDate).startOf('day').toDate();
+        if (endDate) dateFilter.$lte = dayjs(endDate).endOf('day').toDate();
 
-        // Special Passes
-        const specialPassesQuery = { student_id: studentId, status: 'Approved' };
-        if (Object.keys(dateFilter).length > 0) {
-            specialPassesQuery.approved_at = dateFilter;
-        }
-        const specialPasses = await SpecialPass.find(specialPassesQuery)
+        const specialPasses = await SpecialPass.find({ student_id: studentId, status: 'Approved', ...(Object.keys(dateFilter).length > 0 && { approved_at: dateFilter }) })
             .populate('hod_approver_id', 'fullName')
             .sort({ approved_at: -1 });
 
-        // Late Entries
-        const lateEntriesQuery = { studentId: studentId, status: 'Approved' };
-        if (Object.keys(dateFilter).length > 0) {
-            lateEntriesQuery.date = dateFilter;
-        }
-        const lateEntries = await LateEntry.find(lateEntriesQuery)
+        const lateEntries = await LateEntry.find({ studentId: studentId, status: 'Approved', ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }) })
             .populate('facultyId', 'fullName')
             .populate('HODId', 'fullName')
             .sort({ date: -1 });
 
-        // Gate Passes
-        const gatePassesQuery = { student_id: studentId, faculty_status: 'APPROVED', hod_status: 'APPROVED' };
-        if (Object.keys(dateFilter).length > 0) {
-            gatePassesQuery.createdAt = dateFilter;
-        }
-        const gatePasses = await GatePass.find(gatePassesQuery)
+        const gatePasses = await GatePass.find({ student_id: studentId, faculty_status: 'APPROVED', hod_status: 'APPROVED', ...(Object.keys(dateFilter).length > 0 && { createdAt: dateFilter }) })
             .populate('faculty_approver_id', 'fullName')
             .populate('hod_approver_id', 'fullName')
             .sort({ createdAt: -1 });
 
-        const reportData = {
-            specialPasses,
-            lateEntries,
-            gatePasses,
-        };
+        const reportData = { specialPasses, lateEntries, gatePasses };
+        const studentDetails = { fullName: student.fullName, studentId: student.studentId, department: student.department, year: student.year };
 
-        const studentDetails = {
-            fullName: student.fullName,
-            studentId: student.studentId,
-            department: student.department,
-            year: student.year,
-        };
+        const pdfBytes = await generateStudentActivityReportPDF(studentDetails, reportData, startDate, endDate);
 
-        const pdfPath = await generateStudentActivityReportPDF(studentDetails, reportData, startDate, endDate);
-
-        res.download(pdfPath, `Student_Activity_Report_${student.studentId}.pdf`, (err) => {
-            if (err) {
-                console.error('Error sending PDF:', { err, user: req.user.id });
-            }
-            // Optionally, delete the file after sending
-            fs.unlink(pdfPath, (unlinkErr) => {
-                if (unlinkErr) console.error('Error deleting PDF:', { unlinkErr, path: pdfPath });
-            });
-        });
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename="Activity_Report_${student.studentId}.pdf"`);
+        res.send(Buffer.from(pdfBytes));
 
     } catch (error) {
-        console.error('Error generating student activity report PDF:', { error, user: req.user.id, params: req.params });
+        console.error('Error generating student activity report PDF:', error);
         res.status(500).json({ success: false, message: 'Server error generating PDF.' });
     }
 };

@@ -18,6 +18,7 @@
     "@mui/icons-material": "^7.3.2",
     "@mui/material": "^7.3.2",
     "@mui/x-date-pickers": "^8.12.0",
+    "@vercel/blob": "^2.3.3",
     "axios": "^1.11.0",
     "bootstrap": "^5.3.8",
     "boxicons": "^2.1.4",

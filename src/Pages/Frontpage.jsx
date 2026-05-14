@@ -5,6 +5,10 @@ import { Button, Card } from "react-bootstrap";
 import Logo from '../components/common/Logo'; // Import the new Logo component
 import heroImage from '../assets/images/image.png';
 function Frontpage() {
+  const triggerPwaInstall = () => {
+    window.dispatchEvent(new Event('trigger-pwa-install'));
+  };
+
   return (
     <div
       className="d-flex flex-column min-vh-100 bg-light"
@@ -96,6 +100,17 @@ function Frontpage() {
           </Card>
         </div>
       </div>
+      
+      {/* Footer */}
+      <footer className="text-center p-3 mt-auto">
+        <Button 
+          variant="link" 
+          className="text-decoration-none text-muted" 
+          onClick={triggerPwaInstall}
+        >
+          <i className="bx bx-download me-1"></i> Install Webapp
+        </Button>
+      </footer>
     </div>
   );
 }

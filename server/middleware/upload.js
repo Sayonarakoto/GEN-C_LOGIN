@@ -12,7 +12,7 @@ const storage = multer.diskStorage({
 // Initialize upload
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 1000000 }, // 1MB limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
   // Removed fileFilter function
 }).single('profileImage');
 

@@ -246,7 +246,7 @@ const getStudentsByDepartment = async (req, res) => {
 
 const updateFacultyProfile = async (req, res) => {
   try {
-    const { fullName, designation, email } = req.body; // Removed 'profilePictureUrl'
+    const { fullName, designation, email, profilePhoto } = req.body;
     const faculty = await Faculty.findById(req.user.id);
 
     if (!faculty) {
@@ -254,10 +254,11 @@ const updateFacultyProfile = async (req, res) => {
     }
 
     faculty.fullName = fullName;
-    // faculty.department = department; // Removed this line
     faculty.designation = designation;
     faculty.email = email;
-    // faculty.profilePictureUrl = profilePictureUrl; // Removed this line
+    if (profilePhoto) {
+        faculty.profilePhoto = profilePhoto;
+    }
 
     await faculty.save();
 

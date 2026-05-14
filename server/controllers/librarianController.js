@@ -30,7 +30,7 @@ exports.uploadProfilePicture = async (req, res) => {
 // @access  Private (Librarian)
 exports.updateProfile = async (req, res) => {
     try {
-        const { fullName, email } = req.body;
+        const { fullName, email, profilePictureUrl } = req.body;
         const user = await User.findById(req.user.id);
 
         if (!user) {
@@ -39,6 +39,7 @@ exports.updateProfile = async (req, res) => {
 
         if (fullName) user.fullName = fullName;
         if (email) user.email = email;
+        if (profilePictureUrl) user.profilePictureUrl = profilePictureUrl;
 
         await user.save();
 

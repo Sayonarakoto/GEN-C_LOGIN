@@ -4,7 +4,7 @@ const userSocketMap = new Map();
 function init(server) {
   io = require('socket.io')(server, {
     cors: {
-      origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Allow specific frontend origins
+      origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://gen-c-group1.vercel.app'], // Allow local and production frontend
       credentials: true,
     }
   });

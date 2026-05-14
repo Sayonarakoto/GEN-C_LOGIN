@@ -1,6 +1,6 @@
 const crypto = require('crypto');
 // const nodemailer = require('nodemailer'); // Removed: Using mailer.js
-const bcrypt = require('bcrypt'); // For hashing new passwords
+const bcrypt = require('bcryptjs'); // For hashing new passwords
 const Student = require('../models/student'); // Our Student model
 const Faculty = require('../models/Faculty'); // Import Faculty model
 const Security = require('../models/security'); // Import Security model

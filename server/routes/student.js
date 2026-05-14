@@ -1,7 +1,6 @@
 const express = require("express");
 const router = express.Router();
 const Student = require("../models/student");
-const bcrypt = require("bcrypt");
 const { requireAuth, requireRole } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 const studentController = require('../controllers/studentController');

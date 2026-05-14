@@ -5,7 +5,7 @@ const GatePass = require('../models/GatePass');
 const dayjs = require('dayjs');
 const { generateStudentActivityReportPDF } = require('../services/pdfGenerationService');
 const fs = require('fs'); // Required for fs.unlink if you uncomment the deletion part
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 // Helper function for authorization
 function isAuthorizedForStudent(reqUser, student) {

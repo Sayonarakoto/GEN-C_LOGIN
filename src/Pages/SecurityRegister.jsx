@@ -45,7 +45,7 @@ const SecurityRegister = () => {
 
   return (
     <div className="auth-page-wrapper">
-      <div className="auth-container">
+      <div className="auth-container" style={{ maxWidth: '400px', width: '90%' }}>
         <h2 className="text-center mb-4">Security Register</h2>
         <Form onSubmit={onFinish}>
           <Form.Group className="mb-3">

@@ -57,7 +57,7 @@ const StudentRegister = () => {
 
   return (
     <div className="auth-page-wrapper">
-      <div className="auth-container">
+      <div className="auth-container" style={{ maxWidth: '400px', width: '90%' }}>
         <h2 className="text-center mb-4">Student Register</h2>
         <Form onSubmit={onFinish}>
           <Form.Group className="mb-3">
@@ -74,11 +74,26 @@ const StudentRegister = () => {
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Department</Form.Label>
-            <Form.Control type="text" value={department} onChange={(e) => setDepartment(e.target.value)} required />
+            <Form.Select value={department} onChange={(e) => setDepartment(e.target.value)} required>
+              <option value="">Select Department</option>
+              <option value="ct">CT</option>
+              <option value="mech-a">Mechanical-A</option>
+              <option value="mech-b">Mechanical-B</option>
+              <option value="eee">Electrical</option>
+              <option value="ce">Civil</option>
+              <option value="fs">FS</option>
+              <option value="auto">AUTOMOBILE</option>
+            </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Year</Form.Label>
-            <Form.Control type="text" value={year} onChange={(e) => setYear(e.target.value)} required />
+            <Form.Select value={year} onChange={(e) => setYear(e.target.value)} required>
+              <option value="">Select Year</option>
+              <option value="1">1st Year</option>
+              <option value="2">2nd Year</option>
+              <option value="3">3rd Year</option>
+              <option value="4">4th Year</option>
+            </Form.Select>
           </Form.Group>
           <Form.Group className="mb-3">
             <Form.Label>Password</Form.Label>

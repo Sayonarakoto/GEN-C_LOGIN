@@ -59,9 +59,16 @@ function Frontpage() {
               </Link>
 
               {/* Librarian */}
-              <Link to="/librarian-login">
+              <Link to="/library">
                 <Button variant="info" size="lg" className="w-100 text-white">
                   Librarian Login
+                </Button>
+              </Link>
+
+              {/* Student Register */}
+              <Link to="/student-register">
+                <Button size="lg" className="w-100 bg-light text-dark fw-bold">
+                  Student Register
                 </Button>
               </Link>
 
@@ -72,8 +79,15 @@ function Frontpage() {
                 </Button>
               </Link>
 
+              {/* Security Register */}
+              <Link to="/security-register">
+                <Button size="lg" className="w-100 bg-light text-dark fw-bold">
+                  Security Register
+                </Button>
+              </Link>
+
               {/* Librarian Register */}
-              <Link to="/librarian-register">
+              <Link to="/library">
                 <Button size="lg" className="w-100 bg-light text-dark fw-bold">
                   Librarian Register
                 </Button>

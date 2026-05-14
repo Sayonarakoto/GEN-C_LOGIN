@@ -31,7 +31,7 @@ socketManager.init(server);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173'], // Allow your frontend origins
+  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://gen-c-group1.vercel.app'], // Allow local and production frontend
   credentials: true,
 }));
 app.use((req, res, next) => {

@@ -1,5 +1,5 @@
 const { generateToken } = require('../config/jwt');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const Faculty = require('../models/Faculty');
 const Student = require('../models/student');
 const Security = require('../models/security');
@@ -62,6 +62,44 @@ exports.register = async (req, res) => {
     console.error('Faculty registration error:', error);
     res.status(500).json({ success: false, message: 'Server error during registration.' });
   }
+};
+
+exports.studentRegister = async (req, res) => {
+    try {
+        const { studentId, fullName, email, department, year, password } = req.body;
+        if (!studentId || !fullName || !email || !department || !year || !password) {
+            return res.status(400).json({ success: false, message: 'All fields are required' });
+        }
+        const existingStudent = await Student.findOne({ studentId });
+        if (existingStudent) {
+            return res.status(400).json({ success: false, message: 'Student with this ID already exists' });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const student = await Student.create({ studentId, fullName, email, department, year, password: hashedPassword });
+        res.status(201).json({ success: true, message: 'Student registered successfully' });
+    } catch (error) {
+        console.error('Student registration error:', error);
+        res.status(500).json({ success: false, message: 'Server error during registration' });
+    }
+};
+
+exports.securityRegister = async (req, res) => {
+    try {
+        const { name, securityId, passkey } = req.body;
+        if (!name || !securityId || !passkey || passkey.length !== 6) {
+            return res.status(400).json({ success: false, message: 'Name, Security ID, and a 6-digit passkey are required' });
+        }
+        const existingSecurity = await Security.findOne({ securityId });
+        if (existingSecurity) {
+            return res.status(400).json({ success: false, message: 'Security user with this ID already exists' });
+        }
+        // passkey is hashed in model pre-save hook
+        const security = await Security.create({ name, securityId, passkey });
+        res.status(201).json({ success: true, message: 'Security user registered successfully' });
+    } catch (error) {
+        console.error('Security registration error:', error);
+        res.status(500).json({ success: false, message: 'Server error during registration' });
+    }
 };
 
 // ----------------- LOGIN -----------------

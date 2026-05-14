@@ -1,29 +1,37 @@
 const mongoose = require('mongoose');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 
 const securitySchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: [true, 'Name is required'],
+  },
+  securityId: {
+    type: String,
+    required: [true, 'Security ID is required'],
+    unique: true,
+  },
   passkey: {
     type: String,
     required: [true, 'Passkey is required'],
+    minlength: 6,
+    maxlength: 6,
   },
   resetPasswordToken: String,
   resetPasswordExpire: Date,
 });
-// This pre-save hook will hash the passkey before it is saved to the database.
-// This is a crucial security practice to protect sensitive user data.
+
+// Pre-save hook to hash the 6-digit passkey
 securitySchema.pre('save', async function(next) {
-  // Only hash the passkey if it has been modified (or is new)
   if (!this.isModified('passkey')) {
     return next();
   }
   try {
-    // Generate a salt with a work factor of 10
     const salt = await bcrypt.genSalt(10);
-    // Hash the plain-text passkey with the salt
     this.passkey = await bcrypt.hash(this.passkey, salt);
     next();
   } catch (error) {
-    next(error); // Pass any errors to the next middleware
+    next(error);
   }
 });
 

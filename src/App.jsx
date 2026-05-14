@@ -1,6 +1,6 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Frontpage from './Pages/Frontpage';
@@ -14,8 +14,9 @@ import SecurityLogin from './Pages/SecurityLogin';
 import SecurityDashboard from './Dashboards/SecurityDashboard';
 import ForgotPassword from './Pages/ForgotPassword';
 import ResetPassword from './Pages/ResetPassword';
-import LibrarianLogin from './Pages/LibrarianLogin';
-import LibrarianRegister from './Pages/LibrarianRegister';
+import ComingSoon from './Pages/ComingSoon';
+import StudentRegister from './Pages/StudentRegister';
+import SecurityRegister from './Pages/SecurityRegister';
 import LibrarianDashboard from './Dashboards/LibrarianDashboard';
 import InterceptorWrapper from './components/InterceptorWrapper';
 import { useAuth } from './hooks/useAuth';
@@ -29,6 +30,7 @@ import DeclinedRequestDetails from './student/DeclinedRequestDetails';
 import LibraryActivationRequestForm from './components/common/LibraryActivationRequestForm';
 import { NotificationProvider } from './context/NotificationContext';
 import BookBorrowRequest from './student/BookBorrowRequest';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 // Create a component to hold the main Routes logic
 const MainRoutes = () => {
@@ -40,12 +42,16 @@ const MainRoutes = () => {
       <Route path="/student-login" element={<StudentLogin />} />
       <Route path="/security-login" element={<SecurityLogin />} />
       <Route path="/faculty-register" element={<FacultyRegister />} />
-      <Route path="/librarian-register" element={<LibrarianRegister />} />
+      <Route path="/student-register" element={<StudentRegister />} />
+      <Route path="/security-register" element={<SecurityRegister />} />
+      <Route path="/librarian-register" element={<Navigate to="/library" replace />} />
       <Route path="/signin" element={<StudentLogin />} />
       <Route path="/unauthorized" element={<ErrorPage title="Access Denied" subTitle="You do not have permission to view this page. Please log in with an authorized account." />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
-      <Route path="/librarian-login" element={<LibrarianLogin />} />
+      <Route path="/librarian-login" element={<Navigate to="/library" replace />} />
+      <Route path="/library" element={<ComingSoon />} />
+      <Route path="/librarian" element={<ComingSoon />} />
 
       {/* Protected Routes */}
       <Route element={<ProtectedRoute allowedRoles={['FACULTY', 'HOD']} />}>
@@ -102,6 +108,7 @@ function App() {
           <MainRoutes />
         </InterceptorWrapper>
       </NotificationProvider>
+      <PWAInstallPrompt />
     </>
   );
 }

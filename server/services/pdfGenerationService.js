@@ -89,22 +89,38 @@ async function generateWatermarkedPDF(passData, hodName, hodDepartment = 'N/A') 
     
     if (photoPath) {
         try {
-            let relativePath = photoPath.startsWith('/') ? photoPath.slice(1) : photoPath;
-            relativePath = relativePath.replace(/^(server|src)[\/]/, '');
-            const fullPath = path.join(__dirname, '..', relativePath);
-            if (fs.existsSync(fullPath)) {
-                const imageBytes = fs.readFileSync(fullPath);
-                const isPng = fullPath.toLowerCase().endsWith('.png');
-                const profileImage = isPng ? await pdfDoc.embedPng(imageBytes) : await pdfDoc.embedJpg(imageBytes);
+            let profileImage;
+            
+            // Check if photoPath is a URL (Blob storage) or a local file path
+            if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+                const response = await fetch(photoPath);
+                if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+                const imageBytes = await response.arrayBuffer();
                 
-                page.drawImage(profileImage, {
-                    x: 50,
-                    y: contentStartY - 120,
-                    width: 120,
-                    height: 120,
-                });
-                photoAdded = true;
+                // Infer type from URL or default to JPG
+                const isPng = photoPath.toLowerCase().endsWith('.png');
+                profileImage = isPng ? await pdfDoc.embedPng(imageBytes) : await pdfDoc.embedJpg(imageBytes);
+            } else {
+                // Legacy local path
+                let relativePath = photoPath.startsWith('/') ? photoPath.slice(1) : photoPath;
+                relativePath = relativePath.replace(/^(server|src)[\/]/, '');
+                const fullPath = path.join(__dirname, '..', relativePath);
+                if (fs.existsSync(fullPath)) {
+                    const imageBytes = fs.readFileSync(fullPath);
+                    const isPng = fullPath.toLowerCase().endsWith('.png');
+                    profileImage = isPng ? await pdfDoc.embedPng(imageBytes) : await pdfDoc.embedJpg(imageBytes);
+                } else {
+                    throw new Error("Local file not found");
+                }
             }
+
+            page.drawImage(profileImage, {
+                x: 50,
+                y: contentStartY - 120,
+                width: 120,
+                height: 120,
+            });
+            photoAdded = true;
         } catch (e) {
             console.error("Error embedding photo:", e);
         }

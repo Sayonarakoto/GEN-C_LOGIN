@@ -36,25 +36,38 @@ const Register = () => {
 
       setLoading(true);
 
-      const formData = new FormData();
-      formData.append('fullName', fullName);
-      formData.append('email', email);
-      formData.append('employeeId', employeeId);
-      formData.append('department', department);
-      formData.append('designation', designation);
-      formData.append('password', password);
+      let profilePhotoUrl = null;
 
-      // Check file size before upload
+      // Upload profile photo to blob storage first
       if (profilePhoto) {
         const file = profilePhoto;
         if (file.size > 5 * 1024 * 1024) { // 5MB limit
           throw new Error('Profile photo must be smaller than 5MB');
         }
-        formData.append('profilePhoto', file);
+        
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        const blobResponse = await api.post('/api/blob/profile-picture-upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        
+        if (blobResponse.data && blobResponse.data.url) {
+            profilePhotoUrl = blobResponse.data.url;
+        } else {
+            throw new Error('Failed to upload profile photo');
+        }
       }
 
-      const response = await api.post('/auth/register', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      // Submit registration data
+      const response = await api.post('/auth/register', {
+        fullName,
+        email,
+        employeeId,
+        department,
+        designation,
+        password,
+        profilePhoto: profilePhotoUrl
       });
 
       if (response.data.success) {

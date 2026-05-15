@@ -92,3 +92,75 @@ exports.verifyGatePassWithOtp = async (req, res) => {
         res.status(500).json({ message: 'Server error during gate pass verification.' });
     }
 };
+
+exports.verifyQrPass = async (req, res) => {
+    const { qr_token } = req.body;
+
+    if (!qr_token) {
+        return res.status(400).json({ message: 'QR token is required.' });
+    }
+
+    try {
+        if (!mongoose.Types.ObjectId.isValid(qr_token)) {
+             return res.status(400).json({ message: 'Invalid QR token format.' });
+        }
+
+        const qrData = await GatePassQR.findById(qr_token);
+
+        if (!qrData) {
+            await auditService.logAuditAttempt(qr_token, 'Verified', req.user, 'Pass Not Found');
+            return res.status(404).json({ message: 'No active gate pass found for the provided ID.' });
+        }
+
+        if (qrData.status !== 'active') {
+            await auditService.logAuditAttempt(qrData.gatepass, 'Verified', req.user, 'Invalid Status', { status: qrData.status });
+            return res.status(400).json({ message: `Pass is not active. Current status: ${qrData.status}` });
+        }
+
+        const gatePass = await GatePass.findById(qrData.gatepass);
+
+        if (!gatePass) {
+            await auditService.logAuditAttempt(qrData.gatepass, 'Verified', req.user, 'Associated Pass Not Found');
+            return res.status(404).json({ message: 'Associated gate pass not found.' });
+        }
+
+        if (gatePass.hod_status !== 'APPROVED') {
+            await auditService.logAuditAttempt(gatePass._id, 'Verified', req.user, 'Pass Not Approved', { status: gatePass.hod_status });
+            return res.status(400).json({ message: `Gate pass is not approved. Current status: ${gatePass.hod_status}` });
+        }
+
+        // All checks passed. Update statuses.
+        qrData.status = 'used';
+        await qrData.save();
+
+        gatePass.hod_status = 'USED';
+        await gatePass.save();
+
+        const student = await Student.findById(gatePass.student_id, 'fullName studentId');
+
+        await auditService.logAuditAttempt(gatePass._id, 'Verified', req.user, 'Success', {
+            student_name: student.fullName,
+            student_id: student.studentId
+        });
+
+        res.status(200).json({
+            message: 'Gate pass verified successfully.',
+            is_valid: true,
+            display_status: "VERIFICATION SUCCESS",
+            pass_details: {
+                pass_type: 'Gate Pass',
+                status: gatePass.hod_status,
+                student_name: student ? student.fullName : 'N/A',
+                student_id: student ? student.studentId : 'N/A',
+                date_valid_to: gatePass.date_valid_to
+            }
+        });
+
+    } catch (error) {
+        console.error('Error verifying gate pass with QR:', error);
+        if (req.user) {
+            await auditService.logAuditAttempt(qr_token, 'Verified', req.user, 'Server Error', { error: error.message });
+        }
+        res.status(500).json({ message: 'Server error during gate pass verification.' });
+    }
+};

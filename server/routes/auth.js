@@ -44,7 +44,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // ---------------- Student Auth ----------------
 router.post("/signin", authController.studentLogin);  // This is the actual endpoint
-router.post("/register", upload.single('profilePhoto'), authController.register); // Faculty registration
+router.post("/register", authController.register); // Faculty registration
 router.post("/register/student", authController.studentRegister);
 router.post("/register/security", authController.securityRegister);
 

@@ -6,5 +6,7 @@ const qrGatePassController = require('../controllers/qrGatePassController');
 
 // Route for security to verify a gate pass with OTP
 router.post('/verify-otp', requireAuth, requireSecurity, qrGatePassController.verifyGatePassWithOtp);
+// Route for security to verify a gate pass with QR
+router.post('/verify-qr', requireAuth, requireSecurity, qrGatePassController.verifyQrPass);
 
 module.exports = router;

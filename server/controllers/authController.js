@@ -8,8 +8,14 @@ const User = require('../models/User');
 // ----------------- REGISTER -----------------
 exports.register = async (req, res) => {
   try {
-    const { fullName, email, employeeId, department, designation, password } = req.body;
-    const profilePhotoPath = req.file ? `/uploads/profile-pictures/${req.file.filename}` : null; // Save web-accessible path
+    console.log('Registering faculty:', req.body);
+
+    const { fullName, email, employeeId, department, designation, password, profilePhoto } = req.body;
+    
+    // Validate required fields
+    if (!fullName || !email || !employeeId || !department || !designation || !password) {
+        return res.status(400).json({ success: false, message: 'All fields are required.' });
+    }
 
     // Check if faculty already exists
     let faculty = await Faculty.findOne({ employeeId });
@@ -19,7 +25,7 @@ exports.register = async (req, res) => {
 
     // Validate department against a predefined list
     const validDepartments = ["ct", "mech-a", "mech-b", "eee", "ce", "fs", "auto"];
-    if (!validDepartments.includes(department.toLowerCase())) {
+    if (!department || !validDepartments.includes(department.toLowerCase())) {
       return res.status(400).json({ success: false, message: 'Invalid department provided.' });
     }
 
@@ -38,7 +44,7 @@ exports.register = async (req, res) => {
       department,
       designation,
       password: hashedPassword,
-      profilePhoto: profilePhotoPath, // Save the profile photo path
+      profilePhoto: profilePhoto, // Save the profile photo URL/path
     });
 
     await faculty.save();
@@ -60,7 +66,7 @@ exports.register = async (req, res) => {
 
   } catch (error) {
     console.error('Faculty registration error:', error);
-    res.status(500).json({ success: false, message: 'Server error during registration.' });
+    res.status(500).json({ success: false, message: `Server error during registration: ${error.message}` });
   }
 };
 

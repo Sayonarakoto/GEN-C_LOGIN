@@ -32,7 +32,6 @@ import {
     Badge as BadgeIcon, 
     ReportProblem, 
     Notifications,
-    Search,
     Download,
     Logout,
     Person
@@ -47,6 +46,7 @@ import {
     Tooltip, 
     ResponsiveContainer 
 } from 'recharts';
+import { resolveProfileImageUrl } from '../utils/resolveProfileImageUrl';
 
 const drawerWidth = 240;
 
@@ -155,12 +155,7 @@ const LibrarianDashboard = () => {
                         <Typography variant="body2" color="text.secondary">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</Typography>
                         <Notifications color="action" />
                         <Avatar 
-                            src={(() => {
-                                const path = user?.profilePictureUrl;
-                                if (!path) return undefined;
-                                const normalized = path.replace(/\\/g, '/');
-                                return `http://localhost:3001${normalized.startsWith('/') ? '' : '/'}${normalized.replace('/static/uploads', '/uploads')}`;
-                            })()}
+                            src={user?.profilePictureUrl ? resolveProfileImageUrl(user.profilePictureUrl) : undefined}
                             alt={user?.fullName || 'Librarian'}
                             sx={{ width: 32, height: 32, bgcolor: 'primary.main', cursor: 'pointer' }}
                             onClick={() => setCurrentView('profile')}

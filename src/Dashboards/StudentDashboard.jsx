@@ -30,6 +30,7 @@ import useToastService from '../hooks/useToastService';
 import api from '../api/client';
 import { useNotifications } from '../context/NotificationContext';
 import NotificationList from '../components/NotificationList';
+import { resolveProfileImageUrl } from '../utils/resolveProfileImageUrl';
 
 import './Dashboard.css';
 
@@ -259,7 +260,7 @@ export const DashboardHome = () => {
       <Row className="align-items-center mb-4">
         <Col xs="auto">
           <Avatar
-            src={user?.profilePictureUrl ? `http://localhost:3001${user.profilePictureUrl.startsWith('/') ? '' : '/'}${user.profilePictureUrl.replace('/static/uploads', '/uploads')}` : undefined}
+            src={user?.profilePictureUrl ? resolveProfileImageUrl(user.profilePictureUrl) : undefined}
             alt={user?.fullName ? user.fullName.charAt(0).toUpperCase() : ''}
             imgProps={{ onError: (e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150'; } }}
             sx={{ width: 80, height: 80, border: `2.5px solid var(--primary-color)`, cursor: 'pointer' }}

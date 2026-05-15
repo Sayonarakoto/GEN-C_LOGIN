@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Container, Row, Col, Nav, Offcanvas } from "react-bootstrap";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'boxicons/css/boxicons.min.css'; 
-// Removed unused import 'io' from 'socket.io-client'
 import {
   Box,
   Typography,
@@ -28,6 +27,7 @@ import FacultyProfile from "../faculty/FacultyProfile";
 import LibraryActivationRequestForm from "../components/common/LibraryActivationRequestForm";
 import { useNotifications } from '../context/NotificationContext';
 import NotificationList from '../components/NotificationList';
+import { resolveProfileImageUrl } from '../utils/resolveProfileImageUrl';
 
 const FacultyDashboard = () => {
   const [selectedKey, setSelectedKey] = useState("approvals");
@@ -203,12 +203,7 @@ const FacultyDashboard = () => {
               <NotificationList onClose={handleNotificationClose} />
             </Popover>
             <Avatar
-              src={(() => {
-                const path = user?.profilePhoto || user?.profilePictureUrl;
-                if (!path) return undefined;
-                const normalized = path.replace(/\\/g, '/');
-                return `http://localhost:3001${normalized.startsWith('/') ? '' : '/'}${normalized.replace('/static/uploads', '/uploads')}`;
-              })()}
+              src={user?.profilePhoto || user?.profilePictureUrl ? resolveProfileImageUrl(user.profilePhoto || user.profilePictureUrl) : undefined}
               alt={user?.fullName?.charAt(0).toUpperCase() || ''}
               imgProps={{ onError: (e) => { e.target.onerror = null; e.target.src = 'https://via.placeholder.com/150'; } }}
               sx={{ width: 32, height: 32, cursor: 'pointer' }}
@@ -233,27 +228,6 @@ const FacultyDashboard = () => {
             {renderContent()}
           </Card>
         </Container>
-
-        {/* Mobile Footer Navbar */}
-        <Box sx={{
-          display: { xs: "flex", md: "none" },
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          bgcolor: "white",
-          borderTop: "1px solid #e5e7eb",
-          justifyContent: "space-around",
-          py: 1.5
-        }}>
-          <FooterNavItem icon="dashboard" text="Dashboard" active={selectedKey === 'approvals'} onClick={() => handleMenuClick('approvals')} />
-          <FooterNavItem icon="check-circle" text="Approvals" active={selectedKey === 'approvals'} onClick={() => handleMenuClick('approvals')} />
-          <FooterNavItem icon="group" text="Students" active={selectedKey === 'manageStudents'} onClick={() => handleMenuClick('manageStudents')} />
-          <FooterNavItem icon="ticket" text="Special Passes" active={selectedKey === 'specialPasses'} onClick={() => handleMenuClick('specialPasses')} />
-          <FooterNavItem icon="list-ul" text="Audit" active={selectedKey === 'auditLogs'} onClick={() => handleMenuClick('auditLogs')} />
-          <FooterNavItem icon="user" text="Profile" active={selectedKey === 'profile'} onClick={() => handleMenuClick('profile')} />
-          <FooterNavItem icon="log-out" text="Logout" onClick={() => handleMenuClick('logout')} />
-        </Box>
       </Box>
 
       {/* Offcanvas Sidebar */}
@@ -284,23 +258,5 @@ const FacultyDashboard = () => {
     </Box>
   );
 };
-
-
-const FooterNavItem = ({ icon, text, active, onClick }) => (
-  <Box
-    onClick={onClick}
-    sx={{
-      display: "flex", flexDirection: "column", alignItems: "center", gap: 0.5,
-      color: active ? "#3b82f6" : "#6b7280",
-      cursor: "pointer",
-      '&:hover': {
-        color: "#3b82f6",
-      }
-    }}
-  >
-    <i className={`bx bx-${icon}`} style={{ fontSize: 24, fontVariationSettings: active ? "'FILL' 1" : undefined }} />
-    <Typography sx={{ fontSize: 13, fontWeight: 400 }}>{text}</Typography>
-  </Box>
-);
 
 export default FacultyDashboard;

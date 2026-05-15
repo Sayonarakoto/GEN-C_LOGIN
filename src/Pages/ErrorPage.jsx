@@ -1,93 +1,57 @@
-import React, { useState } from "react";
-import { Button, Card } from "react-bootstrap"; // Import Bootstrap Button and Card
-import { useNavigate } from 'react-router-dom'; // Import useNavigate
+import React from "react";
+import { Button, Card } from "react-bootstrap";
+import { useNavigate } from 'react-router-dom';
 
-// Use the local cat image
-const catImageUrl = `${import.meta.env.BASE_URL}images/cat-error.jpg`; 
+// Use a root-relative path for public assets
+const catImageUrl = '/images/cat-error.jpg'; 
 
-export default function ErrorPage({ title = "Lost in the Digital Woods?", subTitle = "Don't worry, we'll help you find your way back." }) {
-  const [showSecret, setShowSecret] = useState(false);
-  const [btnHover, setBtnHover] = useState(false);
-  const [buttonText, setButtonText] = useState("Return to Safety");
-  const navigate = useNavigate(); // Initialize useNavigate
-
-
+export default function ErrorPage({ 
+  title = "404 - Page Not Found", 
+  subTitle = "Oops! The page you're looking for doesn't exist or has been moved." 
+}) {
+  const navigate = useNavigate();
 
   const handleButtonClick = () => {
     navigate('/');
   };
 
   return (
-    <div className="error-page-main-bg" style={{ width: '100vw' }}>
-      <Card className="error-page-card-bg mx-auto my-5 p-4 position-relative w-100">
-        <Card.Body className="p-0"> {/* Use Card.Body for padding */}
-          <div style={{ height: 80 }} />
-          <h2 style={{ color: "#00e1ff", textAlign: "center", marginBottom: 16 }}>
+    <div className="error-page-main-bg" style={{ width: '100vw', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Card className="error-page-card-bg mx-auto p-4 position-relative" style={{ maxWidth: '500px', width: '100%' }}>
+        <Card.Body className="p-0 text-center">
+          <h2 style={{ color: "#00e1ff", marginBottom: 16 }}>
             {title}
           </h2>
-          <p style={{ display: "block", color: "#a0a0a0", textAlign: "center", marginBottom: 30 }}>
-            {subTitle} <br />
-            Try clicking around to see if you can uncover the path.
+          <p style={{ color: "#a0a0a0", marginBottom: 30 }}>
+            {subTitle}
           </p>
 
-          <div className="error-page-card-bg" style={{
-            position: "relative",
-            minHeight: 260,
-            maxWidth: 400,
-            margin: "0 auto",
+          <div style={{
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
             justifyContent: "center",
           }}>
-            {/* Removed orbPulseStyle divs */}
-
-            <div style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
-              <img
-                src={catImageUrl}
-                alt="Curious Cat"
-                style={{ width: '150px', height: '150px', borderRadius: '50%', objectFit: 'cover', cursor: 'pointer' }}
-                onMouseEnter={() => setBtnHover(true)}
-                onMouseLeave={() => setBtnHover(false)}
-                onClick={() => {
-                  setShowSecret(true);
-                  setButtonText("Follow the Path");
-                }}
-                tabIndex={0}
-                role="button"
-                aria-label="Click to reveal secret path"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    setShowSecret(true);
-                    setButtonText("Follow the Path");
-                  }
-                }}
-              />
-
-              <p style={{ color: "#fff", fontSize: 24, fontWeight: 600 }}>Meow! Click the Cat!</p>
-              <p style={{ color: "#cbd5e1", fontSize: 14, marginTop: 10 }}>A secret path awaits...</p>
-              {showSecret && (
-                <p className="secret-message">You found a secret path! This way to the homepage!</p>
-              )}
-            </div>
-            <Button
-              onClick={handleButtonClick}
-              style={{
-                marginTop: 20,
-                padding: "10px 20px",
-                borderRadius: 20,
-                background: btnHover ? "linear-gradient(to right, #00c6ff, #0072ff)" : "#00e1ff",
-                color: "#1a1a1a",
-                border: "none",
-                cursor: "pointer",
-                transition: "background 0.3s",
-              }}
-              onMouseEnter={() => setBtnHover(true)}
-              onMouseLeave={() => setBtnHover(false)}
-            >
-              <span style={{ whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{buttonText}</span>
-            </Button>
+            <img
+              src={catImageUrl}
+              alt="Curious Cat"
+              style={{ width: '150px', height: '150px', borderRadius: '50%', objectFit: 'cover', marginBottom: '20px' }}
+            />
           </div>
+          
+          <Button
+            onClick={handleButtonClick}
+            style={{
+              padding: "10px 20px",
+              borderRadius: 20,
+              background: "#00e1ff",
+              color: "#1a1a1a",
+              border: "none",
+              transition: "background 0.3s",
+            }}
+          >
+            Go to Homepage
+          </Button>
         </Card.Body>
       </Card>
     </div>

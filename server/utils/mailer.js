@@ -1,19 +1,23 @@
-const fs = require('fs').promises; // Import fs.promises for async file reading
-const path = require('path'); // Import path for resolving file paths
+const fs = require('fs').promises;
+const path = require('path');
+const nodemailer = require('nodemailer');
 
-// ... (rest of the existing code)
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS,
+  },
+});
 
 async function sendResetEmail(to, resetUrl) {
   let htmlContent;
   try {
-    // Read the HTML template file asynchronously
     const templatePath = path.join(__dirname, '..', 'views', 'resetPasswordEmail.html');
     htmlContent = await fs.readFile(templatePath, 'utf8');
-    // Replace the placeholder with the actual reset URL
     htmlContent = htmlContent.replace('{{resetUrl}}', resetUrl);
   } catch (error) {
     console.error("❌ Error reading or processing email template:", error);
-    // Fallback to a plain text version or throw an error if template is critical
     htmlContent = `
       <p>Hello,</p>
       <p>You requested to reset your Paperless Campus account password.</p>
@@ -25,10 +29,10 @@ async function sendResetEmail(to, resetUrl) {
   }
 
   const mailOptions = {
-    from: FROM_EMAIL,
+    from: process.env.FROM_EMAIL,
     to,
     subject: "Password Reset Request - Paperless Campus",
-    html: htmlContent, // Use the read and processed HTML content
+    html: htmlContent,
   };
 
   try {

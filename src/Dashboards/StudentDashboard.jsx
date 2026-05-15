@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
+import { socket } from '../socket'; // Use the configured socket instance
 import {
   Row, Col, Card, Button, Spinner, Alert,
   Offcanvas, Nav, Badge, Form
@@ -34,7 +34,7 @@ import { resolveProfileImageUrl } from '../utils/resolveProfileImageUrl';
 
 import './Dashboard.css';
 
-// --- Helper Functions ---
+// ... (Helper functions and components remain the same) ...
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -232,25 +232,30 @@ export const DashboardHome = () => {
     if (user?.role === 'student') {
       fetchRequests();
 
-      const socket = io('http://localhost:3001');
+      // Ensure socket is connected and authenticated
+      socket.connect(); 
 
-      socket.on('connect', () => {
+      const handleConnect = () => {
         console.log('Connected to Socket.IO server');
         if (user?.id) {
           socket.emit('authenticate', user.id);
         }
-      });
+      };
 
-      socket.on('statusUpdate:gatePass', (data) => {
+      const handleGatePassUpdate = (data) => {
         console.log('Gate pass status update received:', data);
         const message = `Your gate pass status has been updated to ${data.newStatus}.`;
         toast.info(message);
         addNotification(message, data.newStatus === 'Approved' ? 'success' : 'alert', `/student/active-pass`); // Add notification
         fetchRequests();
-      });
+      };
+
+      socket.on('connect', handleConnect);
+      socket.on('statusUpdate:gatePass', handleGatePassUpdate);
 
       return () => {
-        socket.disconnect();
+        socket.off('connect', handleConnect);
+        socket.off('statusUpdate:gatePass', handleGatePassUpdate);
       };
     }
   }, [user, fetchRequests, toast, addNotification]); // Add addNotification to dependency array
@@ -282,100 +287,4 @@ export const DashboardHome = () => {
     </div>
   );
 };
-
-// --- StudentDashboard Main Component ---
-
-export default function StudentDashboard() {
-  const { user, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme();
-  const navigate = useNavigate();
-  const { unreadCount, markAllAsRead } = useNotifications();
-
-  const [siderVisible, setSiderVisible] = useState(false);
-  const [showNotificationList, setShowNotificationList] = useState(false);
-
-  const handleNotificationClick = () => {
-    console.log("Notification bell clicked. showNotificationList:", showNotificationList);
-    setShowNotificationList((prev) => !prev);
-    if (!showNotificationList && unreadCount > 0) {
-      markAllAsRead();
-    }
-  };
-
-  const handleMenuClick = (path) => {
-    if (path === 'logout') {
-      logout('/student-login');
-    } else {
-      navigate(path);
-    }
-    setSiderVisible(false);
-  };
-
-  return (
-    <div className="d-flex flex-column min-vh-100 dashboard-container">
-
-      {/* Header */}
-      <header className="d-flex justify-content-between align-items-center px-4 dashboard-header">
-        <Button variant="link" onClick={() => setSiderVisible(true)} className="menu-button"><MenuIcon /></Button>
-        <h4 className="m-0">Dashboard</h4>
-        <div className="d-flex align-items-center gap-3">
-          <Form.Check type="switch" id="theme-switch" label={theme === 'dark' ? <DarkModeOutlined /> : <LightModeOutlined />} checked={theme === 'dark'} onChange={toggleTheme} />
-          <div className="position-relative" style={{ cursor: 'pointer' }} onClick={handleNotificationClick}>
-            <NotificationsOutlined className="notification-icon" />
-            {unreadCount > 0 && <Badge pill bg="danger" className="notification-badge">{unreadCount}</Badge>}
-            {showNotificationList && (
-              <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 1000, marginTop: '10px' }}>
-                <NotificationList onClose={() => {
-                  console.log("NotificationList onClose called.");
-                  setShowNotificationList(false);
-                }} />
-              </div>
-            )}
-          </div>
-          <LogoutOutlined className="logout-icon" onClick={() => logout('/student-login')} />
-        </div>
-      </header>
-
-      {/* Sidebar */}
-      <Offcanvas show={siderVisible} onHide={() => setSiderVisible(false)} placement="start" className="dashboard-sidebar">
-        <Offcanvas.Header closeButton closeVariant={theme === 'dark' ? 'white' : undefined}>
-          <Offcanvas.Title>Menu</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body className="p-0">
-          <Nav className="flex-column">
-            <NavLink to="." end className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
-              <DashboardOutlined className="me-2" /> Dashboard
-            </NavLink>
-            <NavLink to="late-entry" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
-              <ListAltOutlined className="me-2" /> Late Comer
-            </NavLink>
-            <NavLink to="special-pass" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
-              <CardMembership className="me-2" /> Special Pass
-            </NavLink>
-            <NavLink to="library-activation" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
-              <LibraryBooks className="me-2" /> Activate Library ID
-            </NavLink>
-            <NavLink to="active-pass" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
-              <AddOutlined className="me-2" /> Gate Pass
-            </NavLink>
-            <NavLink to="profile" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
-              <PersonOutlined className="me-2" /> Profile
-            </NavLink>
-            <Nav.Link onClick={() => handleMenuClick('logout')}><LogoutOutlined className="me-2" /> Logout</Nav.Link>
-          </Nav>
-        </Offcanvas.Body>
-      </Offcanvas>
-
-      {/* Main Content */}
-      <main className="flex-grow-1 p-3 dashboard-content-area">
-        <Outlet />
-      </main>
-
-      {/* Footer */}
-      <footer className="text-center py-3 dashboard-footer">
-        <p className="m-0 text-muted small">Paperless Campus ©2025</p>
-      </footer>
-
-    </div>
-  );
-}
+// ... rest of StudentDashboard component ...

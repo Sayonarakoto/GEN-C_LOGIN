@@ -16,10 +16,8 @@ import {
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { io } from 'socket.io-client';
+import { socket } from '../../socket'; // Use the configured socket instance
 import api from '../../api/client'; // Import api client
-
-const socket = io('http://localhost:3001');
 
 const LiveBorrowingTable = () => {
     const [borrowings, setBorrowings] = useState([]);
@@ -43,18 +41,23 @@ const LiveBorrowingTable = () => {
 
     useEffect(() => {
         fetchBorrowings();
-        
-        socket.on('newBorrowing', (newRecord) => {
+
+        // Ensure socket is connected
+        socket.connect();
+
+        const handleNewBorrowing = (newRecord) => {
             setNotification(`New book issued: ${newRecord.bookTitle}`);
             setBorrowings(prev => [newRecord, ...prev]);
             setTimeout(() => setNotification(null), 3000);
-        });
+        };
+
+        socket.on('newBorrowing', handleNewBorrowing);
 
         return () => {
-            socket.off('newBorrowing');
+            socket.off('newBorrowing', handleNewBorrowing);
         };
     }, [fetchBorrowings]);
-
+// ... rest of the file ...
     const handleSearch = (event) => {
         setSearchText(event.target.value);
     };

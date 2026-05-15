@@ -25,11 +25,10 @@ import {
     Tooltip
 } from '@mui/material';
 import { Close, Visibility, CheckCircle, Cancel, AccessTime, Search, FilterList, WarningAmber, Check } from '@mui/icons-material';
-import { io } from 'socket.io-client';
 import api from '../../api/client';
-
-const socket = io('http://localhost:3001');
-
+import { socket } from '../../socket';
+import { resolveProfileImageUrl } from '../../utils/resolveProfileImageUrl';
+    
 const PendingPasses = () => {
     const [passes, setPasses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -57,6 +56,9 @@ const PendingPasses = () => {
 
     useEffect(() => {
         fetchPendingPasses();
+
+        // Ensure the global socket is connected for real-time updates
+        socket.connect();
 
         const handleNewPassRequest = (newPass) => {
             setNotification({ type: 'info', message: `New Library Pass Request from ${newPass.requester?.fullName || 'a user'}!` });
@@ -98,7 +100,7 @@ const PendingPasses = () => {
     const getProfileSrc = (requester) => {
         if (!requester) return null;
         const path = requester.profilePictureUrl || requester.profilePhoto;
-        return path ? `http://localhost:3001${path}` : null;
+        return path ? resolveProfileImageUrl(path) : null;
     };
 
     // Helper for Relative Time
@@ -279,7 +281,7 @@ const PendingPasses = () => {
                                             variant="outlined" 
                                             size="small" 
                                             startIcon={<Visibility />}
-                                            onClick={() => handleViewImage(`http://localhost:3001${item.idProofPath}`)}
+                                            onClick={() => handleViewImage(resolveProfileImageUrl(item.idProofPath))}
                                             sx={{ mt: 1, width: '100%' }}
                                         >
                                             View ID Proof

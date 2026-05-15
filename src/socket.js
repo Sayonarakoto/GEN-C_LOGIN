@@ -2,7 +2,7 @@ import { io } from "socket.io-client";
 
 // The URL for your backend Socket.IO server
 // In development, Vite will proxy /socket.io to this target
-const URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
+const URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3001";
 
 export const socket = io(URL, {
   withCredentials: true,

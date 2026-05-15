@@ -60,7 +60,7 @@ const Register = () => {
       }
 
       // Submit registration data
-      const response = await api.post('/auth/register', {
+      const response = await api.post('/api/auth/register', {
         fullName,
         email,
         employeeId,

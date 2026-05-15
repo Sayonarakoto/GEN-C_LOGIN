@@ -8,7 +8,6 @@ import { AuthProvider } from './context/AuthContext.jsx'; // NEW
 
 // Add these imports
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'boxicons/css/boxicons.min.css';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

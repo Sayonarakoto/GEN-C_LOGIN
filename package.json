@@ -21,7 +21,6 @@
     "@vercel/blob": "^2.3.3",
     "axios": "^1.11.0",
     "bootstrap": "^5.3.8",
-    "boxicons": "^2.1.4",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.18",
     "dom-router": "^5.1.3",

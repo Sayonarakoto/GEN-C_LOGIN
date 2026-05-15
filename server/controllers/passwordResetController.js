@@ -1,38 +1,31 @@
 const crypto = require('crypto');
-// const nodemailer = require('nodemailer'); // Removed: Using mailer.js
-const bcrypt = require('bcryptjs'); // For hashing new passwords
-const Student = require('../models/student'); // Our Student model
-const Faculty = require('../models/Faculty'); // Import Faculty model
-const Security = require('../models/security'); // Import Security model
-const { sendResetEmail } = require('../utils/mailer'); // Import sendResetEmail
-
-// Configure Nodemailer (removed from here, now in mailer.js)
-// const transporter = nodemailer.createTransport({
-//   service: 'Gmail', // e.g., 'Gmail', 'Outlook', 'SendGrid'
-//   auth: {
-//     user: process.env.EMAIL_USER, // Your email address
-//     pass: process.env.EMAIL_PASS, // Your email password or app-specific password
-//   },
-// });
+const bcrypt = require('bcryptjs');
+const Student = require('../models/student');
+const Faculty = require('../models/Faculty');
+const Security = require('../models/security');
+const { sendResetEmail } = require('../utils/mailer');
 
 // @route   POST /api/forgot-password
 // @desc    Request a password reset link
 // @access  Public
 const forgotPassword = async (req, res) => {
-  console.log('Forgot password request received.'); // Added log
+  console.log('Forgot password request received.');
   try {
     const { email } = req.body;
 
     let user = await Student.findOne({ email });
+    let Model = Student;
     if (!user) {
       user = await Faculty.findOne({ email });
+      Model = Faculty;
     }
     if (!user) {
       user = await Security.findOne({ email });
+      Model = Security;
     }
 
     if (!user) {
-      return res.status(404).json({ message: 'User with that email does not exist.' }); // Changed message
+      return res.status(404).json({ message: 'User with that email does not exist.' });
     }
 
     // Generate a reset token
@@ -41,20 +34,17 @@ const forgotPassword = async (req, res) => {
     const resetPasswordExpire = Date.now() + 3600000; // 1 hour
 
     // Update user with reset token and expiration
-    // Update user with reset token and expiration
-    await Student.updateOne({ _id: user._id }, {
-      $set: {
-        resetPasswordToken: passwordResetToken,
-        resetPasswordExpire: resetPasswordExpire,
-      }
-    });
+    user.resetPasswordToken = passwordResetToken;
+    user.resetPasswordExpire = resetPasswordExpire;
+    await user.save();
 
     // Create reset URL
-    const resetURL = `http://localhost:5173/reset-password/${resetToken}`;
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+    const resetURL = `${frontendUrl}/reset-password/${resetToken}`;
     console.log('Generated reset URL:', resetURL);
 
     // Send email using the mailer utility
-    await sendResetEmail(user.email, resetURL); // Use user.email
+    await sendResetEmail(user.email, resetURL);
 
     res.status(200).json({ message: 'Password reset link sent to your email.' });
   } catch (error) {
@@ -98,13 +88,10 @@ const resetPassword = async (req, res) => {
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     // Update user's password and clear reset token fields
-    await Student.updateOne({ _id: user._id }, {
-      $set: {
-        password: hashedPassword,
-        resetPasswordToken: undefined,
-        resetPasswordExpire: undefined,
-      }
-    });
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
 
     res.status(200).json({ message: 'Password has been reset successfully.' });
   } catch (error) {

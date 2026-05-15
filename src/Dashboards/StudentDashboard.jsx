@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
-import { socket } from '../socket'; // Use the configured socket instance
+import { io } from 'socket.io-client';
 import {
   Row, Col, Card, Button, Spinner, Alert,
   Offcanvas, Nav, Badge, Form
@@ -34,7 +34,7 @@ import { resolveProfileImageUrl } from '../utils/resolveProfileImageUrl';
 
 import './Dashboard.css';
 
-// ... (Helper functions and components remain the same) ...
+// --- Helper Functions ---
 
 const getStatusStyle = (status) => {
   switch (status) {
@@ -155,7 +155,7 @@ export const DashboardHome = () => {
     setLoading(true);
     setError(null);
     try {
-      // 1. Fetch Late Comers (Stable)
+      // 1. Fetch Late Comers
       const lateComerResponse = await api.get('/api/latecomers/mine');
       const lateComers = (lateComerResponse.data?.entries || []).map(entry => ({
         ...entry,
@@ -169,43 +169,23 @@ export const DashboardHome = () => {
       // 2. Fetch Special Passes
       const specialPassResponse = await api.get('/api/special-passes/student');
 
-      // 🟢 FINAL FIX: Robustly check for the data array.
-      // Axios response.data might contain the entire server response body.
       const rawSpecialPassData = specialPassResponse.data.data
-        || specialPassResponse.data.entries // Fallback for LateComer naming convention
-        || specialPassResponse.data; // Fallback for direct data array response
-
-      // 🐛 DEBUG 1: Check the raw data array received by the frontend
-      console.log("🟢 FRONTEND DEBUG: Raw Special Pass Data:", rawSpecialPassData);
+        || specialPassResponse.data.entries 
+        || specialPassResponse.data;
 
       const specialPasses = (Array.isArray(rawSpecialPassData) ? rawSpecialPassData : [])
-        // Use filter/map to handle potential undefined objects safely
         .map(pass => {
-            try {
-                // Check if the critical fields exist before mapping
-                if (!pass._id || !pass.requested_at) {
-                    console.warn("🟢 FRONTEND DEBUG: Skipping Special Pass due to missing _id or requested_at:", pass);
-                    return null; // Skip invalid pass objects
-                }
-
-                // Return the strongly mapped object
-                return {
-                    ...pass,
-                    _id: pass._id,
-                    type: 'Special Pass',
-                    // Map the actual database field to the generic 'reason' field
-                    reason: pass.request_reason || 'No specific reason provided',
-                    // Use the actual database field 'requested_at' for sorting
-                    createdAt: pass.requested_at,
-                    status: pass.status,
-                };
-            } catch (mapError) {
-                // Log any error during the mapping of a single pass object
-                console.error("🟢 FRONTEND DEBUG: Error mapping single special pass:", pass, mapError);
-                return null;
-            }
+            if (!pass._id || !pass.requested_at) return null;
+            return {
+                ...pass,
+                _id: pass._id,
+                type: 'Special Pass',
+                reason: pass.request_reason || 'No specific reason provided',
+                createdAt: pass.requested_at,
+                status: pass.status,
+            };
         })
-        .filter(p => p !== null); // Remove null entries from failed/skipped passes
+        .filter(p => p !== null);
 
 
       // 3. Combine and sort
@@ -213,14 +193,10 @@ export const DashboardHome = () => {
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
         .slice(0, 5);
 
-      // 🐛 DEBUG 2: Check the final array before rendering
-      console.log("🟢 FRONTEND DEBUG: Final combined recent passes for display:", combined);
-
       setRecentPasses(combined);
 
     } catch (err) {
       console.error("Dashboard fetch error:", err);
-      // We log the network error, but we don't let it crash the component
       setError(err.message || 'Failed to fetch dashboard data.');
       setRecentPasses([]);
     } finally {
@@ -232,33 +208,27 @@ export const DashboardHome = () => {
     if (user?.role === 'student') {
       fetchRequests();
 
-      // Ensure socket is connected and authenticated
-      socket.connect(); 
+      const socketUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+      const socket = io(socketUrl);
 
-      const handleConnect = () => {
-        console.log('Connected to Socket.IO server');
+      socket.on('connect', () => {
         if (user?.id) {
           socket.emit('authenticate', user.id);
         }
-      };
+      });
 
-      const handleGatePassUpdate = (data) => {
-        console.log('Gate pass status update received:', data);
+      socket.on('statusUpdate:gatePass', (data) => {
         const message = `Your gate pass status has been updated to ${data.newStatus}.`;
         toast.info(message);
-        addNotification(message, data.newStatus === 'Approved' ? 'success' : 'alert', `/student/active-pass`); // Add notification
+        addNotification(message, data.newStatus === 'Approved' ? 'success' : 'alert', `/student/active-pass`);
         fetchRequests();
-      };
-
-      socket.on('connect', handleConnect);
-      socket.on('statusUpdate:gatePass', handleGatePassUpdate);
+      });
 
       return () => {
-        socket.off('connect', handleConnect);
-        socket.off('statusUpdate:gatePass', handleGatePassUpdate);
+        socket.disconnect();
       };
     }
-  }, [user, fetchRequests, toast, addNotification]); // Add addNotification to dependency array
+  }, [user, fetchRequests, toast, addNotification]);
 
   return (
     <div className="dashboard-content-box">
@@ -287,4 +257,100 @@ export const DashboardHome = () => {
     </div>
   );
 };
-// ... rest of StudentDashboard component ...
+
+// --- StudentDashboard Main Component ---
+
+export default function StudentDashboard() {
+  const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
+  const { unreadCount, markAllAsRead } = useNotifications();
+
+  const [siderVisible, setSiderVisible] = useState(false);
+  const [showNotificationList, setShowNotificationList] = useState(false);
+
+  const handleNotificationClick = () => {
+    console.log("Notification bell clicked. showNotificationList:", showNotificationList);
+    setShowNotificationList((prev) => !prev);
+    if (!showNotificationList && unreadCount > 0) {
+      markAllAsRead();
+    }
+  };
+
+  const handleMenuClick = (path) => {
+    if (path === 'logout') {
+      logout('/student-login');
+    } else {
+      navigate(path);
+    }
+    setSiderVisible(false);
+  };
+
+  return (
+    <div className="d-flex flex-column min-vh-100 dashboard-container">
+
+      {/* Header */}
+      <header className="d-flex justify-content-between align-items-center px-4 dashboard-header">
+        <Button variant="link" onClick={() => setSiderVisible(true)} className="menu-button"><MenuIcon /></Button>
+        <h4 className="m-0">Dashboard</h4>
+        <div className="d-flex align-items-center gap-3">
+          <Form.Check type="switch" id="theme-switch" label={theme === 'dark' ? <DarkModeOutlined /> : <LightModeOutlined />} checked={theme === 'dark'} onChange={toggleTheme} />
+          <div className="position-relative" style={{ cursor: 'pointer' }} onClick={handleNotificationClick}>
+            <NotificationsOutlined className="notification-icon" />
+            {unreadCount > 0 && <Badge pill bg="danger" className="notification-badge">{unreadCount}</Badge>}
+            {showNotificationList && (
+              <div style={{ position: 'absolute', top: '100%', right: 0, zIndex: 1000, marginTop: '10px' }}>
+                <NotificationList onClose={() => {
+                  console.log("NotificationList onClose called.");
+                  setShowNotificationList(false);
+                }} />
+              </div>
+            )}
+          </div>
+          <LogoutOutlined className="logout-icon" onClick={() => logout('/student-login')} />
+        </div>
+      </header>
+
+      {/* Sidebar */}
+      <Offcanvas show={siderVisible} onHide={() => setSiderVisible(false)} placement="start" className="dashboard-sidebar">
+        <Offcanvas.Header closeButton closeVariant={theme === 'dark' ? 'white' : undefined}>
+          <Offcanvas.Title>Menu</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body className="p-0">
+          <Nav className="flex-column">
+            <NavLink to="." end className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
+              <DashboardOutlined className="me-2" /> Dashboard
+            </NavLink>
+            <NavLink to="late-entry" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
+              <ListAltOutlined className="me-2" /> Late Comer
+            </NavLink>
+            <NavLink to="special-pass" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
+              <CardMembership className="me-2" /> Special Pass
+            </NavLink>
+            <NavLink to="library-activation" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
+              <LibraryBooks className="me-2" /> Activate Library ID
+            </NavLink>
+            <NavLink to="active-pass" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
+              <AddOutlined className="me-2" /> Gate Pass
+            </NavLink>
+            <NavLink to="profile" className={({ isActive }) => "nav-link" + (isActive ? " active-link" : "")} onClick={() => setSiderVisible(false)}>
+              <PersonOutlined className="me-2" /> Profile
+            </NavLink>
+            <Nav.Link onClick={() => handleMenuClick('logout')}><LogoutOutlined className="me-2" /> Logout</Nav.Link>
+          </Nav>
+        </Offcanvas.Body>
+      </Offcanvas>
+
+      {/* Main Content */}
+      <main className="flex-grow-1 p-3 dashboard-content-area">
+        <Outlet />
+      </main>
+
+      {/* Footer */}
+      <footer className="text-center py-3 dashboard-footer">
+        <p className="m-0 text-muted small">Paperless Campus ©2025</p>
+      </footer>
+
+    </div>
+  );
+}

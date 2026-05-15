@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Container, Row, Col, Nav, Offcanvas } from "react-bootstrap";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'boxicons/css/boxicons.min.css'; 
 import {
   Box,
   Typography,

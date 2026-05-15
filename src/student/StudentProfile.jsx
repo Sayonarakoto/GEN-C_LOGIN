@@ -69,6 +69,14 @@ const StudentProfile = () => {
     const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
+        if (import.meta.env.DEV) {
+            // Temporary debug to verify Vite env is loaded in the browser
+            // eslint-disable-next-line no-console
+            console.log('VITE_USE_VERCEL_BLOB:', import.meta.env.VITE_USE_VERCEL_BLOB);
+        }
+    }, []);
+
+    useEffect(() => {
         // Assuming the 'user' object from useAuth contains the student details
         if (user) {
             console.log('User object in StudentProfile:', user);
@@ -94,8 +102,8 @@ const StudentProfile = () => {
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (file) {
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                setAlert({ message: 'File size exceeds 5MB limit.', type: 'error' });
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+                setAlert({ message: 'File size exceeds 10MB limit.', type: 'error' });
                 return;
             }
             setAlert(null);
@@ -116,7 +124,7 @@ const StudentProfile = () => {
             // First, upload image if a new one is selected
             let profilePictureUrl = formData.profilePictureUrl;
             if (selectedFile) {
-                const useBlob = import.meta.env.VITE_USE_VERCEL_BLOB === 'true';
+                const useBlob = String(import.meta.env.VITE_USE_VERCEL_BLOB || '').trim().toLowerCase() === 'true';
 
                 if (useBlob) {
                     const blob = await upload(selectedFile.name, selectedFile, {

@@ -68,8 +68,8 @@ exports.requestGatePass = async (req, res, next) => {
             return next(createError('Selected approver not found.', 404));
         }
 
-        // CRITICAL FIX: Ensure selected approver is from the same department as the student (case-insensitive)
-        if (selectedApprover.department.toLowerCase() !== student.department.toLowerCase()) {
+        // CRITICAL FIX: Ensure selected approver is from the same department as the student
+        if (selectedApprover.department !== student.department) {
             return next(createError('Selected approver is not from your department.', 403));
         }
 

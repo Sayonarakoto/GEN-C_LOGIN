@@ -510,7 +510,7 @@ exports.updateLateEntry = async (req, res, next) => {
     // Validate facultyId: must belong to the student's department
     const assignedFaculty = await Faculty.findById(facultyId);
     if (!assignedFaculty || assignedFaculty.department !== existingEntry.department) {
-      return next(createError('Assigned faculty not found in the student's department.', 403));
+      return next(createError('Assigned faculty not found in the student\'s department.', 403));
     }
 
     const newStatus = ['Rejected', 'Resubmitted'].includes(existingEntry.status) ? 'Pending Faculty' : existingEntry.status;

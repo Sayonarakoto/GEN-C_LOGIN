@@ -196,7 +196,7 @@ const getAllStudents = async (req, res, next) => {
     if (department) {
       query.department = { $regex: department, $options: 'i' }; // Case-insensitive search
     }
-    if (year && year.toLowerCase() !== 'all') {
+    if (year && year !== 'all') {
       query.year = { $regex: year, $options: 'i' }; // Case-insensitive search
     }
 

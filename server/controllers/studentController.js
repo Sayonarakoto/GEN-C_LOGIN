@@ -195,7 +195,8 @@ exports.downloadStudentActivityReportPDF = async (req, res) => {
 // New function to add a student (by faculty/HOD)
 exports.addStudent = async (req, res) => {
   try {
-    const { studentId, fullName, email, department, year, password } = req.body;
+    const { studentId, fullName, email, department: rawDepartment, year, password } = req.body;
+    const department = rawDepartment.toUpperCase();
     const userDepartment = req.user.department; // Department of the authenticated faculty/HOD
 
     if (!studentId || !fullName || !password || !department || !year) {

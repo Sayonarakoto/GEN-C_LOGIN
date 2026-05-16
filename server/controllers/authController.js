@@ -26,8 +26,8 @@ exports.register = async (req, res, next) => {
     }
 
     // Validate department against a predefined list
-    const validDepartments = process.env.VALID_DEPARTMENTS ? process.env.VALID_DEPARTMENTS.split(',') : ["ct", "mech-a", "mech-b", "eee", "ce", "fs", "auto"];
-    if (!department || !validDepartments.includes(department.toLowerCase())) {
+    const validDepartments = process.env.VALID_DEPARTMENTS ? process.env.VALID_DEPARTMENTS.split(',') : ["CT", "MECH-A", "MECH-B", "EEE", "CE", "FS", "AUTO"];
+    if (!department || !validDepartments.includes(department.toUpperCase())) {
       return next(createError('Invalid department provided.', 400));
     }
 

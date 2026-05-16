@@ -74,7 +74,7 @@ const BookInventory = () => {
     const handleDeleteBook = async (id) => {
         if (!window.confirm('Are you sure you want to delete this book?')) return;
         try {
-            await api.delete(`/api/library/books/${id}`);
+            await api.delete(`/library/books/${id}`);
             setBooks(books.filter(b => b._id !== id));
             setTotalBooks(prev => prev - 1);
             toast.success('Book deleted');

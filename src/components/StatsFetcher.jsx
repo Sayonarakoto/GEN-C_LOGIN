@@ -28,7 +28,7 @@ const StatsFetcher = ({ featureType, user }) => {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const apiUrl = `/api/stats/${featureType}`;
+        const apiUrl = `/stats/${featureType}`;
         const params = { role: user?.role };
         const response = await api.get(apiUrl, { params, signal });
         setStats(response.data.data);

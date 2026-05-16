@@ -75,7 +75,7 @@ const PendingPasses = () => {
     const handleDecision = async (passId, action) => {
         setProcessingId(passId);
         try {
-            await api.put(`/api/library/librarypass/${action}/${passId}`);
+            await api.put(`/library/librarypass/${action}/${passId}`);
             setPasses(prevPasses => prevPasses.filter(p => p._id !== passId));
             setNotification({ type: 'success', message: `Pass ${action}ed successfully.` });
         } catch (error) {

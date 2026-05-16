@@ -37,7 +37,7 @@ const LibraryActivationRequestForm = () => {
       if (!userId || userId === 'undefined') return;
       try {
         // Check status for the current user
-        const response = await apiClient.get(`/api/library/status/${userId}`);
+        const response = await apiClient.get(`/library/status/${userId}`);
         if (response.data && response.data.success && response.data.data) {
           setRequestStatus(response.data.data.status.toLowerCase());
           setPassData(response.data.data);
@@ -99,7 +99,7 @@ const LibraryActivationRequestForm = () => {
   const handleDownloadPass = async () => {
     if (!passData?._id) return;
     try {
-      const response = await apiClient.get(`/api/library/pass/download/${passData._id}`, {
+      const response = await apiClient.get(`/library/pass/download/${passData._id}`, {
         responseType: 'blob',
       });
       const url = window.URL.createObjectURL(new Blob([response.data]));

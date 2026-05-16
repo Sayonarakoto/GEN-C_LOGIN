@@ -33,7 +33,7 @@ const MemberProfileModal = ({ open, onClose, userId }) => {
                 setLoading(true);
                 setError('');
                 try {
-                    const response = await api.get(`/api/library/members/${userId}`);
+                    const response = await api.get(`/library/members/${userId}`);
                     setDetails(response.data.data);
                 } catch (err) {
                     setError('Failed to fetch member details.');
@@ -53,7 +53,7 @@ const MemberProfileModal = ({ open, onClose, userId }) => {
         }
         setDeactivating(true);
         try {
-            await api.put(`/api/library/members/${userId}/deactivate`, { reason: deactivationReason });
+            await api.put(`/library/members/${userId}/deactivate`, { reason: deactivationReason });
             toast.success('Library card has been successfully deactivated.');
             onClose(); // Close modal on success
         } catch (err) {

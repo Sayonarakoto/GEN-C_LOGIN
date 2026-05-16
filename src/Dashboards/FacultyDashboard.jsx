@@ -42,7 +42,7 @@ const FacultyDashboard = () => {
 
   const fetchAllStudents = useCallback(async () => {
     try {
-      const response = await api.get(`/api/students`);
+      const response = await api.get(`/students`);
       setAllStudents(response.data.data || []);
     } catch (error) {
       console.error("Failed to fetch students:", error);

@@ -89,8 +89,7 @@ const AuditTrail = () => {
         startDate: filters.startDate ? dayjs(filters.startDate).format('YYYY-MM-DD') : null,
         endDate: filters.endDate ? dayjs(filters.endDate).format('YYYY-MM-DD') : null,
       };
-      const response = await apiClient.get(`/api/students/${selectedStudent}/activity-report`, { params });
-      setReportData(response.data.data);
+      const response = await apiClient.get(`/students/${selectedStudent}/activity-report`, { params });
     } catch (err) {
       console.error("Failed to fetch activity report:", err);
       setError('Failed to load activity report.');
@@ -111,7 +110,7 @@ const AuditTrail = () => {
         endDate: filters.endDate ? dayjs(filters.endDate).format('YYYY-MM-DD') : null,
       };
       const queryString = new URLSearchParams(params).toString();
-      const url = `/api/students/${selectedStudent}/activity-report/download-pdf?${queryString}`;
+      const url = `/students/${selectedStudent}/activity-report/download-pdf?${queryString}`;
 
       const response = await apiClient.get(url, { responseType: 'blob' });
       const blob = new Blob([response.data], { type: 'application/pdf' });

@@ -2,7 +2,7 @@ import api from './client';
 
 export const updateLatecomerStatus = async (id, status, remarks) => {
   try {
-    const response = await api.put(`/api/latecomers/${id}/status`, {
+    const response = await api.put(`/latecomers/${id}/status`, {
       status,
       remarks,
     });

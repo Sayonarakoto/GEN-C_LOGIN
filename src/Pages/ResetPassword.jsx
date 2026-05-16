@@ -65,7 +65,7 @@ function ResetPassword() { // Renamed from Forgetpass to ResetPassword
     // If validation passes, make the API call
     try {
       // Use the correct API endpoint for reset password
-      const response = await api.post(`/api/reset-password/${encodeURIComponent(token)}`, {
+      const response = await api.post(`/reset-password/${encodeURIComponent(token)}`, {
         newPassword: newPassword
       });
 

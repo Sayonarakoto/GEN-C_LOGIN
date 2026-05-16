@@ -490,7 +490,7 @@ const GatePassHistory = ({ history, handleDownloadPDF, downloadingPdf = false })
                                 </Col>
                                 <Col sm={4} className="text-sm-end mt-2 mt-sm-0">
                                     <Badge bg={status.variant} className="fs-6 px-2 py-1">{status.text}</Badge>
-                                    {pass.pdf_path && pass.hod_status === 'APPROVED' && (
+                                    {pass.hod_status === 'APPROVED' && (
                                         <Button variant="outline-primary" onClick={() => handleDownloadPDF(pass._id)} disabled={downloadingPdf} className="ms-2 mt-2 mt-sm-0">
                                             {downloadingPdf ? <Spinner animation="border" size="sm" className="me-2" /> : <i className='bx bxs-download'></i>} PDF
                                         </Button>

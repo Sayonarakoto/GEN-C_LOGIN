@@ -172,7 +172,7 @@ async function generateWatermarkedPDF(passData, hodName, hodDepartment = 'N/A') 
         page.drawText(`VALID TO: N/A (One Way)`, { x: 50, y: textY, size: 12, font });
     }
     textY -= lineHeight;
-    page.drawText(`REASON: ${passData.request_reason || 'N/A'}`, { x: 50, y: textY, size: 12, font });
+    page.drawText(`REASON: ${passData.reason || 'N/A'}`, { x: 50, y: textY, size: 12, font });
 
     // --- 4. Security Features (Footer) ---
     const footerY = textY - 80;

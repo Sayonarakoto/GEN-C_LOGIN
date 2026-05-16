@@ -24,7 +24,7 @@ exports.getActiveGatePass = async (req, res, next) => {
       faculty_status: 'APPROVED',
       hod_status: 'APPROVED',
       date_valid_to: { $gte: new Date() }
-    }).populate('student_id', 'fullName studentId department')
+    }).populate('student_id', 'fullName studentId department profilePictureUrl')
       .populate('faculty_approver_id', 'fullName')
       .populate('hod_approver_id', 'fullName')
       .select('+pdf_path +qr_code_id +one_time_pin'); // Ensure fields are selected
@@ -440,7 +440,7 @@ exports.hodApproveGatePass = async (req, res, next) => {
     // Generate QR code ID and OTP
     const qr_code_id = generateToken(
         {
-            pass_id: pass._id,
+            passId: pass._id,
             student_id: pass.student_id._id,
             pass_type: 'Gate Pass',
         },

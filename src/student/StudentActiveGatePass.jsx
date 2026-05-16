@@ -365,7 +365,7 @@ const StudentGatePass = () => {
                             <Row>
                                 <Col md={8} className="pe-md-4">
                                     <div className="d-flex align-items-center mb-4 border-bottom pb-3">
-                                        <Image src={passData.student_id?.photoUrl || 'https://placehold.co/64x64/3b82f6/ffffff?text=STUDENT'} alt="Student" roundedCircle style={{ width: '64px', height: '64px', border: '2px solid var(--bs-primary)' }} />
+                                        <Image src={passData.student_id?.profilePictureUrl ? resolveProfileImageUrl(passData.student_id.profilePictureUrl) : 'https://placehold.co/64x64/3b82f6/ffffff?text=STUDENT'} alt="Student" roundedCircle style={{ width: '64px', height: '64px', border: '2px solid var(--bs-primary)' }} />
                                         <div className="ms-3">
                                             <p className="h5 fw-bold text-dark mb-0">{passData.student_id?.fullName}</p>
                                             <p className="text-muted mb-0">{passData.student_id?.studentId}</p>

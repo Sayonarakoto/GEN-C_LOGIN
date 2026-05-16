@@ -194,8 +194,8 @@ const FacultyGatePass = () => {
 
       const endpoint = user?.role === 'HOD' ? 'hod' : 'faculty';
       const [pendingRes, historyRes] = await Promise.all([
-        apiClient.get(`/api/gatepass/${endpoint}/pending`),
-        apiClient.get(`/api/gatepass/${endpoint}/history`),
+        apiClient.get(`/gatepass/${endpoint}/pending`),
+        apiClient.get(`/gatepass/${endpoint}/history`),
       ]);
       
       setPendingRequests(pendingRes.data.data);
@@ -217,7 +217,7 @@ const FacultyGatePass = () => {
   const handleApprove = async (id) => {
     try {
       const endpoint = user?.role === 'HOD' ? 'hod' : 'faculty';
-      await apiClient.put(`/api/gatepass/${endpoint}/approve/${id}`);
+      await apiClient.put(`/gatepass/${endpoint}/approve/${id}`);
       fetchGatePassData();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to approve request.');
@@ -228,7 +228,7 @@ const FacultyGatePass = () => {
   const handleReject = async (id) => {
     try {
       const endpoint = user?.role === 'HOD' ? 'hod' : 'faculty';
-      await apiClient.put(`/api/gatepass/${endpoint}/reject/${id}`);
+      await apiClient.put(`/gatepass/${endpoint}/reject/${id}`);
       fetchGatePassData();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to reject request.');

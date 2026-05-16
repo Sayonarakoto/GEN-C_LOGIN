@@ -27,7 +27,7 @@ exports.getActiveGatePass = async (req, res, next) => {
     }).populate('student_id', 'fullName studentId department')
       .populate('faculty_approver_id', 'fullName')
       .populate('hod_approver_id', 'fullName')
-      .select('+pdf_path');
+      .select('+pdf_path +qr_code_id +one_time_pin'); // Ensure fields are selected
 
     if (!activePass) {
       return next(createError('No active gate pass found.', 404));

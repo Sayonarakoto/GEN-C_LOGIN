@@ -203,7 +203,7 @@ const StudentGatePass = () => {
     const handleDownloadPDF = async (passId) => {
         setDownloadingPdf(true);
         try {
-            const response = await apiClient.get(`/api/gatepass/download-pdf/${passId}`, {
+            const response = await apiClient.get(`/gatepass/download-pdf/${passId}`, {
                 responseType: 'blob', // Important for downloading files
             });
 

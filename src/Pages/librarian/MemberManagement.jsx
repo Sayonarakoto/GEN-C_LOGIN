@@ -32,7 +32,7 @@ const MemberManagement = () => {
     const fetchMembers = async () => {
         setLoading(true);
         try {
-            const response = await api.get('/api/library/members');
+            const response = await api.get('/library/members');
             setMembers(response.data.data);
         } catch (err) {
             setError('Failed to fetch library members.');

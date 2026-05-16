@@ -28,7 +28,7 @@ const StudentLogin = () => {
 
     try {
       const response = await api.post(
-        '/api/auth/login',
+        '/auth/login',
         { role: 'student', studentId, password },
         { headers: { 'X-Skip-Interceptor': true } }
       );

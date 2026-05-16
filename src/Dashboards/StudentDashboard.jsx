@@ -156,7 +156,7 @@ export const DashboardHome = () => {
     setError(null);
     try {
       // 1. Fetch Late Comers
-      const lateComerResponse = await api.get('/api/latecomers/mine');
+      const lateComerResponse = await api.get('/latecomers/mine');
       const lateComers = (lateComerResponse.data?.entries || []).map(entry => ({
         ...entry,
         _id: entry._id,
@@ -167,7 +167,7 @@ export const DashboardHome = () => {
       }));
 
       // 2. Fetch Special Passes
-      const specialPassResponse = await api.get('/api/special-passes/student');
+      const specialPassResponse = await api.get('/special-passes/student');
 
       const rawSpecialPassData = specialPassResponse.data.data
         || specialPassResponse.data.entries 

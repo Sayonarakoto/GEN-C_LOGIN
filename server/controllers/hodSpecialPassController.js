@@ -7,8 +7,9 @@ const { generateToken } = require('../config/jwt'); // Reusing generateToken
 const { sendNotification } = require('../services/notificationService'); // Placeholder for notification service
 const { generateThreeDigitOTP } = require('../utils/otpUtils'); // Import OTP utility
 const { schedulePassCleanup } = require('../services/schedulerService'); // Import scheduler service
+const createError = require('../utils/error');
 
-exports.getPendingSpecialPasses = async (req, res) => {
+exports.getPendingSpecialPasses = async (req, res, next) => {
     const department = req.user.department;
     const hodId = req.user.id;
 
@@ -29,11 +30,11 @@ exports.getPendingSpecialPasses = async (req, res) => {
         res.status(200).json({ success: true, data: pendingPasses });
     } catch (error) {
         console.error('CRITICAL ERROR fetching HOD special passes:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch pending requests.' });
+        next(error);
     }
 };
 
-exports.approveSpecialPass = async (req, res) => {
+exports.approveSpecialPass = async (req, res, next) => {
   const { passId } = req.params;
   const { hodComment } = req.body;
   const hodId = req.user.id; // Assuming HOD ID is attached by auth middleware
@@ -41,16 +42,16 @@ exports.approveSpecialPass = async (req, res) => {
   try {
     const pass = await SpecialPass.findById(passId);
     if (!pass) {
-      return res.status(404).json({ success: false, message: 'Special Pass not found.' });
+      return next(createError('Special Pass not found.', 404));
     }
 
     // Ensure the pass belongs to the HOD's department
     if (pass.department !== req.user.department) {
-        return res.status(403).json({ success: false, message: 'Access denied: This pass does not belong to your department.' });
+        return next(createError('Access denied: This pass does not belong to your department.', 403));
     }
 
     if (pass.status !== 'Pending') {
-      return res.status(400).json({ success: false, message: `Pass is already ${pass.status}.` });
+      return next(createError(`Pass is already ${pass.status}.`, 400));
     }
 
     // Update pass status and common fields first
@@ -129,11 +130,11 @@ exports.approveSpecialPass = async (req, res) => {
 
   } catch (error) {
     console.error('Error approving special pass:', error);
-    res.status(500).json({ success: false, message: 'Internal server error.' });
+    next(error);
   }
 };
 
-exports.rejectSpecialPass = async (req, res) => {
+exports.rejectSpecialPass = async (req, res, next) => {
   const { passId } = req.params;
   const { hodComment } = req.body;
   const hodId = req.user.id; // Assuming HOD ID is attached by auth middleware
@@ -141,16 +142,16 @@ exports.rejectSpecialPass = async (req, res) => {
   try {
     const pass = await SpecialPass.findById(passId);
     if (!pass) {
-      return res.status(404).json({ success: false, message: 'Special Pass not found.' });
+      return next(createError('Special Pass not found.', 404));
     }
 
     // Ensure the pass belongs to the HOD's department
     if (pass.department !== req.user.department) {
-        return res.status(403).json({ success: false, message: 'Access denied: This pass does not belong to your department.' });
+        return next(createError('Access denied: This pass does not belong to your department.', 403));
     }
 
     if (pass.status !== 'Pending') {
-      return res.status(400).json({ success: false, message: `Pass is already ${pass.status}.` });
+      return next(createError(`Pass is already ${pass.status}.`, 400));
     }
 
     // Update pass status to Rejected
@@ -187,11 +188,11 @@ exports.rejectSpecialPass = async (req, res) => {
 
   } catch (error) {
     console.error('Error rejecting special pass:', error);
-    res.status(500).json({ success: false, message: 'Internal server error.' });
+    next(error);
   }
 };
 
-exports.initiateSpecialPass = async (req, res) => {
+exports.initiateSpecialPass = async (req, res, next) => {
     console.log('DEBUG: initiateSpecialPass - Start');
     console.log('DEBUG: req.body:', req.body);
 
@@ -210,17 +211,17 @@ exports.initiateSpecialPass = async (req, res) => {
         // -- STEP 1: Fetch HOD and Student Data --
         const hod = await Faculty.findById(hodId);
         if (!hod) {
-            return res.status(404).json({ success: false, message: 'HOD not found.' });
+            return next(createError('HOD not found.', 404));
         }
 
         const student = await Student.findById(student_id);
         if (!student) {
-            return res.status(404).json({ success: false, message: 'Student not found.' });
+            return next(createError('Student not found.', 404));
         }
 
         // Ensure the student belongs to the HOD's department
         if (student.department !== hod.department) {
-            return res.status(403).json({ success: false, message: 'Access denied: Student does not belong to your department.' });
+            return next(createError('Access denied: Student does not belong to your department.', 403));
         }
 
         // -- STEP 2: Validate Input and Dates --
@@ -231,7 +232,7 @@ exports.initiateSpecialPass = async (req, res) => {
         const dateValidTo = new Date(`${date_required}T${end_time}:00`);
 
         if (isNaN(dateValidFrom.getTime()) || isNaN(dateValidTo.getTime()) || dateValidFrom >= dateValidTo) {
-            return res.status(400).json({ success: false, message: 'Invalid date or time slot calculation.' });
+            return next(createError('Invalid date or time slot calculation.', 400));
         }
 
         // -- STEP 3: Create and Save the Pass --
@@ -313,11 +314,11 @@ exports.initiateSpecialPass = async (req, res) => {
 
     } catch (error) {
         console.error('Error initiating special pass (HOD):', error);
-        res.status(500).json({ success: false, message: 'Internal server error.' });
+        next(error);
     }
 };
 
-exports.getSpecialPassHistory = async (req, res) => {
+exports.getSpecialPassHistory = async (req, res, next) => {
     const department = req.user.department;
     console.log(`DEBUG: HOD Special Pass History - Searching for Dept: '${department}', Status: ['Approved', 'Rejected']`);
 
@@ -335,7 +336,7 @@ exports.getSpecialPassHistory = async (req, res) => {
         res.status(200).json({ success: true, data: historyPasses });
     } catch (error) {
         console.error('CRITICAL ERROR fetching HOD special pass history:', error);
-        res.status(500).json({ success: false, message: 'Failed to fetch pass history.' });
+        next(error);
     }
 };
 

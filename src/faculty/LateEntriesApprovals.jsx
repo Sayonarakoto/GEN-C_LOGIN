@@ -54,9 +54,9 @@ export default function LateEntriesApprovals({ onActionComplete }) {
 
     let endpoint;
     if (user.role === 'faculty') {
-      endpoint = '/api/latecomers/faculty/pending';
+      endpoint = '/latecomers/faculty/pending';
     } else if (user.role === 'HOD') {
-      endpoint = '/api/latecomers/hod/pending';
+      endpoint = '/latecomers/hod/pending';
     } else {
       console.log(`DEBUG: User role '${user.role}' has no actionable requests view. Aborting fetch.`);
       setRequests([]);

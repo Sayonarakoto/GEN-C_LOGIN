@@ -4,6 +4,7 @@ const SpecialPass = require('../models/SpecialPass'); // Import SpecialPass mode
 const GatePass = require('../models/GatePass');     // Import GatePass model
 const dayjs = require('dayjs'); // Import dayjs
 const PDFDocument = require('pdfkit'); // Import pdfkit
+const logger = require('../utils/logger'); // Import logger
 
 // -------------------------------------------------------------
 // 🔧 Helper: Build audit log filter for the user's department
@@ -59,7 +60,7 @@ exports.getAuditLogs = async (req, res) => {
 
     res.status(200).json({ success: true, data: logs, meta: { total, page, limit } });
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
@@ -97,7 +98,7 @@ exports.exportAuditLogs = async (req, res) => {
     res.attachment('audit_logs.csv');
     res.send(csv);
   } catch (error) {
-    console.error(error);
+    logger.error(error);
     res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
@@ -188,7 +189,7 @@ exports.getSecurityVerificationLogs = async (req, res) => {
     res.status(200).json({ success: true, data: formattedLogs });
 
   } catch (error) {
-    console.error('Error fetching security verification logs:', error);
+    logger.error('Error fetching security verification logs:', error);
     res.status(500).json({ success: false, message: 'Server Error' });
   }
 };
@@ -219,7 +220,7 @@ exports.getDepartmentAuditLogs = async (req, res) => {
 
     res.status(200).json({ success: true, data: logs, meta: { total, page, limit } });
   } catch (error) {
-    console.error('Error fetching department audit logs:', error);
+    logger.error('Error fetching department audit logs:', error);
     res.status(500).json({ success: false, message: 'Error fetching department audit logs' });
   }
 };
@@ -273,7 +274,7 @@ exports.exportAuditLogsPdf = async (req, res) => {
 
     doc.end(); // Finalize the PDF
   } catch (error) {
-    console.error('Error exporting audit logs to PDF:', error);
+    logger.error('Error exporting audit logs to PDF:', error);
     res.status(500).json({ success: false, error: 'Server Error' });
   }
 };

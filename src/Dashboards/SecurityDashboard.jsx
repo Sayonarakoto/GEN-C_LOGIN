@@ -133,7 +133,7 @@ export default function SecurityDashboard() {
   const fetchLogs = useCallback(async () => {
     setLogLoading(true);
     try {
-      const response = await apiClient.get("/api/security/logs");
+      const response = await apiClient.get("/security/logs");
       if (response.data?.success) {
         setLogs(Array.isArray(response.data.data) ? response.data.data : []);
       } else {
@@ -173,14 +173,14 @@ export default function SecurityDashboard() {
 
     if (passType === 'gate') {
         if (data.type === 'otp') {
-            endpoint = '/api/gatepass/verify-otp';
+            endpoint = '/gatepass/verify-otp';
             payload = { studentIdString: data.studentId, otp: data.otp };
         } else if (data.type === 'qr') {
-            endpoint = '/api/gatepass/verify-qr';
+            endpoint = '/gatepass/verify-qr';
             payload = { qr_token: data.token };
         }
     } else if (passType === 'special') {
-        endpoint = '/api/special-passes/verify';
+        endpoint = '/special-passes/verify';
         if (data.type === 'otp') {
             payload = { student_id: data.studentId, verification_otp: data.otp, passType: 'special' };
         } else if (data.type === 'qr') {

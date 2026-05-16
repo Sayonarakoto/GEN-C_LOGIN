@@ -33,7 +33,7 @@ const ExcelUpload = ({ onUploadSuccess }) => {
     formData.append('file', selectedFile);
 
     try {
-      const response = await api.post('/api/upload', formData, {
+      const response = await api.post('/upload', formData, {
       });
 
       if (response.data.success && (!response.data.errors || response.data.errors.length === 0)) {

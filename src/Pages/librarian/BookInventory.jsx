@@ -30,7 +30,7 @@ const BookInventory = () => {
         const fetchBooks = async () => {
             setLoading(true);
             try {
-                const res = await api.get('/api/library/books', {
+                const res = await api.get('/library/books', {
                     params: {
                         page: page + 1, // API expects 1-based index
                         limit: rowsPerPage,
@@ -58,7 +58,7 @@ const BookInventory = () => {
 
     const handleAddBook = async () => {
         try {
-            const res = await api.post('/api/library/books', newBook);
+            const res = await api.post('/library/books', newBook);
             if (res.data.success) {
                 setBooks([res.data.data, ...books].slice(0, rowsPerPage));
                 setTotalBooks(prev => prev + 1);

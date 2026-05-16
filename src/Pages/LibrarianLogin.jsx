@@ -19,7 +19,7 @@ const LibrarianLogin = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await api.post('/api/auth/librarian-login', {
+      const response = await api.post('/auth/librarian-login', {
         facultyId,
         password,
       });

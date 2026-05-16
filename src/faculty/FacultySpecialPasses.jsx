@@ -45,7 +45,7 @@ const PendingRequests = () => {
   const fetchPendingPasses = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/api/hod/special-passes');
+      const response = await apiClient.get('/hod/special-passes');
       setPasses(Array.isArray(response.data.data) ? response.data.data : []);
     } catch (err) {
       setError('Failed to fetch pending requests.');
@@ -213,7 +213,7 @@ const InitiatePass = () => {
 
         setStudentTableLoading(true);
         try {
-            const response = await apiClient.get('/api/faculty/students', {
+            const response = await apiClient.get('/faculty/students', {
                 params: {
                     department: hodDepartment,
                     search: searchQuery,
@@ -246,7 +246,7 @@ const InitiatePass = () => {
         setError('');
         try {
             for (const student_id of selectedStudents) {
-                await apiClient.post('/api/hod/special-passes/initiate', {
+                await apiClient.post('/hod/special-passes/initiate', {
                     student_id,
                     pass_type: passType, // Add passType to the request
                     request_reason: reason,
@@ -407,7 +407,7 @@ const HistoryTable = () => {
   const fetchHistoryPasses = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await apiClient.get('/api/hod/special-passes/history');
+      const response = await apiClient.get('/hod/special-passes/history');
       setPasses(Array.isArray(response.data.data) ? response.data.data : []);
     } catch (err) {
       setError('Failed to fetch pass history.');

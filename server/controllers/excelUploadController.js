@@ -3,6 +3,7 @@ const ExcelJS = require('exceljs');
 // const bcrypt = require('bcrypt'); // Removed: No longer hashing password here
 const Student = require('../models/student'); // Use the merged student model
 const fs = require('fs').promises; // For file deletion
+const createError = require('../utils/error');
 
 // Multer setup for file uploads
 const upload = multer({
@@ -27,14 +28,14 @@ function generateTemporaryPassword(fullName) {
 }
 
 // Upload Excel → parse → save/update in MongoDB
-const uploadStudents = async (req, res) => {
+const uploadStudents = async (req, res, next) => {
   let uploadedFilePath = null;
   const uploaded = [];
   const errors = [];
 
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded.' });
+      return next(createError('No file uploaded.', 400));
     }
     uploadedFilePath = req.file.path;
 
@@ -151,7 +152,7 @@ const uploadStudents = async (req, res) => {
 
   } catch (err) {
     console.error('Error during file upload:', err);
-    res.status(500).json({ success: false, message: 'Server error during file processing.', error: err.message });
+    next(err);
   } finally {
     if (uploadedFilePath) {
       try {
@@ -165,7 +166,7 @@ const uploadStudents = async (req, res) => {
 };
 
 // Get all students with pagination, sorting, and filtering
-const getAllStudents = async (req, res) => {
+const getAllStudents = async (req, res, next) => {
   try {
     // Validate and sanitize input parameters
     const page = Math.max(1, parseInt(req.query.page) || 1);
@@ -175,7 +176,7 @@ const getAllStudents = async (req, res) => {
     const order = req.query.order === 'desc' ? 'desc' : 'asc';
     
     // Sanitize search parameters (prevent regex injection)
-    const sanitizeRegex = (str) => str ? str.replace(/[.*+?^${}()|[\\\]]/g, '\\$&') : null;
+    const sanitizeRegex = (str) => str ? str.replace(/[.*+?^${}()|[\]]/g, '\$&') : null;
     const fullName = sanitizeRegex(req.query.fullName);
     const studentId = sanitizeRegex(req.query.studentId);
     const email = sanitizeRegex(req.query.email);
@@ -218,7 +219,7 @@ const getAllStudents = async (req, res) => {
     });
   } catch (err) {
     console.error('Error fetching students:', err);
-    res.status(500).json({ success: false, message: 'Error fetching students', error: err.message });
+    next(err);
   }
 };
 

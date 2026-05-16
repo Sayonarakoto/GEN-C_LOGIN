@@ -4,29 +4,31 @@ const Faculty = require('../models/Faculty');
 const Student = require('../models/student');
 const Security = require('../models/security');
 const User = require('../models/User');
+const createError = require('../utils/error');
+const logger = require('../utils/logger');
 
 // ----------------- REGISTER -----------------
-exports.register = async (req, res) => {
+exports.register = async (req, res, next) => {
   try {
-    console.log('Registering faculty:', req.body);
+    logger.info('Registering faculty:', req.body);
 
     const { fullName, email, employeeId, department, designation, password, profilePhoto } = req.body;
     
     // Validate required fields
     if (!fullName || !email || !employeeId || !department || !designation || !password) {
-        return res.status(400).json({ success: false, message: 'All fields are required.' });
+        return next(createError('All fields are required.', 400));
     }
 
     // Check if faculty already exists
     let faculty = await Faculty.findOne({ employeeId });
     if (faculty) {
-      return res.status(400).json({ success: false, message: 'Faculty with this Employee ID already exists.' });
+      return next(createError('Faculty with this Employee ID already exists.', 400));
     }
 
     // Validate department against a predefined list
-    const validDepartments = ["ct", "mech-a", "mech-b", "eee", "ce", "fs", "auto"];
+    const validDepartments = process.env.VALID_DEPARTMENTS ? process.env.VALID_DEPARTMENTS.split(',') : ["ct", "mech-a", "mech-b", "eee", "ce", "fs", "auto"];
     if (!department || !validDepartments.includes(department.toLowerCase())) {
-      return res.status(400).json({ success: false, message: 'Invalid department provided.' });
+      return next(createError('Invalid department provided.', 400));
     }
 
     // Hash password
@@ -65,68 +67,59 @@ exports.register = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Faculty registration error:', error);
-    res.status(500).json({ success: false, message: `Server error during registration: ${error.message}` });
+    next(error);
   }
 };
 
-exports.studentRegister = async (req, res) => {
+exports.studentRegister = async (req, res, next) => {
     try {
         const { studentId, fullName, email, department, year, password } = req.body;
         if (!studentId || !fullName || !email || !department || !year || !password) {
-            return res.status(400).json({ success: false, message: 'All fields are required' });
+            return next(createError('All fields are required', 400));
         }
         const existingStudent = await Student.findOne({ studentId });
         if (existingStudent) {
-            return res.status(400).json({ success: false, message: 'Student with this ID already exists' });
+            return next(createError('Student with this ID already exists', 400));
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const student = await Student.create({ studentId, fullName, email, department, year, password: hashedPassword });
         res.status(201).json({ success: true, message: 'Student registered successfully' });
     } catch (error) {
-        console.error('Student registration error:', error);
-        res.status(500).json({ success: false, message: 'Server error during registration' });
+        next(error);
     }
 };
 
-exports.securityRegister = async (req, res) => {
+exports.securityRegister = async (req, res, next) => {
     try {
         const { name, securityId, passkey } = req.body;
         if (!name || !securityId || !passkey || passkey.length !== 6) {
-            return res.status(400).json({ success: false, message: 'Name, Security ID, and a 6-digit passkey are required' });
+            return next(createError('Name, Security ID, and a 6-digit passkey are required', 400));
         }
         const existingSecurity = await Security.findOne({ securityId });
         if (existingSecurity) {
-            return res.status(400).json({ success: false, message: 'Security user with this ID already exists' });
+            return next(createError('Security user with this ID already exists', 400));
         }
         // passkey is hashed in model pre-save hook
         const security = await Security.create({ name, securityId, passkey });
         res.status(201).json({ success: true, message: 'Security user registered successfully' });
     } catch (error) {
-        console.error('Security registration error:', error);
-        res.status(500).json({ success: false, message: 'Server error during registration' });
+        next(error);
     }
 };
 
 // ----------------- LOGIN -----------------
-exports.studentLogin = async (req, res) => {
+exports.studentLogin = async (req, res, next) => {
   try {
     const { studentId, password } = req.body;
     const student = await Student.findOne({ studentId });
 
     if (!student) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
+      return next(createError('Invalid credentials', 401));
     }
 
     const isMatch = await bcrypt.compare(password, student.password);
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
+      return next(createError('Invalid credentials', 401));
     }
 
     // Sanitize profile picture URL (remove /static if present from legacy uploads)
@@ -149,33 +142,23 @@ exports.studentLogin = async (req, res) => {
       user: { id: student._id, role: 'student', studentId: student.studentId, fullName: student.fullName, department: student.department, profilePictureUrl: profilePictureUrl }
     });
   } catch (error) {
-    console.error('Student login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during login'
-    });
+    next(error);
   }
 };
 
-exports.facultyLogin = async (req, res) => {
+exports.facultyLogin = async (req, res, next) => {
   try {
     const { employeeId, facultyId, password } = req.body;
     const id = employeeId || facultyId;
     const faculty = await Faculty.findOne({ employeeId: id });
 
     if (!faculty) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
+      return next(createError('Invalid credentials', 401));
     }
 
     const isMatch = await bcrypt.compare(password, faculty.password);
     if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
+      return next(createError('Invalid credentials', 401));
     }
 
     const role = faculty.designation.toUpperCase() === 'HOD' ? 'HOD' : 'faculty';
@@ -186,7 +169,8 @@ exports.facultyLogin = async (req, res) => {
       department: faculty.department,
       email: faculty.email,         // Add email
       employeeId: faculty.employeeId, // Add employeeId
-      designation: faculty.designation // ADD THIS LINE
+      designation: faculty.designation, // Include designation for profile UI
+      profilePictureUrl: faculty.profilePhoto || '' // Allow rehydration to show profile image
     });
 
     const facultyData = faculty.toObject();
@@ -199,31 +183,20 @@ exports.facultyLogin = async (req, res) => {
       user: { id: faculty._id, role: role, ...facultyData },
     });
   } catch (error) {
-    console.error('Faculty login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during login'
-    });
+    next(error);
   }
 };
 
-exports.securityLogin = async (req, res) => {
+exports.securityLogin = async (req, res, next) => {
   try {
-    console.log('Security login attempt started.'); // Added log
     const { passkey } = req.body;
-    console.log('Passkey received:', passkey ? 'yes' : 'no'); // Added log
-    // If you have a single security doc:
     const security = await Security.findOne();
-    console.log('Security user found:', security ? 'yes' : 'no'); // Added log
-    if (!security) return res.status(401).json({ success: false, message: 'Security user not found' });
+    if (!security) return next(createError('Security user not found', 401));
 
-    console.log('Comparing passkey...'); // Added log
     const ok = await bcrypt.compare(passkey, security.passkey);
-    console.log('Passkey comparison result:', ok); // Added log
-    if (!ok) return res.status(401).json({ success: false, message: 'Invalid passkey' });
+    if (!ok) return next(createError('Invalid passkey', 401));
 
     const token = generateToken({ id: security._id, role: 'security', fullName: 'Security', department: 'Security' });
-    console.log('Token generated. Login successful.'); // Added log
     return res.json({
       success: true,
       message: 'Login successful',
@@ -231,8 +204,7 @@ exports.securityLogin = async (req, res) => {
       user: { id: security._id, role: 'security', fullName: 'Security', department: 'Security' }
     });
   } catch (err) {
-    console.error('Security login error:', err);
-    res.status(500).json({ success: false, message: 'Server error' });
+    next(err);
   }
 };
 
@@ -243,7 +215,7 @@ exports.refreshToken = async (req, res) => {
     // ... add your token refresh logic here
     res.status(501).json({ message: 'Token refresh not implemented' });
   } catch (error) {
-    console.error('Token refresh error:', error);
+    logger.error('Token refresh error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error during token refresh'
@@ -258,7 +230,7 @@ exports.forgotPassword = async (req, res) => {
     // ... add your forgot password logic here
     res.status(501).json({ message: 'Forgot password not implemented' });
   } catch (error) {
-    console.error('Forgot password error:', error);
+    logger.error('Forgot password error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error during password reset request'
@@ -273,7 +245,7 @@ exports.resetPassword = async (req, res) => {
     // ... add your password reset logic here
     res.status(501).json({ message: 'Password reset not implemented' });
   } catch (error) {
-    console.error('Password reset error:', error);
+    logger.error('Password reset error:', error);
     res.status(500).json({
       success: false,
       message: 'Server error during password reset'
@@ -288,10 +260,10 @@ exports.unifiedLogin = async (req, res) => {
 
     if (role === 'student') {
       const { studentId, password } = req.body;
-      console.log('Attempting student login for studentId:', studentId);
+      logger.info('Attempting student login for studentId:', studentId);
       const student = await Student.findOne({ studentId });
       if (!student) {
-        console.log('Student not found for studentId:', studentId);
+        logger.info('Student not found for studentId:', studentId);
         return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Student found:', student.fullName);
@@ -347,7 +319,16 @@ exports.unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       const role = faculty.designation.toUpperCase() === 'HOD' ? 'HOD' : 'faculty';
-      const token = generateToken({ id: faculty._id, role: role, fullName: faculty.fullName, department: faculty.department, email: faculty.email, employeeId: faculty.employeeId, designation: faculty.designation }); // ADD designation
+      const token = generateToken({
+        id: faculty._id,
+        role: role,
+        fullName: faculty.fullName,
+        department: faculty.department,
+        email: faculty.email,
+        employeeId: faculty.employeeId,
+        designation: faculty.designation,
+        profilePictureUrl: faculty.profilePhoto || '',
+      });
       const f = faculty.toObject(); delete f.password;
       return res.json({ token, user: { id: faculty._id, role: role, ...f }});
     }
@@ -365,7 +346,7 @@ exports.unifiedLogin = async (req, res) => {
 
     return res.status(400).json({ message: "Unsupported role" });
   } catch (err) {
-    console.error("Login error:", err);
+    logger.error("Login error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

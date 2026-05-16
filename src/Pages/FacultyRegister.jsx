@@ -48,7 +48,7 @@ const Register = () => {
         const formData = new FormData();
         formData.append('image', file);
         
-        const blobResponse = await api.post('/api/blob/profile-picture-upload', formData, {
+        const blobResponse = await api.post('/blob/profile-picture-upload', formData, {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
         
@@ -60,7 +60,7 @@ const Register = () => {
       }
 
       // Submit registration data
-      const response = await api.post('/api/auth/register', {
+      const response = await api.post('/auth/register', {
         fullName,
         email,
         employeeId,

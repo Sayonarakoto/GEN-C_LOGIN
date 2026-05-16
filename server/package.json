@@ -18,9 +18,10 @@
     "dotenv": "^17.2.1",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
-    "express-rate-limit": "^8.1.0",
+    "express-rate-limit": "^8.5.2",
     "express-validator": "^7.2.1",
     "fs": "^0.0.1-security",
+    "helmet": "^8.1.0",
     "init": "^0.1.2",
     "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.2",
@@ -36,7 +37,8 @@
     "qrcode": "^1.5.4",
     "require": "^0.4.4",
     "socket.io": "^4.8.1",
-    "speakeasy": "^2.0.0"
+    "speakeasy": "^2.0.0",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "jest": "^30.1.3",

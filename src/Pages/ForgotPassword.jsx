@@ -19,7 +19,7 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      await api.post('/api/forgot-password', {
+      await api.post('/forgot-password', {
         email: emailToSend,
       });
       setSubmitted(true);

@@ -1,17 +1,18 @@
 const User = require('../models/User');
+const createError = require('../utils/error');
 
 // @desc    Upload profile picture for librarian
 // @route   POST /api/librarian/upload-profile-picture
 // @access  Private (Librarian)
-exports.uploadProfilePicture = async (req, res) => {
+exports.uploadProfilePicture = async (req, res, next) => {
     try {
         if (!req.file) {
-            return res.status(400).json({ success: false, message: 'No file uploaded.' });
+            return next(createError('No file uploaded.', 400));
         }
 
         const user = await User.findById(req.user.id);
         if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
+            return next(createError('User not found.', 404));
         }
 
         // Use '/uploads' to match server/index.js static serve
@@ -21,20 +22,20 @@ exports.uploadProfilePicture = async (req, res) => {
         res.json({ success: true, filePath: user.profilePictureUrl, message: 'Profile picture uploaded successfully.' });
     } catch (error) {
         console.error('Error uploading librarian profile picture:', error);
-        res.status(500).json({ success: false, message: 'Server error' });
+        next(error);
     }
 };
 
 // @desc    Update librarian profile details
 // @route   PUT /api/librarian/profile
 // @access  Private (Librarian)
-exports.updateProfile = async (req, res) => {
+exports.updateProfile = async (req, res, next) => {
     try {
         const { fullName, email, profilePictureUrl } = req.body;
         const user = await User.findById(req.user.id);
 
         if (!user) {
-            return res.status(404).json({ success: false, message: 'User not found.' });
+            return next(createError('User not found.', 404));
         }
 
         if (fullName) user.fullName = fullName;
@@ -47,8 +48,8 @@ exports.updateProfile = async (req, res) => {
     } catch (error) {
         console.error('Error updating librarian profile:', error);
         if (error.code === 11000) {
-             return res.status(400).json({ success: false, message: 'Email already in use.' });
+             return next(createError('Email already in use.', 400));
         }
-        res.status(500).json({ success: false, message: 'Server error' });
+        next(error);
     }
 };

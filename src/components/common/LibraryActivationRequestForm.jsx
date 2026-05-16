@@ -79,7 +79,7 @@ const LibraryActivationRequestForm = () => {
     submissionData.append('userId', user.id || user._id);
 
     try {
-      await apiClient.post('/api/library/activation-request', submissionData, {
+      await apiClient.post('/library/activation-request', submissionData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 

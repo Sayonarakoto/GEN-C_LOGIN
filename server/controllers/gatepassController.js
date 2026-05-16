@@ -10,11 +10,12 @@ const { sendNotification } = require('../services/notificationService');
 const { generateWatermarkedPDF } = require('../services/pdfGenerationService'); // New import
 const { verifyOTPPass, verifyQRPass } = require('../services/verificationService'); // Import verification services
 const { logAuditAttempt } = require('../services/auditService'); // Import audit service
+const createError = require('../utils/error');
 
 // @desc    Get active gate pass for a student
 // @route   GET /api/gatepass/student/active
 // @access  Private (Student)
-exports.getActiveGatePass = async (req, res) => {
+exports.getActiveGatePass = async (req, res, next) => {
   try {
     const studentId = req.user.id;
 
@@ -29,47 +30,47 @@ exports.getActiveGatePass = async (req, res) => {
       .select('+pdf_path');
 
     if (!activePass) {
-      return res.status(404).json({ success: false, message: 'No active gate pass found.' });
+      return next(createError('No active gate pass found.', 404));
     }
 
     res.status(200).json({ success: true, data: activePass });
   } catch (error) {
     console.error('Error fetching active gate pass:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Request a new gate pass
 // @route   POST /api/gatepass/student/request
 // @access  Private (Student)
-exports.requestGatePass = async (req, res) => {
+exports.requestGatePass = async (req, res, next) => {
     const { destination, reason, selectedApproverId, date_valid_from, date_valid_to, isHalfDay, approverRole } = req.body;
     const studentId = req.user.id;
 
     try {
         // Basic validation
         if (!destination || !reason || !selectedApproverId || !date_valid_from || !approverRole) {
-            return res.status(400).json({ success: false, message: 'Please provide all required fields.' });
+            return next(createError('Please provide all required fields.', 400));
         }
 
         // If not a half-day pass, date_valid_to is required
         if (!isHalfDay && !date_valid_to) {
-            return res.status(400).json({ success: false, message: 'Return time is required for full-day passes.' });
+            return next(createError('Return time is required for full-day passes.', 400));
         }
 
         const student = await Student.findById(studentId);
         if (!student) {
-            return res.status(404).json({ success: false, message: 'Student not found.' });
+            return next(createError('Student not found.', 404));
         }
 
         const selectedApprover = await Faculty.findById(selectedApproverId);
         if (!selectedApprover) {
-            return res.status(404).json({ success: false, message: 'Selected approver not found.' });
+            return next(createError('Selected approver not found.', 404));
         }
 
         // CRITICAL FIX: Ensure selected approver is from the same department as the student
         if (selectedApprover.department !== student.department) {
-            return res.status(403).json({ success: false, message: 'Selected approver is not from your department.' });
+            return next(createError('Selected approver is not from your department.', 403));
         }
 
         let faculty_approver_id = null;
@@ -104,7 +105,7 @@ exports.requestGatePass = async (req, res) => {
                 // Standard two-tier approval: Faculty -> HOD
                 const hod = await Faculty.findOne({ department: student.department, designation: 'HOD' });
                 if (!hod) {
-                    return res.status(404).json({ success: false, message: `No HOD found for ${student.department} department.` });
+                    return next(createError(`No HOD found for ${student.department} department.`, 404));
                 }
                 hod_approver_id = hod._id;
                 faculty_status = 'PENDING';
@@ -123,10 +124,10 @@ exports.requestGatePass = async (req, res) => {
 
         // Validate dates
         if (isNaN(exitDate.getTime())) {
-            return res.status(400).json({ success: false, message: 'Invalid exit date/time provided.' });
+            return next(createError('Invalid exit date/time provided.', 400));
         }
         if (!isHalfDay && date_valid_to && isNaN(returnDateObj.getTime())) {
-            return res.status(400).json({ success: false, message: 'Invalid return date/time provided.' });
+            return next(createError('Invalid return date/time provided.', 400));
         }
 
         // --- Time Range Validation (9:30 AM to 4:00 PM IST) ---
@@ -142,14 +143,14 @@ exports.requestGatePass = async (req, res) => {
         const exitTimeInMinutes = getISTTimeInMinutes(exitDate);
 
         if (exitTimeInMinutes < collegeStartTimeInMinutes || exitTimeInMinutes > collegeEndTimeInMinutes) {
-            return res.status(400).json({ success: false, message: 'Requested exit time must be within college hours (9:30 AM - 4:00 PM).' });
+            return next(createError('Requested exit time must be within college hours (9:30 AM - 4:00 PM).', 400));
         }
 
         if (returnDateObj) {
             const returnTimeInMinutes = getISTTimeInMinutes(returnDateObj);
 
             if (returnTimeInMinutes < collegeStartTimeInMinutes || returnTimeInMinutes > collegeEndTimeInMinutes) {
-                return res.status(400).json({ success: false, message: 'Requested return time must be within college hours (9:30 AM - 4:00 PM).' });
+                return next(createError('Requested return time must be within college hours (9:30 AM - 4:00 PM).', 400));
             }
         }
         // --- End Time Range Validation ---
@@ -199,14 +200,14 @@ exports.requestGatePass = async (req, res) => {
 
     } catch (error) {
         console.error('Error requesting gate pass:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        next(error);
     }
 };
 
 // @desc    Get pending gate passes for a faculty member
 // @route   GET /api/gatepass/faculty/pending
 // @access  Private (Faculty)
-exports.getPendingGatePasses = async (req, res) => {
+exports.getPendingGatePasses = async (req, res, next) => {
   try {
     const facultyId = req.user.id;
     const pendingPasses = await GatePass.find({
@@ -223,14 +224,14 @@ exports.getPendingGatePasses = async (req, res) => {
     res.status(200).json({ success: true, data: pendingPasses });
   } catch (error) {
     console.error('Error fetching pending gate passes:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Get gate pass history for a faculty member
 // @route   GET /api/gatepass/faculty/history
 // @access  Private (Faculty)
-exports.getGatePassHistory = async (req, res) => {
+exports.getGatePassHistory = async (req, res, next) => {
   try {
     const facultyId = req.user.id;
     const historyPasses = await GatePass.find({
@@ -247,24 +248,24 @@ exports.getGatePassHistory = async (req, res) => {
     res.status(200).json({ success: true, data: historyPasses });
   } catch (error) {
     console.error('Error fetching gate pass history:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Faculty approves a gate pass and forwards to HOD
 // @route   PUT /api/gatepass/faculty/approve/:id
 // @access  Private (Faculty)
-exports.facultyApproveGatePass = async (req, res) => {
+exports.facultyApproveGatePass = async (req, res, next) => {
   try {
     const pass = await GatePass.findById(req.params.id).populate('student_id', 'fullName');
 
     if (!pass) {
-      return res.status(404).json({ success: false, message: 'Gate pass not found' });
+      return next(createError('Gate pass not found.', 404));
     }
 
     // Ensure the pass is pending faculty approval and assigned to this faculty
     if (pass.faculty_status !== 'PENDING' || pass.faculty_approver_id.toString() !== req.user.id) {
-      return res.status(401).json({ success: false, message: 'Not authorized or pass not in correct status for faculty approval.' });
+      return next(createError('Not authorized or pass not in correct status for faculty approval.', 401));
     }
 
     pass.faculty_status = 'APPROVED';
@@ -337,28 +338,28 @@ exports.facultyApproveGatePass = async (req, res) => {
     console.error('Error in facultyApproveGatePass:', error);
     // Log more details about the error for debugging
     if (error.name === 'CastError') {
-      return res.status(400).json({ success: false, message: 'Invalid ID format provided.' });
+      return next(createError('Invalid ID format provided.', 400));
     }
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ success: false, message: error.message });
+      return next(createError(error.message, 400));
     }
-    res.status(500).json({ success: false, message: 'Server Error', details: error.message });
+    next(error);
   }
 };
 
 // @desc    Faculty rejects a gate pass
 // @route   PUT /api/gatepass/faculty/reject/:id
 // @access  Private (Faculty)
-exports.facultyRejectGatePass = async (req, res) => {
+exports.facultyRejectGatePass = async (req, res, next) => {
     try {
         const pass = await GatePass.findById(req.params.id).populate('student_id', 'fullName');
 
         if (!pass) {
-            return res.status(404).json({ success: false, message: 'Gate pass not found' });
+            return next(createError('Gate pass not found.', 404));
         }
 
         if (pass.faculty_status !== 'PENDING' || !pass.faculty_approver_id || pass.faculty_approver_id.toString() !== req.user.id) {
-            return res.status(401).json({ success: false, message: 'Not authorized or pass not in correct status for faculty rejection.' });
+            return next(createError('Not authorized or pass not in correct status for faculty rejection.', 401));
         }
 
         pass.faculty_status = 'REJECTED';
@@ -405,19 +406,19 @@ exports.facultyRejectGatePass = async (req, res) => {
         res.status(200).json({ success: true, data: pass });
     } catch (error) {
         console.error('Error in facultyRejectGatePass:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        next(error);
     }
 };
 
 // @desc    HOD approves/finalizes a gate pass
 // @route   PUT /api/gatepass/hod/approve/:id
 // @access  Private (HOD)
-exports.hodApproveGatePass = async (req, res) => {
+exports.hodApproveGatePass = async (req, res, next) => {
   try {
     const pass = await GatePass.findById(req.params.id).populate('student_id', 'fullName');
 
     if (!pass) {
-      return res.status(404).json({ success: false, message: 'Gate pass not found' });
+      return next(createError('Gate pass not found.', 404));
     }
 
     // Check if the HOD is authorized to approve this pass
@@ -426,12 +427,12 @@ exports.hodApproveGatePass = async (req, res) => {
     const isDirectHODApproval = !pass.hod_approver_id && pass.faculty_approver_id.toString() === req.user.id && pass.faculty_status === 'APPROVED';
 
     if (!isHODofDepartment || (!isAssignedHOD && !isDirectHODApproval)) {
-        return res.status(401).json({ success: false, message: 'Not authorized to approve this pass.' });
+        return next(createError('Not authorized to approve this pass.', 401));
     }
 
     // Ensure the pass is in a state ready for HOD approval
     if (pass.hod_status !== 'PENDING' || (pass.faculty_status !== 'APPROVED' && !isDirectHODApproval)) {
-        return res.status(400).json({ success: false, message: 'Pass not in correct status for HOD approval.' });
+        return next(createError('Pass not in correct status for HOD approval.', 400));
     }
 
     pass.hod_status = 'APPROVED';
@@ -490,19 +491,19 @@ exports.hodApproveGatePass = async (req, res) => {
     res.status(200).json({ success: true, data: pass });
   } catch (error) {
     console.error('Error in hodApproveGatePass:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    HOD rejects a gate pass
 // @route   PUT /api/gatepass/hod/reject/:id
 // @access  Private (HOD)
-exports.hodRejectGatePass = async (req, res) => {
+exports.hodRejectGatePass = async (req, res, next) => {
     try {
         const pass = await GatePass.findById(req.params.id).populate('student_id', 'fullName');
 
         if (!pass) {
-            return res.status(404).json({ success: false, message: 'Gate pass not found' });
+            return next(createError('Gate pass not found.', 404));
         }
 
         const isHODofDepartment = req.user.department.toString() === pass.department_id.toString();
@@ -510,11 +511,11 @@ exports.hodRejectGatePass = async (req, res) => {
         const isDirectHODApproval = !pass.hod_approver_id && pass.faculty_approver_id.toString() === req.user.id && pass.faculty_status === 'APPROVED';
 
         if (!isHODofDepartment || (!isAssignedHOD && !isDirectHODApproval)) {
-            return res.status(401).json({ success: false, message: 'Not authorized to reject this pass.' });
+            return next(createError('Not authorized to reject this pass.', 401));
         }
 
         if (pass.hod_status !== 'PENDING') {
-            return res.status(400).json({ success: false, message: 'Pass not in correct status for HOD rejection.' });
+            return next(createError('Pass not in correct status for HOD rejection.', 400));
         }
 
         pass.hod_status = 'REJECTED';
@@ -553,14 +554,14 @@ exports.hodRejectGatePass = async (req, res) => {
         res.status(200).json({ success: true, data: pass });
     } catch (error) {
         console.error('Error in hodRejectGatePass:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        next(error);
     }
 };
 
 // @desc    Verify a gate pass using Student ID and OTP
 // @route   POST /api/gatepass/verify-otp
 // @access  Private (Security)
-exports.verifyGatePassByOTP = async (req, res) => {
+exports.verifyGatePassByOTP = async (req, res, next) => {
     const { studentIdString, otp, scan_location } = req.body;
     const securityUser = req.user; // Attached by auth middleware
 
@@ -570,12 +571,7 @@ exports.verifyGatePassByOTP = async (req, res) => {
     try {
         if (!studentIdString || !otp) {
             await logAuditAttempt('Unknown', 'gate', 'Verified', securityUser, 'FAILED: Missing Student ID or OTP for Gate Pass verification.');
-            return res.status(400).json({
-                is_valid: false,
-                display_status: "INPUT REQUIRED",
-                message: 'Missing Student ID or OTP for verification.',
-                pass_details: {}
-            });
+            return next(createError('Missing Student ID or OTP for verification.', 400));
         }
 
         // Use the centralized verifyOTPPass service
@@ -664,14 +660,14 @@ exports.verifyGatePassByOTP = async (req, res) => {
     } catch (error) {
         console.error('Error in verifyGatePassByOTP:', error);
         await logAuditAttempt('Unknown', 'gate', 'Verified', securityUser, `FAILED (OTP): Server Error - ${error.message}`);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        next(error);
     }
 };
 
 // @desc    Verify a gate pass using QR Code
 // @route   POST /api/gatepass/verify-qr
 // @access  Private (Security)
-exports.verifyGatePassByQR = async (req, res) => {
+exports.verifyGatePassByQR = async (req, res, next) => {
     const { qr_token, scan_location } = req.body;
     const securityUser = req.user; // Attached by auth middleware
 
@@ -681,12 +677,7 @@ exports.verifyGatePassByQR = async (req, res) => {
     try {
         if (!qr_token) {
             await logAuditAttempt('Unknown', 'gate', 'Verified', securityUser, 'FAILED: Missing QR Token for Gate Pass verification.');
-            return res.status(400).json({
-                is_valid: false,
-                display_status: "INPUT REQUIRED",
-                message: 'Missing QR Token for verification.',
-                pass_details: {}
-            });
+            return next(createError('Missing QR Token for verification.', 400));
         }
 
         // Use the centralized verifyQRPass service
@@ -775,30 +766,30 @@ exports.verifyGatePassByQR = async (req, res) => {
     } catch (error) {
         console.error('Error in verifyGatePassByQR:', error);
         await logAuditAttempt('Unknown', 'gate', 'Verified', securityUser, `FAILED (QR): Server Error - ${error.message}`);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        next(error);
     }
 };
 
 // @desc    Log a late return for a gate pass
 // @route   POST /api/gatepass/log-late-return
 // @access  Private (Security)
-exports.logLateReturn = async (req, res) => {
+exports.logLateReturn = async (req, res, next) => {
     const { gatePassId, scanLocation, remarks } = req.body;
     const securityId = req.user.id;
 
     try {
         if (!gatePassId) {
-            return res.status(400).json({ success: false, message: 'Gate Pass ID is required.' });
+            return next(createError('Gate Pass ID is required.', 400));
         }
 
         const gatePass = await GatePass.findById(gatePassId).populate('student_id', 'fullName');
         if (!gatePass) {
-            return res.status(404).json({ success: false, message: 'Gate Pass not found.' });
+            return next(createError('Gate Pass not found.', 404));
         }
 
         // Ensure the gate pass was approved and is not already marked as late
         if (gatePass.hod_status !== 'APPROVED') {
-            return res.status(400).json({ success: false, message: 'Gate Pass was not approved or is not valid for late return logging.' });
+            return next(createError('Gate Pass was not approved or is not valid for late return logging.', 400));
         }
 
         // Log the lateness event in AuditLog
@@ -844,14 +835,14 @@ exports.logLateReturn = async (req, res) => {
 
     } catch (error) {
         console.error('Error logging late return:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        next(error);
     }
 };
 
 // @desc    Get gate pass history for a student
 // @route   GET /api/gatepass/student/history
 // @access  Private (Student)
-exports.getStudentGatePassHistory = async (req, res) => {
+exports.getStudentGatePassHistory = async (req, res, next) => {
   try {
     const studentId = req.user.id;
     const historyPasses = await GatePass.find({ student_id: studentId })
@@ -863,14 +854,14 @@ exports.getStudentGatePassHistory = async (req, res) => {
     res.status(200).json({ success: true, data: historyPasses });
   } catch (error) {
     console.error('Error fetching student gate pass history:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Download a gate pass PDF
 // @route   GET /api/gatepass/download-pdf/:id
 // @access  Private (Student, HOD, Security)
-exports.downloadGatePassPDF = async (req, res) => {
+exports.downloadGatePassPDF = async (req, res, next) => {
   try {
     const passId = req.params.id;
     const userId = req.user.id;
@@ -881,7 +872,7 @@ exports.downloadGatePassPDF = async (req, res) => {
       .populate('hod_approver_id', 'fullName');
 
     if (!gatePass) {
-      return res.status(404).json({ success: false, message: 'Gate Pass not found.' });
+      return next(createError('Gate Pass not found.', 404));
     }
 
     // Authorization: Only the student who requested it, or an HOD/Security can download
@@ -890,7 +881,7 @@ exports.downloadGatePassPDF = async (req, res) => {
     const isSecurity = userRole === 'security';
 
     if (!isStudent && !isHOD && !isSecurity) {
-      return res.status(403).json({ success: false, message: 'Not authorized to download this gate pass.' });
+      return next(createError('Not authorized to download this gate pass.', 403));
     }
 
     // Regenerate the PDF on-demand
@@ -904,18 +895,18 @@ exports.downloadGatePassPDF = async (req, res) => {
 
   } catch (error) {
     console.error('Error in downloadGatePassPDF:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Get all gate pass history for HOD's department
 // @route   GET /api/gatepass/hod/history
 // @access  Private (HOD)
-exports.getHODGatePassHistory = async (req, res) => {
+exports.getHODGatePassHistory = async (req, res, next) => {
   try {
     const department = req.user.department;
     if (!department) {
-      return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+      return next(createError('HOD user does not have a department assigned.', 400));
     }
 
     const historyPasses = await GatePass.find({ department_id: department })
@@ -927,18 +918,18 @@ exports.getHODGatePassHistory = async (req, res) => {
     res.status(200).json({ success: true, data: historyPasses });
   } catch (error) {
     console.error('Error fetching HOD gate pass history:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Get pending gate passes for HOD approval
 // @route   GET /api/gatepass/hod/pending
 // @access  Private (HOD)
-exports.getPendingHODApprovals = async (req, res) => {
+exports.getPendingHODApprovals = async (req, res, next) => {
   try {
     const hodId = req.user.id; // Get HOD's ID from the authenticated user
     if (!hodId) {
-      return res.status(400).json({ success: false, message: 'HOD user ID not found.' });
+      return next(createError('HOD user ID not found.', 400));
     }
 
     const pendingPasses = await GatePass.find({
@@ -964,14 +955,14 @@ exports.getPendingHODApprovals = async (req, res) => {
     res.status(200).json({ success: true, data: pendingPasses });
   } catch (error) {
     console.error('Error fetching pending HOD approvals:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Get gate pass statistics for a faculty member
 // @route   GET /api/gatepass/faculty/stats
 // @access  Private (Faculty)
-exports.getFacultyGatePassStats = async (req, res) => {
+exports.getFacultyGatePassStats = async (req, res, next) => {
   try {
     const facultyId = req.user.id;
     const department = req.user.department;
@@ -1017,18 +1008,18 @@ exports.getFacultyGatePassStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching faculty gate pass stats:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Get department-wide gate pass statistics for HOD
 // @route   GET /api/gatepass/hod/stats
 // @access  Private (HOD)
-exports.getHODDepartmentStats = async (req, res) => {
+exports.getHODDepartmentStats = async (req, res, next) => {
   try {
     const department = req.user.department;
     if (!department) {
-      return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+      return next(createError('HOD user does not have a department assigned.', 400));
     }
 
     // Total gate passes for the department
@@ -1086,6 +1077,6 @@ exports.getHODDepartmentStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching HOD department stats:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };

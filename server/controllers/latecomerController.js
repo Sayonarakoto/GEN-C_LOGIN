@@ -4,7 +4,8 @@ const LateEntry = require('../models/LateEntry');
 const Faculty = require('../models/Faculty');
 const { sendNotification } = require('../services/notificationService');
 // Assuming '../utils/latecomerUtils' is the correct path
-const { checkHODNeed, finalizeAction } = require('../utils/latecomerUtils'); 
+const { checkHODNeed, finalizeAction } = require('../utils/latecomerUtils');
+const createError = require('../utils/error');
 
 // Helper function for population
 const populateLateEntry = (query) => {
@@ -15,12 +16,12 @@ const populateLateEntry = (query) => {
 };
 
 // Helper function to handle responses (Refactor)
-const handleResponse = (res, promise) => {
+const handleResponse = (res, next, promise) => {
   promise
     .then(data => res.status(200).json({ success: true, data }))
     .catch(err => {
       console.error("Error in latecomerController:", err);
-      res.status(500).json({ success: false, message: 'Internal server error' });
+      next(err);
     });
 };
 
@@ -29,11 +30,11 @@ const handleResponse = (res, promise) => {
 // =========================================================
 
 // GET /api/latecomers/faculty/pending (T3.1 - Working)
-exports.getFacultyPending = async (req, res) => {
+exports.getFacultyPending = async (req, res, next) => {
   try {
     const facultyId = req.user.id;
     if (!facultyId) {
-      return res.status(400).json({ success: false, message: 'User authentication data is incomplete.' });
+      return next(createError('User authentication data is incomplete.', 400));
     }
 
     const query = {
@@ -53,16 +54,12 @@ exports.getFacultyPending = async (req, res) => {
 
   } catch (err) {
     console.error('--- FATAL ERROR in getFacultyPending ---', err);
-    res.status(500).json({
-      success: false,
-      message: 'An internal server error occurred while fetching pending requests.',
-      error: err.message
-    });
+    next(err);
   }
 };
 
 // GET /api/latecomers/hod/pending (T3.4)
-exports.getHODPending = async (req, res) => {
+exports.getHODPending = async (req, res, next) => {
   console.log('DEBUG: Entering getHODPending');
   try {
     // This value is correctly 'CT' from the JWT
@@ -71,7 +68,7 @@ exports.getHODPending = async (req, res) => {
 
     if (!department) {
         console.error('ERROR: HOD user does not have a department assigned.');
-        return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+        return next(createError('HOD user does not have a department assigned.', 400));
     }
 
     console.log(`DEBUG: getHODPending - User ID: ${hodId}, Department: ${department}`);
@@ -102,23 +99,23 @@ exports.getHODPending = async (req, res) => {
     res.status(200).json({ success: true, data: pendingRequests });
   } catch (err) {
     console.error('Error in getHODPending:', err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    next(err);
   }
 };
 
 // GET /api/latecomers/department/approved (Generic approved list by department)
-exports.getApprovedByDepartment = (req, res) => {
+exports.getApprovedByDepartment = (req, res, next) => {
   const departmentRegex = new RegExp(`^${req.user.department}$`, 'i');
   const query = {
     department: departmentRegex,
     status: 'Approved' 
   };
   const promise = populateLateEntry(LateEntry.find(query)).sort({ createdAt: -1 });
-  handleResponse(res, promise);
+  handleResponse(res, next, promise);
 };
 
 // PUT /api/latecomers/:id/faculty-action (T4.2, T4.4)
-exports.facultyAction = async (req, res) => {
+exports.facultyAction = async (req, res, next) => {
   const { id } = req.params;
   const { action, remarks } = req.body;
   const { department, id: facultyId } = req.user;
@@ -133,15 +130,15 @@ exports.facultyAction = async (req, res) => {
     });
 
     if (!entry) {
-      return res.status(404).json({ success: false, message: 'Entry not found, not in your department, or not assigned to you.' });
+      return next(createError('Entry not found, not in your department, or not assigned to you.', 404));
     }
     
     if (!['Pending Faculty', 'Resubmitted'].includes(entry.status)) {
-        return res.status(400).json({ success: false, message: `Entry already finalized with status: ${entry.status}` });
+        return next(createError(`Entry already finalized with status: ${entry.status}`, 400));
     }
 
     if (!entry.FacultyActionable) {
-      return res.status(403).json({ success: false, message: 'Action not allowed. Waiting for HOD approval.' });
+      return next(createError('Action not allowed. Waiting for HOD approval.', 403));
     }
 
     let newStatus;
@@ -160,7 +157,7 @@ exports.facultyAction = async (req, res) => {
         auditAction = 'FACULTY_REJECTED';
         newStatus = 'Rejected';
     } else {
-        return res.status(400).json({ success: false, message: 'Invalid action.' });
+        return next(createError('Invalid action.', 400));
     }
 
     const updates = {
@@ -185,12 +182,12 @@ exports.facultyAction = async (req, res) => {
 
   } catch (err) {
     console.error("Error in facultyAction:", err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    next(err);
   }
 };
 
 // PUT /api/latecomers/:id/hod-action (T4.3)
-exports.hodAction = async (req, res) => {
+exports.hodAction = async (req, res, next) => {
   const { id } = req.params;
   const { action, remarks } = req.body;
   const { department, id: hodId } = req.user;
@@ -205,7 +202,7 @@ exports.hodAction = async (req, res) => {
     });
 
     if (!entry) {
-      return res.status(404).json({ success: false, message: 'Entry not found, not in your department, or not pending HOD action.' });
+      return next(createError('Entry not found, not in your department, or not pending HOD action.', 404));
     }
 
     let auditAction;
@@ -222,7 +219,7 @@ exports.hodAction = async (req, res) => {
         newHODStatus = 'Rejected';
         auditAction = 'HOD_REJECTED';
     } else {
-        return res.status(400).json({ success: false, message: 'Invalid action.' });
+        return next(createError('Invalid action.', 400));
     }
 
     const updates = {
@@ -253,12 +250,12 @@ exports.hodAction = async (req, res) => {
 
   } catch (err) {
     console.error("Error in hodAction:", err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    next(err);
   }
 };
 
 // GET /api/latecomers/faculty/all (New Filtered Faculty Dashboard View)
-exports.getFacultyLateEntries = async (req, res) => {
+exports.getFacultyLateEntries = async (req, res, next) => {
   try {
     const { statusFilter, from, to } = req.query; // Get filter from query params
     const facultyId = req.user.id;
@@ -298,12 +295,12 @@ exports.getFacultyLateEntries = async (req, res) => {
 
   } catch (err) {
     console.error("Error in getFacultyLateEntries:", err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    next(err);
   }
 };
 
 // NEW: Get Faculty Dashboard Stats
-exports.getFacultyStats = async (req, res) => {
+exports.getFacultyStats = async (req, res, next) => {
     try {
         const userId = req.user.id; 
         const userRole = req.user.role;
@@ -315,14 +312,14 @@ exports.getFacultyStats = async (req, res) => {
 
         if (userRole === 'HOD') {
             if (!userDepartment) {
-                return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+                return next(createError('HOD user does not have a department assigned.', 400));
             }
             baseQuery.department = userDepartment;
             // HODs see stats for their department, not just what they personally approved as faculty
         } else if (userRole === 'faculty') {
             baseQuery.facultyId = new mongoose.Types.ObjectId(userId);
         } else {
-            return res.status(403).json({ success: false, message: 'Unauthorized to view faculty stats.' });
+            return next(createError('Unauthorized to view faculty stats.', 403));
         }
 
         // 1. Get Pending Count
@@ -369,7 +366,7 @@ exports.getFacultyStats = async (req, res) => {
 
     } catch (err) {
         console.error("Error in getFacultyStats:", err);
-        res.status(500).json({ message: 'Internal Server Error', error: err.message });
+        next(err);
     }
 };
 
@@ -379,7 +376,7 @@ exports.getFacultyStats = async (req, res) => {
 // =========================================================
 
 // POST /api/latecomers
-exports.createLateEntry = async (req, res) => {
+exports.createLateEntry = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -397,7 +394,7 @@ exports.createLateEntry = async (req, res) => {
 
       if (isNaN(date.getTime())) { 
         // This should not happen with the new implementation, but keeping as a safeguard
-        return res.status(500).json({ success: false, message: 'Failed to create a valid timestamp.' });
+        return next(createError('Failed to create a valid timestamp.', 500));
       }
 
       // 🛑 FIX: Correctly structure the HOD determination logic
@@ -411,15 +408,13 @@ exports.createLateEntry = async (req, res) => {
           
           const userDepartment = req.user.department;
           if (!userDepartment) {
-            return res.status(400).json({ 
-              message: 'User department not found. Cannot submit entry.' 
-            });
+            return next(createError('User department not found. Cannot submit entry.', 400));
           }
           const departmentRegex = new RegExp(`^${userDepartment}$`);
           const hod = await Faculty.findOne({ department: departmentRegex, designation: new RegExp('^HOD', 'i') });
 
           if (!hod) {
-            return res.status(400).json({ success: false, message: 'No HOD found for your department to approve this special case based on history.' });
+            return next(createError('No HOD found for your department to approve this special case based on history.', 400));
           }
           hodIdToUse = hod._id;
         }
@@ -427,15 +422,13 @@ exports.createLateEntry = async (req, res) => {
       
       const userDepartment = req.user.department;
       if (!userDepartment) {
-        return res.status(400).json({ 
-          message: 'User department not found. Cannot submit entry.' 
-        });
+        return next(createError('User department not found. Cannot submit entry.', 400));
       }
 
       // Validate facultyId: must belong to the student's department
       const assignedFaculty = await Faculty.findById(facultyId);
       if (!assignedFaculty || assignedFaculty.department !== userDepartment) {
-        return res.status(403).json({ success: false, message: 'Assigned faculty not found in your department.' });
+        return next(createError('Assigned faculty not found in your department.', 403));
       }
 
       // 🛑 FIX: If student selected an HOD as faculty member directly, require HOD approval
@@ -455,7 +448,7 @@ exports.createLateEntry = async (req, res) => {
           const departmentRegex = new RegExp(`^${userDepartment}$`);
           const hod = await Faculty.findOne({ department: departmentRegex, designation: new RegExp('^HOD', 'i') });
           if (!hod) {
-              return res.status(400).json({ success: false, message: 'No HOD found for your department to process this escalated request.' });
+              return next(createError('No HOD found for your department to process this escalated request.', 400));
           }
           hodIdToUse = hod._id;
       }
@@ -485,12 +478,12 @@ exports.createLateEntry = async (req, res) => {
       });
     } catch (err) {
       console.error("Error creating late entry:", err);
-      res.status(500).json({ message: 'Server error' });
+      next(err);
     }
 };
 
 // PUT /api/latecomers/:id/update
-exports.updateLateEntry = async (req, res) => {
+exports.updateLateEntry = async (req, res, next) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
     return res.status(400).json({ errors: errors.array() });
@@ -503,21 +496,21 @@ exports.updateLateEntry = async (req, res) => {
     const existingEntry = await LateEntry.findById(id);
 
     if (!existingEntry) {
-      return res.status(404).json({ success: false, message: 'Late entry not found.' });
+      return next(createError('Late entry not found.', 404));
     }
 
     if (existingEntry.studentId.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Forbidden: You can only update your own late entries.' });
+      return next(createError('Forbidden: You can only update your own late entries.', 403));
     }
 
     if (existingEntry.isFinal || existingEntry.status === 'Pending HOD') {
-      return res.status(400).json({ success: false, message: 'Cannot update a finalized or currently pending HOD late entry.' });
+      return next(createError('Cannot update a finalized or currently pending HOD late entry.', 400));
     }
 
     // Validate facultyId: must belong to the student's department
     const assignedFaculty = await Faculty.findById(facultyId);
     if (!assignedFaculty || assignedFaculty.department !== existingEntry.department) {
-      return res.status(403).json({ success: false, message: 'Assigned faculty not found in the student\'s department.' });
+      return next(createError('Assigned faculty not found in the student's department.', 403));
     }
 
     const newStatus = ['Rejected', 'Resubmitted'].includes(existingEntry.status) ? 'Pending Faculty' : existingEntry.status;
@@ -539,24 +532,24 @@ exports.updateLateEntry = async (req, res) => {
 
   } catch (err) {
     console.error("Error in updateLateEntry:", err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    next(err);
   }
 };
 
 
 // GET /api/latecomers/student/all
-exports.getStudentEntries = async (req, res) => {
+exports.getStudentEntries = async (req, res, next) => {
   try {
     const query = LateEntry.find({ studentId: req.user.id }).sort({ updatedAt: -1, createdAt: -1 }); 
     const entries = await populateLateEntry(query);
     res.json({ success: true, entries });
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    next(err);
   }
 };
 
 // GET /api/latecomers/rejected/resubmittable
-exports.getStudentRejectedEntries = async (req, res) => {
+exports.getStudentRejectedEntries = async (req, res, next) => {
   try {
     const query = LateEntry.find({ 
         studentId: req.user.id, 
@@ -567,12 +560,12 @@ exports.getStudentRejectedEntries = async (req, res) => {
     const rejectedEntries = await populateLateEntry(query);
     res.status(200).json({ success: true, entries: rejectedEntries });
   } catch (err) {
-    res.status(500).json({ message: 'Internal server error', error: err.message });
+    next(err);
   }
 };
 
 // GET /api/latecomers/:id
-exports.getLateEntryById = async (req, res) => {
+exports.getLateEntryById = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -583,18 +576,18 @@ exports.getLateEntryById = async (req, res) => {
       const lateEntry = await LateEntry.findById(id).populate('studentId', 'fullName studentId department');
 
       if (!lateEntry) {
-        return res.status(404).json({ message: 'Late entry not found' });
+        return next(createError('Late entry not found.', 404));
       }
 
       // Authorization checks
       if (req.user.role === 'student') {
         if (!lateEntry.studentId || lateEntry.studentId._id.toString() !== req.user.id) {
-          return res.status(403).json({ message: 'Forbidden: You can only view your own late entries' });
+          return next(createError('Forbidden: You can only view your own late entries.', 403));
         }
       } else if (req.user.role === 'faculty' || req.user.role === 'HOD') {
         // Faculty and HODs can only view entries within their department
         if (lateEntry.department !== req.user.department) {
-          return res.status(403).json({ message: 'Forbidden: You can only view late entries from your department' });
+          return next(createError('Forbidden: You can only view late entries from your department.', 403));
         }
       }
       // Security role is allowed to view any entry (cross-departmental)
@@ -602,12 +595,12 @@ exports.getLateEntryById = async (req, res) => {
 
       res.status(200).json({ success: true, lateEntry });
     } catch (err) {
-      res.status(500).json({ message: 'Internal server error', error: err.message });
+      next(err);
     }
 };
 
 // PUT /api/latecomers/:id/resubmit
-exports.resubmitEntry = async (req, res) => {
+exports.resubmitEntry = async (req, res, next) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -619,11 +612,11 @@ exports.resubmitEntry = async (req, res) => {
 
       const existingEntry = await LateEntry.findById(id);
       if (!existingEntry) {
-        return res.status(404).json({ message: 'Late entry not found' });
+        return next(createError('Late entry not found.', 404));
       }
 
       if (existingEntry.studentId.toString() !== req.user.id) {
-        return res.status(403).json({ message: 'Forbidden: You can only resubmit your own entries' });
+        return next(createError('Forbidden: You can only resubmit your own entries.', 403));
       }
 
       // --- 🛑 START OF MODIFIED LOGIC ---
@@ -653,7 +646,7 @@ exports.resubmitEntry = async (req, res) => {
         });
 
         if (!hod) {
-            return res.status(400).json({ success: false, message: 'No HOD found for department on escalation.' });
+            return next(createError('No HOD found for department on escalation.', 400));
         }
         hodIdToUse = hod._id;
       }
@@ -690,12 +683,12 @@ exports.resubmitEntry = async (req, res) => {
       res.status(200).json({ success: true, lateEntry: updatedEntry });
     } catch (err) {
       console.error("Error in resubmitEntry:", err); // Added error logging
-      res.status(500).json({ message: 'Server error' });
+      next(err);
     }
 };
 
 // GET /api/latecomers (Generic: Superadmin or all department entries)
-exports.getLateEntries = async (req, res) => {
+exports.getLateEntries = async (req, res, next) => {
   try {
     let query = {};
 
@@ -710,30 +703,30 @@ exports.getLateEntries = async (req, res) => {
     res.status(200).json({ success: true, data: lateEntries });
   } catch (err) {
     console.error('Error in getLateEntries:', err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    next(err);
   }
 };
 
 // Other Helper/Utility Controllers
-exports.checkHODNeedController = async (req, res) => {
+exports.checkHODNeedController = async (req, res, next) => {
   try {
     const needsHOD = await checkHODNeed(req.user.id);
     res.json({ success: true, needsHODApproval: needsHOD });
   } catch (err) {
     console.error('Error checking HOD need:', err);
-    res.status(500).json({ message: 'Server error' });
+    next(err);
   }
 };
 
 // @desc    Get all late entry history for HOD's department
 // @route   GET /api/latecomers/hod/history
 // @access  Private (HOD)
-exports.getHODLateEntryHistory = async (req, res) => {
+exports.getHODLateEntryHistory = async (req, res, next) => {
   try {
     const { statusFilter, from, to } = req.query; // Get filter from query params
     const department = req.user.department;
     if (!department) {
-      return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+      return next(createError('HOD user does not have a department assigned.', 400));
     }
 
     let queryCriteria = { department: department };
@@ -772,7 +765,7 @@ exports.getHODLateEntryHistory = async (req, res) => {
     res.status(200).json({ success: true, data: history });
   } catch (err) {
     console.error('Error fetching HOD late entry history:', err);
-    res.status(500).json({ success: false, message: 'Internal server error' });
+    next(err);
   }
 };
 

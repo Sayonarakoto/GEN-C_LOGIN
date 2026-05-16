@@ -22,7 +22,7 @@ const RequestLibraryPass = () => {
         setLoading(true);
         try {
             // Standardize the pass type; no manual input required
-            await api.post('/api/library/request-pass', { passType: 'Standard' });
+            await api.post('/library/request-pass', { passType: 'Standard' });
             setNotification({ type: 'success', message: 'Library pass requested successfully!' });
             setTimeout(() => navigate('/student'), 2000); // Redirect after 2 seconds
         } catch (error) {

@@ -233,7 +233,7 @@ const StudentGatePass = () => {
         try {
             setError('');
             setLoading(true);
-            const response = await apiClient.get('/api/gatepass/student/active');
+            const response = await apiClient.get('/gatepass/student/active');
             setPassData(response.data.data);
         } catch (err) {
             if (err.response && err.response.status === 404) {
@@ -249,7 +249,7 @@ const StudentGatePass = () => {
 
     const fetchHistory = useCallback(async () => {
         try {
-            const response = await apiClient.get('/api/gatepass/student/history');
+            const response = await apiClient.get('/gatepass/student/history');
             setHistory(response.data.data);
         } catch (err) {
             console.error('Failed to fetch gate pass history:', err);
@@ -259,7 +259,7 @@ const StudentGatePass = () => {
 
     const fetchFaculty = useCallback(async () => {
         try {
-            const response = await apiClient.get('/api/faculty/all'); // Assuming this endpoint exists
+            const response = await apiClient.get('/faculty/all'); // Assuming this endpoint exists
             setFaculty(response.data.data);
         } catch (err) {
             console.error('Failed to fetch faculty:', err);
@@ -285,7 +285,7 @@ const StudentGatePass = () => {
         setError('');
         try {
             // I need a new endpoint for this
-            const response = await apiClient.post('/api/gatepass/student/request', formData);
+            const response = await apiClient.post('/gatepass/student/request', formData);
             showToast('Gate pass request submitted successfully!', 'success');
             // After submitting, we should probably show a "pending" status, not an active pass.
             // For now, let's just refetch the active pass.

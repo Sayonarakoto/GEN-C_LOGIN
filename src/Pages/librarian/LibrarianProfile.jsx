@@ -61,20 +61,20 @@ const LibrarianProfile = () => {
                 if (useBlob) {
                     const blob = await upload(selectedFile.name, selectedFile, {
                         access: 'public',
-                        handleUploadUrl: '/api/blob/profile-picture-upload',
+                        handleUploadUrl: '/blob/profile-picture-upload',
                     });
                     profilePictureUrl = blob.url;
                 } else {
                     const uploadData = new FormData();
                     uploadData.append('profileImage', selectedFile);
-                    const res = await apiClient.post('/api/librarian/upload-profile-picture', uploadData);
+                    const res = await apiClient.post('/librarian/upload-profile-picture', uploadData);
                     profilePictureUrl = res.data.filePath;
                 }
                 setFormData(prev => ({ ...prev, profilePictureUrl }));
             }
 
             const updatedData = { ...formData, profilePictureUrl };
-            await apiClient.put('/api/librarian/profile', updatedData);
+            await apiClient.put('/librarian/profile', updatedData);
 
             const updatedUser = { ...user, ...updatedData };
             updateUser(updatedUser);

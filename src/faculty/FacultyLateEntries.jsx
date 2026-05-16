@@ -53,9 +53,9 @@ const FacultyLateEntries = ({ currentFilter }) => {
         queryParams.to = dayjs(queryParams.to).endOf('day').toISOString();
       }
 
-      let endpoint = '/api/latecomers/faculty/all';
+      let endpoint = '/latecomers/faculty/all';
       if (user?.role === 'HOD') {
-        endpoint = '/api/latecomers/hod/history';
+        endpoint = '/latecomers/hod/history';
       }
 
       const response = await api.get(endpoint, { params: queryParams, signal });

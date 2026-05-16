@@ -44,7 +44,7 @@ const PendingPasses = () => {
     const fetchPendingPasses = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await api.get('/api/library/librarypass/pending');
+            const response = await api.get('/library/librarypass/pending');
             setPasses(response.data.data);
         } catch (error) {
             console.error('Failed to fetch pending passes', error);

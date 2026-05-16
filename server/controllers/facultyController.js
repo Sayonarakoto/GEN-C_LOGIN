@@ -2,16 +2,17 @@ const mongoose = require('mongoose');
 const LateEntry = require('../models/LateEntry');
 const Faculty = require('../models/Faculty');
 const Student = require('../models/student'); // Import Student model
+const createError = require('../utils/error');
 
 // Controller to get dashboard statistics for faculty
-const getDashboardStats = async (req, res) => {
+const getDashboardStats = async (req, res, next) => {
   console.log('--- DEBUG: Entering getDashboardStats ---');
   try {
     console.log('DEBUG: req.user object in getDashboardStats:', JSON.stringify(req.user, null, 2));
     const { department, role, id } = req.user; // Get department, role, and id from JWT
 
     if (!department) {
-        throw new Error('User department is missing for stats calculation.');
+        return next(createError('User department is missing for stats calculation.', 400));
     }
 
     // Base query must always include the department filter
@@ -76,12 +77,12 @@ const getDashboardStats = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
-    res.status(500).json({ success: false, message: 'Error fetching stats' });
+    next(error);
   }
 };
 
 // Controller to get distinct departments based on user role
-const getDistinctDepartments = async (req, res) => {
+const getDistinctDepartments = async (req, res, next) => {
   try {
     const { role, department } = req.user; // Get role and department from the verified token
 
@@ -101,16 +102,16 @@ const getDistinctDepartments = async (req, res) => {
     return res.json({ success: true, data: [] });
   } catch (error) {
     console.error('Error fetching distinct departments:', error);
-    res.status(500).json({ success: false, message: 'Error fetching distinct departments' });
+    next(error);
   }
 };
 
-const getFacultyByDepartment = async (req, res) => {
+const getFacultyByDepartment = async (req, res, next) => {
   try {
     const { department } = req.user; // Get department from the authenticated user
 
     if (!department) {
-      return res.status(400).json({ success: false, message: 'User department is missing.' });
+      return next(createError('User department is missing.', 400));
     }
 
     // CRITICAL FIX: Use a case-insensitive regex query
@@ -129,18 +130,18 @@ const getFacultyByDepartment = async (req, res) => {
     res.json({ success: true, data: facultyList });
   } catch (error) {
     console.error('Error fetching faculty by department:', error);
-    res.status(500).json({ success: false, message: 'Error fetching faculty' });
+    next(error);
   }
 };
 
-const getHODByDepartment = async (req, res) => {
+const getHODByDepartment = async (req, res, next) => {
   try {
     const { department } = req.user; // Get department from the authenticated user
     console.log(`[getHODByDepartment] Authenticated user's department: ${department}`); // DEBUG: Log entry
 
     if (!department) {
       console.log('[getHODByDepartment] User department is missing.');
-      return res.status(400).json({ success: false, message: 'User department is missing.' });
+      return next(createError('User department is missing.', 400));
     }
 
     // ✅ FIX 1: Department Regex (case-insensitive and exact match)
@@ -159,42 +160,42 @@ const getHODByDepartment = async (req, res) => {
 
     if (!hod) {
       // This is the source of the 404 if the route is successfully hit but no HOD is found in the DB.
-      return res.status(404).json({ success: false, message: 'HOD not found for this department.' });
+      return next(createError('HOD not found for this department.', 404));
     }
 
     res.json({ success: true, data: hod });
   } catch (error) {
     console.error('[getHODByDepartment] Error fetching HOD by department:', error);
-    res.status(500).json({ success: false, message: 'Error fetching HOD' });
+    next(error);
   }
 };
 
 
-const getAllFaculty = async (req, res) => {
+const getAllFaculty = async (req, res, next) => {
   try {
     const { department } = req.user; // Get department from the authenticated user
 
     if (!department) {
-      return res.status(400).json({ success: false, message: 'User department is missing.' });
+      return next(createError('User department is missing.', 400));
     }
 
     const facultyList = await Faculty.find({ department: department }).select('_id fullName designation department');
     res.json({ success: true, data: facultyList });
   } catch (error) {
     console.error('Error fetching all faculty:', error);
-    res.status(500).json({ success: false, message: 'Error fetching all faculty' });
+    next(error);
   }
 };
 
 // @desc    Get all faculty members (including HODs) in the current user's department
 // @route   GET /api/faculty/department-members
 // @access  Private (Faculty, HOD)
-const getDepartmentMembers = async (req, res) => {
+const getDepartmentMembers = async (req, res, next) => {
   try {
     const { department } = req.user; // Get department from the authenticated user
 
     if (!department) {
-      return res.status(400).json({ success: false, message: 'User department is missing.' });
+      return next(createError('User department is missing.', 400));
     }
 
     const departmentMembers = await Faculty.find({ department: department })
@@ -203,20 +204,20 @@ const getDepartmentMembers = async (req, res) => {
     res.json({ success: true, data: departmentMembers });
   } catch (error) {
     console.error('Error fetching department members:', error);
-    res.status(500).json({ success: false, message: 'Error fetching department members' });
+    next(error);
   }
 };
 
 // @desc    Get students by department with search and pagination
 // @route   GET /api/faculty/students
 // @access  Private (Faculty, HOD)
-const getStudentsByDepartment = async (req, res) => {
+const getStudentsByDepartment = async (req, res, next) => {
   try {
     const { search, page = 1, limit = 5 } = req.query;
     const department = req.user.department; // Get department from the authenticated user
 
     if (!department) {
-      return res.status(400).json({ success: false, message: 'User department is missing.' });
+      return next(createError('User department is missing.', 400));
     }
 
     const query = { department: department };
@@ -240,17 +241,17 @@ const getStudentsByDepartment = async (req, res) => {
     res.json({ success: true, students, totalStudents });
   } catch (error) {
     console.error('Error fetching students by department:', error);
-    res.status(500).json({ success: false, message: 'Error fetching students' });
+    next(error);
   }
 };
 
-const updateFacultyProfile = async (req, res) => {
+const updateFacultyProfile = async (req, res, next) => {
   try {
     const { fullName, designation, email, profilePhoto } = req.body;
     const faculty = await Faculty.findById(req.user.id);
 
     if (!faculty) {
-      return res.status(404).json({ success: false, message: 'Faculty not found.' });
+      return next(createError('Faculty not found.', 404));
     }
 
     faculty.fullName = fullName;
@@ -266,21 +267,21 @@ const updateFacultyProfile = async (req, res) => {
   } catch (error) {
     console.error('Error updating faculty profile:', error);
     if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
-      return res.status(400).json({ success: false, message: 'Email already in use. Please use a different email.' });
+      return next(createError('Email already in use. Please use a different email.', 400));
     }
-    res.status(500).json({ success: false, message: 'Server error' });
+    next(error);
   }
 };
 
-const uploadProfilePicture = async (req, res) => {
+const uploadProfilePicture = async (req, res, next) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No file uploaded.' });
+      return next(createError('No file uploaded.', 400));
     }
 
     const faculty = await Faculty.findById(req.user.id);
     if (!faculty) {
-      return res.status(404).json({ success: false, message: 'Faculty not found.' });
+      return next(createError('Faculty not found.', 404));
     }
 
     // Update the profilePhoto field (Faculty model uses profilePhoto, not profilePictureUrl)
@@ -291,7 +292,7 @@ const uploadProfilePicture = async (req, res) => {
     res.json({ success: true, filePath: faculty.profilePhoto, message: 'Profile picture uploaded successfully.' });
   } catch (error) {
     console.error('Error uploading faculty profile picture:', { error, user: req.user.id });
-    res.status(500).json({ success: false, message: 'Server error' });
+    next(error);
   }
 };
 

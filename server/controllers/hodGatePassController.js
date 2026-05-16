@@ -6,11 +6,12 @@ const { generateToken, PASS_TOKEN_SECRET } = require('../config/jwt'); // Assumi
 const { generateThreeDigitOTP } = require('../utils/otpUtils');
 const { sendNotification } = require('../services/notificationService');
 const { generateWatermarkedPDF } = require('../services/pdfGenerationService');
+const createError = require('../utils/error');
 
 // @desc    Get pending gate passes requiring HOD final approval
 // @route   GET /api/gatepass/hod/pending
 // @access  Private (HOD)
-exports.getHODPendingGatePasses = async (req, res) => {
+exports.getHODPendingGatePasses = async (req, res, next) => {
     try {
         const hodId = req.user.id;
         const userDepartment = req.user.department; // Assuming department is in req.user from auth middleware
@@ -32,32 +33,32 @@ exports.getHODPendingGatePasses = async (req, res) => {
         res.status(200).json({ success: true, data: pendingPasses });
     } catch (error) {
         console.error('[HOD GatePass Controller] Error fetching HOD pending gate passes:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        next(error);
     }
 };
 
 // @desc    HOD approves (finalizes) a gate pass and generates credentials
 // @route   PUT /api/gatepass/hod/approve/:id
 // @access  Private (HOD)
-exports.hodApproveGatePass = async (req, res) => {
+exports.hodApproveGatePass = async (req, res, next) => {
     try {
         const pass = await GatePass.findById(req.params.id).populate('student_id', 'fullName');
 
         if (!pass) {
-            return res.status(404).json({ success: false, message: 'Gate pass not found' });
+            return next(createError('Gate pass not found.', 404));
         }
 
         // CRITICAL FIX: Ensure the pass belongs to the HOD's department
         if (pass.department_id.toString() !== req.user.department.toString()) {
-            return res.status(403).json({ success: false, message: 'Access denied: This pass does not belong to your department.' });
+            return next(createError('Access denied: This pass does not belong to your department.', 403));
         }
 
         // 1. Authorization & Status Check
         if (pass.hod_status !== 'PENDING' || pass.hod_approver_id.toString() !== req.user.id) {
-            return res.status(401).json({ success: false, message: 'Not authorized or pass not awaiting HOD approval.' });
+            return next(createError('Not authorized or pass not awaiting HOD approval.', 401));
         }
         if (pass.faculty_status !== 'APPROVED') {
-             return res.status(400).json({ success: false, message: 'Cannot finalize: Faculty approval is still pending or rejected.' });
+             return next(createError('Cannot finalize: Faculty approval is still pending or rejected.', 400));
         }
 
         // 2. Final Status Update
@@ -108,30 +109,30 @@ exports.hodApproveGatePass = async (req, res) => {
         res.status(200).json({ success: true, data: pass, pdfPath: pass.pdf_path });
     } catch (error) {
         console.error('Error in hodApproveGatePass:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        next(error);
     }
 };
 
 // @desc    HOD rejects a gate pass
 // @route   PUT /api/gatepass/hod/reject/:id
 // @access  Private (HOD)
-exports.hodRejectGatePass = async (req, res) => {
+exports.hodRejectGatePass = async (req, res, next) => {
     // Note: The facultyRejectGatePass should handle the termination for single-tier rejections.
     // This handles the final termination after faculty approval.
     try {
         const pass = await GatePass.findById(req.params.id).populate('student_id', 'fullName');
 
         if (!pass) {
-            return res.status(404).json({ success: false, message: 'Gate pass not found' });
+            return next(createError('Gate pass not found.', 404));
         }
 
         // CRITICAL FIX: Ensure the pass belongs to the HOD's department
         if (pass.department_id.toString() !== req.user.department.toString()) {
-            return res.status(403).json({ success: false, message: 'Access denied: This pass does not belong to your department.' });
+            return next(createError('Access denied: This pass does not belong to your department.', 403));
         }
 
         if (pass.hod_status !== 'PENDING' || pass.hod_approver_id.toString() !== req.user.id) {
-            return res.status(401).json({ success: false, message: 'Not authorized or pass not awaiting HOD rejection.' });
+            return next(createError('Not authorized or pass not awaiting HOD rejection.', 401));
         }
         
         // Final Status Update & Termination
@@ -147,7 +148,7 @@ exports.hodRejectGatePass = async (req, res) => {
             actor_role: 'HOD',
             actor_id: req.user.id,
             event_details: {
-                status_change: 'hod_status: PENDING -&gt; REJECTED',
+                status_change: 'hod_status: PENDING -> REJECTED',
             },
         });
 
@@ -161,18 +162,18 @@ exports.hodRejectGatePass = async (req, res) => {
         res.status(200).json({ success: true, data: pass });
     } catch (error) {
         console.error('Error in hodRejectGatePass:', error);
-        res.status(500).json({ success: false, message: 'Server Error' });
+        next(error);
     }
 };
 
 // @desc    Get all gate pass history for HOD's department
 // @route   GET /api/gatepass/hod/history
 // @access  Private (HOD)
-exports.getHODGatePassHistory = async (req, res) => {
+exports.getHODGatePassHistory = async (req, res, next) => {
   try {
     const department = req.user.department;
     if (!department) {
-      return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+      return next(createError('HOD user does not have a department assigned.', 400));
     }
 
     const historyPasses = await GatePass.find({ department_id: department })
@@ -184,18 +185,18 @@ exports.getHODGatePassHistory = async (req, res) => {
     res.status(200).json({ success: true, data: historyPasses });
   } catch (error) {
     console.error('Error fetching HOD gate pass history:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };
 
 // @desc    Get department-wide gate pass statistics for HOD
 // @route   GET /api/gatepass/hod/stats
 // @access  Private (HOD)
-exports.getHODDepartmentStats = async (req, res) => {
+exports.getHODDepartmentStats = async (req, res, next) => {
   try {
     const department = req.user.department;
     if (!department) {
-      return res.status(400).json({ success: false, message: 'HOD user does not have a department assigned.' });
+      return next(createError('HOD user does not have a department assigned.', 400));
     }
 
     // Total gate passes for the department
@@ -250,6 +251,6 @@ exports.getHODDepartmentStats = async (req, res) => {
     } });
   } catch (error) {
     console.error('Error fetching HOD department stats:', error);
-    res.status(500).json({ success: false, message: 'Server Error' });
+    next(error);
   }
 };

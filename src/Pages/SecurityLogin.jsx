@@ -25,7 +25,7 @@ const SecurityLogin = () => {
     setLoading(true);
     toast.info('Logging in...');
     try {
-      const response = await client.post('/api/auth/login', {
+      const response = await client.post('/auth/login', {
         role: 'security',
         passkey: passkey,
       }, {

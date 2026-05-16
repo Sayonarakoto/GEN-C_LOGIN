@@ -1,7 +1,10 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const path = require('path');
+const logger = require('./utils/logger');
 require("dotenv").config({ path: '../.env' });
 
 const authRoutes = require('./routes/auth');
@@ -30,8 +33,32 @@ socketManager.init(server);
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      "connect-src": ["'self'", "https://gen-c-login.onrender.com", "wss://gen-c-login.onrender.com"],
+      // Default directives
+      "default-src": ["'self'"],
+      "script-src": ["'self'", "'unsafe-inline'"],
+      "style-src": ["'self'", "'unsafe-inline'"],
+      "img-src": ["'self'", "data:", "https:"],
+    },
+  },
+}));
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  skip: (req) => req.path.startsWith('/socket.io'),
+});
+app.use(limiter);
+
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(o => o.trim())
+  : ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://gen-c-group1.vercel.app'];
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5173', 'https://gen-c-group1.vercel.app'], // Allow local and production frontend
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use((req, res, next) => {
@@ -51,8 +78,8 @@ app.use((req, res, next) => {
 mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/paperlessCampus", {
   connectTimeoutMS: 5000, // Give up initial connection after 5 seconds
 })
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch(err => console.error("❌ DB connection error:", err));
+  .then(() => logger.info("✅ MongoDB connected"))
+  .catch(err => logger.error("❌ DB connection error:", err));
 
 // API Routes - Grouped and placed before static file serving
 app.post('/api/upload', requireAuth, upload.single('file'), uploadStudents);
@@ -92,21 +119,20 @@ app.use('/api/qr-gatepass', require('./routes/qrGatePass'));
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  if (err && err.code === 'LIMIT_FILE_SIZE') {
+  
+  const statusCode = err.statusCode || 500;
+  const message = err.message || 'Something went wrong!';
+
+  if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({
       success: false,
       message: 'File too large. Max file size is 10MB.',
     });
   }
-  if (err && err.message && /not an image/i.test(err.message)) {
-    return res.status(400).json({
-      success: false,
-      message: err.message,
-    });
-  }
-  return res.status(500).json({
+  
+  return res.status(statusCode).json({
     success: false,
-    message: 'Something went wrong!',
+    message: message,
   });
 });
 
@@ -119,7 +145,7 @@ app.use((req, res) => {
 const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  logger.info(`🚀 Server is running on http://localhost:${PORT}`);
 });
 
 server.timeout = 30000; // Set server timeout to 30 seconds

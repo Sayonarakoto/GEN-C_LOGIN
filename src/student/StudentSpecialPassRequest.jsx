@@ -164,7 +164,7 @@ export default function StudentSpecialPassRequest() {
     setListLoading(true);
     try {
       // 1. Correct the API path
-      const response = await apiClient.get('/api/special-passes/student');
+      const response = await apiClient.get('/special-passes/student');
       
       // 2. Correctly extract the nested data array
       const passesData = response.data?.data;
@@ -189,7 +189,7 @@ export default function StudentSpecialPassRequest() {
     setFormLoading(true);
     try {
       // The backend expects: date_required, start_time, end_time
-      await apiClient.post('/api/special-passes/request', {
+      await apiClient.post('/special-passes/request', {
         pass_type: passType,
         request_reason: reason,
         

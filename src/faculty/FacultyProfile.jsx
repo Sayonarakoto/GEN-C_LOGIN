@@ -114,7 +114,7 @@ const FacultyProfile = () => {
                 setLoadingMembers(true);
                 setMembersError(null);
                 try {
-                    const response = await apiClient.get('/api/faculty/department-members');
+                    const response = await apiClient.get('/faculty/department-members');
                     if (response.data.success) {
                         setDepartmentMembers(response.data.data);
                     } else {
@@ -136,7 +136,7 @@ const FacultyProfile = () => {
                 setLoadingLogs(true);
                 setLogsError(null);
                 try {
-                    const response = await apiClient.get('/api/audit/department-logs');
+                    const response = await apiClient.get('/audit/department-logs');
                     if (response.data.success) {
                         setAuditLogs(response.data.data);
                     } else {
@@ -181,20 +181,20 @@ const FacultyProfile = () => {
                 if (useBlob) {
                     const blob = await upload(selectedFile.name, selectedFile, {
                         access: 'public',
-                        handleUploadUrl: '/api/blob/profile-picture-upload',
+                        handleUploadUrl: '/blob/profile-picture-upload',
                     });
                     profilePictureUrl = blob.url;
                 } else {
                     const uploadData = new FormData();
                     uploadData.append('profileImage', selectedFile);
-                    const res = await apiClient.post('/api/faculty/upload-profile-picture', uploadData);
+                    const res = await apiClient.post('/faculty/upload-profile-picture', uploadData);
                     profilePictureUrl = res.data.filePath;
                 }
                 setFormData(prev => ({ ...prev, profilePictureUrl }));
             }
 
             const updatedData = { ...formData, profilePictureUrl };
-            await apiClient.put('/api/faculty/profile', updatedData);
+            await apiClient.put('/faculty/profile', updatedData);
 
             const updatedUser = { ...user, ...updatedData };
             updateUser(updatedUser);

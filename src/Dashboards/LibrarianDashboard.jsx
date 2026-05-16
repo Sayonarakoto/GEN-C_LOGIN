@@ -65,7 +65,7 @@ const LibrarianDashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await api.get('/api/library/dashboard/stats');
+                const res = await api.get('/library/dashboard/stats');
                 if (res.data.success) {
                     setStats(res.data.data);
                 }
@@ -87,7 +87,7 @@ const LibrarianDashboard = () => {
 
     const handleDownloadReport = async () => {
         try {
-            const response = await api.get('/api/library/dashboard/stats/export', { responseType: 'blob' });
+            const response = await api.get('/library/dashboard/stats/export', { responseType: 'blob' });
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;

@@ -50,7 +50,7 @@ const BookBorrowRequest = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const response = await api.post('/api/library/request-borrow', formData);
+            const response = await api.post('/library/request-borrow', formData);
             if (response.data.success) {
                 toast.success('Book borrow request submitted successfully!');
                 setFormData({

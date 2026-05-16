@@ -29,7 +29,7 @@ export default function StudentLateEntry() {
     if (!user || !user.id) return;
     setTableLoading(true);
     try {
-      const res = await api.get('/api/latecomers/mine');
+      const res = await api.get('/latecomers/mine');
       setLateEntries(res.data.entries || []);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to fetch your late entries');
@@ -74,7 +74,7 @@ export default function StudentLateEntry() {
 
       const res = isEditMode
         ? await api.put(`/api/latecomers/${requestId}`, payload)
-        : await api.post('/api/latecomers', payload);
+        : await api.post('/latecomers', payload);
 
       if (res.data.success) {
         toast.success(res.data.message || (isEditMode ? 'Resubmitted successfully' : 'Submitted successfully'));

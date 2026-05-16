@@ -46,7 +46,7 @@ const AuditTrail = () => {
     if (!user?.department) return;
     setLoading(true);
     try {
-      const response = await apiClient.get('/api/faculty/students', {
+      const response = await apiClient.get('/faculty/students', {
         params: {
           department: user.department,
           search: searchQuery,

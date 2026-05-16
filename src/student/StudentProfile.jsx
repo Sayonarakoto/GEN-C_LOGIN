@@ -129,13 +129,13 @@ const StudentProfile = () => {
                 if (useBlob) {
                     const blob = await upload(selectedFile.name, selectedFile, {
                         access: 'public',
-                        handleUploadUrl: '/api/blob/profile-picture-upload',
+                        handleUploadUrl: '/blob/profile-picture-upload',
                     });
                     profilePictureUrl = blob.url;
                 } else {
                     const uploadData = new FormData();
                     uploadData.append('profileImage', selectedFile);
-                    const res = await apiClient.post('/api/students/upload-profile-picture', uploadData);
+                    const res = await apiClient.post('/students/upload-profile-picture', uploadData);
                     profilePictureUrl = res.data.filePath;
                 }
             }
@@ -144,7 +144,7 @@ const StudentProfile = () => {
             const updatedData = { ...formData, profilePictureUrl };
             // Remove department from updatedData as it's not editable
             delete updatedData.department; 
-            await apiClient.put('/api/students/profile', updatedData);
+            await apiClient.put('/students/profile', updatedData);
 
             // Update the user context with the new data
             const updatedUser = { ...user, ...updatedData };

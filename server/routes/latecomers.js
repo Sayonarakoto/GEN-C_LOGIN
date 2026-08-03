@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth, requireRole, attachUserDoc } = require('../middleware/auth');
 const { body, param } = require('express-validator');
-const latecomerController = require('../controllers/latecomerController');
-const facultyController = require('../controllers/facultyController'); // NEW: Import facultyController
+const latecomerController = require('../Genc.BL/controllers/latecomerController');
+const facultyController = require('../Genc.BL/controllers/facultyController'); // NEW: Import facultyController
 
 // 👇 1. ADD THIS ROUTE TO FIX THE 404 ERROR
 router.get('/', requireAuth, latecomerController.getLateEntries);

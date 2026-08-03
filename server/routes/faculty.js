@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const facultyController = require('../controllers/facultyController'); // Import getDepartmentMembers
+const facultyController = require('../Genc.BL/controllers/facultyController'); // Import getDepartmentMembers
 const { requireAuth, requireRole } = require('../middleware/auth');
 const multer = require('multer');
 const path = require('path');

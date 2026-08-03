@@ -1,11 +1,11 @@
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const logger = require('./utils/logger');
-require("dotenv").config({ path: '../.env' });
+const { connectMongo } = require('./core-genc/db');
+require("dotenv").config({ path: path.join(__dirname, '../.env') });
 
 const authRoutes = require('./routes/auth');
 const FacultyRoutes = require('./routes/faculty');
@@ -21,27 +21,30 @@ const latecomerRoutes = require('./routes/latecomers');
 const securityRoutes = require('./routes/Security');
 const statsRoutes = require('./routes/stats');
 const { requireAuth } = require('./middleware/auth'); // Import your auth middleware
-const { upload, uploadStudents, getAllStudents } = require('./controllers/excelUploadController'); // Import from new controller
-const { forgotPassword, resetPassword } = require('./controllers/passwordResetController'); // Import from new controller
+const { upload, uploadStudents, getAllStudents } = require('./Genc.BL/controllers/excelUploadController');
+const { forgotPassword, resetPassword } = require('./Genc.BL/controllers/passwordResetController');
+
 
 const app = express();
 
 const server = require('http').createServer(app);
 const socketManager = require('./socket');
+const devGuard = require('./middleware/devGuard');
 socketManager.init(server);
 
 // Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(devGuard);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      "connect-src": ["'self'", "https://gen-c-login.onrender.com", "wss://gen-c-login.onrender.com"],
+      "connect-src": ["'self'", "http://localhost:3001", "ws://localhost:3001", "https://gen-c-login.onrender.com", "wss://gen-c-login.onrender.com"],
       // Default directives
       "default-src": ["'self'"],
       "script-src": ["'self'", "'unsafe-inline'"],
       "style-src": ["'self'", "'unsafe-inline'"],
-      "img-src": ["'self'", "data:", "https:"],
+      "img-src": ["'self'", "data:", "blob:", "https:"],
     },
   },
 }));
@@ -68,18 +71,36 @@ app.use((req, res, next) => {
 });
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
+// Dev environment status route
+app.get('/api/dev/status', (req, res) => {
+  res.json({
+    success: true,
+    environment: process.env.NODE_ENV || 'development',
+    useVercelBlob: process.env.VITE_USE_VERCEL_BLOB === 'true',
+    apiBaseUrl: process.env.VITE_API_BASE_URL || 'http://localhost:3001',
+    timestamp: new Date().toISOString()
+  });
+});
+
 // Add debugging middleware
 app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
   next();
 });
 
-// DB connection
-mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/paperlessCampus", {
-  connectTimeoutMS: 5000, // Give up initial connection after 5 seconds
-})
-  .then(() => logger.info("✅ MongoDB connected"))
-  .catch(err => logger.error("❌ DB connection error:", err));
+const { httpLogger } = require('./utils/logger');
+const { runMigrations } = require('./Genc.DAL/migrations/migrator');
+
+// DB connection & automatic schema migration
+connectMongo()
+  .then(async () => {
+    logger.info('✅ MongoDB connected from core-genc/db');
+    await runMigrations();
+  })
+  .catch(err => logger.error('❌ DB connection error:', err));
+
+app.use(httpLogger);
+
 
 // API Routes - Grouped and placed before static file serving
 app.post('/api/upload', requireAuth, upload.single('file'), uploadStudents);
@@ -87,7 +108,11 @@ app.get('/api/students', requireAuth, getAllStudents);
 app.post('/api/forgot-password', forgotPassword);
 app.post('/api/reset-password/:token', resetPassword);
 app.use('/api/auth', authRoutes);
+app.use('/api/navigation', require('./routes/navigationRoutes'));
+app.use('/api/department-access', require('./routes/departmentAccessRoutes'));
+
 app.use('/api/faculty', FacultyRoutes);
+
 app.use('/api/students', studentRoutes); // Register student routes - Changed from /api/student
 app.use('/api/special-passes', specialPassRoutes);
 app.use('/api/hod/special-passes', hodSpecialPassRoutes); // Register HOD Special Passes routes

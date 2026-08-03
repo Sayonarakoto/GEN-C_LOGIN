@@ -6,7 +6,7 @@ const {
   hodRejectGatePass,
   getHODDepartmentStats,
   getHODGatePassHistory,
-} = require('../controllers/hodGatePassController');
+} = require('../Genc.BL/controllers/hodGatePassController');
 // Assuming requireAuth and requireRole are essential for initial checks
 const { requireAuth, requireRole } = require('../middleware/auth');
 // Custom HOD-specific authorization and department checks

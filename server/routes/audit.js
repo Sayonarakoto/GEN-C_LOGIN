@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auditController = require('../controllers/auditController'); // Import the whole controller
+const auditController = require('../Genc.BL/controllers/auditController'); // Import the whole controller
 const { requireAuth, requireRole } = require('../middleware/auth'); // Import requireRole
 const { requireHOD } = require('../middleware/hodAuthorization');
 

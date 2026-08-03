@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from '../hooks/useAuth';
 import client from '../api/client';
 import useToastService from '../hooks/useToastService';
-import '../Pages/Auth.css'; // Import Auth.css
-import { Form, Button, InputGroup } from 'react-bootstrap';
-import Logo from '../components/common/Logo';
+import '../Pages/Auth.css';
+import { Form, InputGroup } from 'react-bootstrap';
+import AuthShell from '../components/common/AuthShell';
+import AuthField from '../components/common/AuthField';
+import AuthSubmitButton from '../components/common/AuthSubmitButton';
 
 
 const SecurityLogin = () => {
@@ -54,46 +56,30 @@ const SecurityLogin = () => {
   };
 
   return (
-    <div className="auth-page-wrapper">
-      <div className="auth-container">
-        <div className="auth-box">
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <Logo />
-            <h2 style={{ marginTop: '1rem' }}>Security Portal</h2>
-            <p>Please enter the security passkey to proceed.</p>
-          </div>
+    <AuthShell
+      title="Security Portal"
+      subtitle="Please enter the security passkey to proceed."
+      sideTitle="Secure campus operations"
+      sideDescription="Manage verification and access workflows from one central point."
+    >
+      <Form onSubmit={onFinish}>
+        <AuthField
+          id="formPasskey"
+          label="Security Passkey"
+          type={showPasskey ? 'text' : 'password'}
+          value={passkey}
+          onChange={(e) => setPasskey(e.target.value)}
+          placeholder="Enter security passkey"
+          required
+        >
+          <InputGroup.Text onClick={togglePasskeyVisibility} style={{ cursor: 'pointer' }}>
+            <i className={showPasskey ? 'bx bx-hide' : 'bx bx-show'}></i>
+          </InputGroup.Text>
+        </AuthField>
 
-          <Form onSubmit={onFinish}>
-            <Form.Group className="mb-3" controlId="formPasskey">
-              <Form.Label>Security Passkey</Form.Label>
-              <InputGroup>
-                <Form.Control
-                  type={showPasskey ? "text" : "password"}
-                  placeholder="Enter security passkey"
-                  value={passkey}
-                  onChange={(e) => setPasskey(e.target.value)}
-                  required
-                  size="lg"
-                />
-                <InputGroup.Text onClick={togglePasskeyVisibility} style={{ cursor: 'pointer' }}>
-                  <i className={showPasskey ? "bx bx-hide" : "bx bx-show"}></i>
-                </InputGroup.Text>
-              </InputGroup>
-            </Form.Group>
-
-            <Button
-              variant="primary"
-              type="submit"
-              size="lg"
-              className="w-100 mt-3"
-              disabled={loading}
-            >
-              {loading ? 'Logging in...' : 'Login'}
-            </Button>
-          </Form>
-        </div>
-      </div>
-    </div>
+        <AuthSubmitButton loading={loading}>Login</AuthSubmitButton>
+      </Form>
+    </AuthShell>
   );
 };
 

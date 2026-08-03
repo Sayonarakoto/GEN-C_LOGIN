@@ -1,24 +1,26 @@
 const jwt = require('jsonwebtoken');
 const rateLimit = require('express-rate-limit');
+const logger = require('../utils/logger');
 
 exports.passwordResetLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // limit each IP to 5 requests per windowMs
-  message: 'Too many password reset attempts, please try again later'
+  message: 'Too many password reset attempts, please try again later',
 });
 
 exports.protect = async (req, res, next) => {
   try {
     let token;
-    
+
     if (req.headers.authorization?.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
     }
 
     if (!token) {
+      logger.warn('[AuthMiddleware] Access denied. No bearer token provided.');
       return res.status(401).json({
         success: false,
-        message: 'Not authorized to access this route' 
+        message: 'Not authorized to access this route',
       });
     }
 
@@ -27,10 +29,10 @@ exports.protect = async (req, res, next) => {
     req.user = decoded;
     next();
   } catch (error) {
-    console.error('Auth middleware error:', error);
+    logger.error({ error: error.message }, '[AuthMiddleware] Token verification failed');
     res.status(401).json({
       success: false,
-      message: 'Not authorized to access this route'
+      message: 'Not authorized to access this route',
     });
   }
 };

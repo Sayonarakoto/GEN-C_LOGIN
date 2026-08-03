@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const authController = require('../controllers/authController');
+const authController = require('../Genc.BL/controllers/authController');
 const { passwordResetLimiter } = require('../middleware/authMiddleware');
 const multer = require('multer');
 const path = require('path');
@@ -65,7 +65,10 @@ router.post("/refresh", authController.refreshToken);
 router.post("/forgot-password", passwordResetLimiter, authController.forgotPassword);
 router.post("/reset-password/:token", passwordResetLimiter, authController.resetPassword);
 
-// ---------------- Unified Login ----------------
+// ---------------- Unified Login & Role Switching ----------------
+const { requireAuth } = require('../middleware/auth');
+router.post("/switch-role", requireAuth, authController.switchRole);
 router.post("/login", authController.unifiedLogin);
 
 module.exports = router;
+

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from "react";
 import api from '../api/client';
-import { Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap'; // Import Bootstrap components
-
-import { useParams, useNavigate } from 'react-router-dom'; // Import useParams and useNavigate
-import useToastService from '../hooks/useToastService'; // Import ToastService
-import '../Pages/Auth.css'; // Import Auth.css
+import { Form, Alert, InputGroup } from 'react-bootstrap';
+import { useParams, useNavigate } from 'react-router-dom';
+import useToastService from '../hooks/useToastService';
+import '../Pages/Auth.css';
+import AuthShell from '../components/common/AuthShell';
+import AuthField from '../components/common/AuthField';
+import AuthSubmitButton from '../components/common/AuthSubmitButton';
 
 function ResetPassword() { // Renamed from Forgetpass to ResetPassword
   const { token } = useParams(); // Get token from URL params
@@ -90,79 +92,49 @@ function ResetPassword() { // Renamed from Forgetpass to ResetPassword
   };
 
   return (
-    <div className="auth-page-wrapper">
-      <div className="auth-container">
-        <h1 style={{ textAlign: 'center', color: 'var(--text-dark)' }}>Reset Password</h1> {/* Changed title */}
-        <p style={{ textAlign: 'center', display: 'block', marginBottom: '24px', color: 'var(--text-light)' }}>Please enter your new password below.</p>
-        <p style={{ textAlign: 'center', display: 'block', marginBottom: '24px', color: 'var(--text-light)', fontSize: '0.85em' }}>Password must be at least 6 characters long.</p>
+    <AuthShell
+      title="Reset Password"
+      subtitle="Please enter your new password below. Password must be at least 6 characters long."
+      sideTitle="Secure your account"
+      sideDescription="Choose a strong new password to keep your campus account protected."
+    >
+      <Form onSubmit={handleSubmit}>
+        <AuthField
+          id="formNewPassword"
+          label="New Password"
+          type={showNewPassword ? 'text' : 'password'}
+          placeholder="Enter new password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          required
+        >
+          <InputGroup.Text onClick={toggleNewPasswordVisibility} className="cursor-pointer">
+            <i className={showNewPassword ? 'bx bx-hide' : 'bx bx-show'}></i>
+          </InputGroup.Text>
+        </AuthField>
 
-        <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3" controlId="formNewPassword">
-            <Form.Label>New Password</Form.Label>
-            <InputGroup>
-              <Form.Control
-                type={showNewPassword ? "text" : "password"}
-                placeholder="Enter new password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-              <InputGroup.Text onClick={toggleNewPasswordVisibility} className="cursor-pointer">
-                <i className={showNewPassword ? "bx bx-hide" : "bx bx-show"}></i>
-              </InputGroup.Text>
-            </InputGroup>
-          </Form.Group>
+        <AuthField
+          id="formConfirmPassword"
+          label="Confirm New Password"
+          type={showConfirmPassword ? 'text' : 'password'}
+          placeholder="Confirm new password"
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+        >
+          <InputGroup.Text onClick={toggleConfirmPasswordVisibility} className="cursor-pointer">
+            <i className={showConfirmPassword ? 'bx bx-hide' : 'bx bx-show'}></i>
+          </InputGroup.Text>
+        </AuthField>
 
-          <Form.Group className="mb-3" controlId="formConfirmPassword">
-            <Form.Label>Confirm New Password</Form.Label>
-            <InputGroup>
-              <Form.Control
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirm new password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-              <InputGroup.Text onClick={toggleConfirmPasswordVisibility} className="cursor-pointer">
-                <i className={showConfirmPassword ? "bx bx-hide" : "bx bx-show"}></i>
-              </InputGroup.Text>
-            </InputGroup>
-          </Form.Group>
+        {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
+        {success && <Alert variant="success" className="mb-3">{success}</Alert>}
 
-          {error && (
-            <Alert
-              variant="danger"
-              className="mb-3"
-            >
-              {error}
-            </Alert>
-          )}
-          {success && (
-            <Alert
-              variant="success"
-              className="mb-3"
-            >
-              {success}
-            </Alert>
-          )}
-
-          <Button
-            variant="primary"
-            type="submit"
-            className="w-100"
-            disabled={loading || !newPassword || !confirmPassword}
-          >
-            {loading ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-2" /> Resetting...
-              </>
-            ) : (
-              'Reset Password'
-            )}
-          </Button>
-        </Form>
-      </div>
-    </div>
+        <AuthSubmitButton loading={loading} disabled={!newPassword || !confirmPassword}>
+          Reset Password
+        </AuthSubmitButton>
+      </Form>
+    </AuthShell>
   );
 }
 

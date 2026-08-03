@@ -1,9 +1,11 @@
 import React, { useState } from "react";
 import api from "../api/client";
-import { Form, Button, Spinner, Alert } from "react-bootstrap"; // Import Bootstrap components
-
-import useToastService from '../hooks/useToastService'; // Import ToastService
-import '../Pages/Auth.css'; // Import Auth.css
+import { Form, Alert } from "react-bootstrap";
+import useToastService from '../hooks/useToastService';
+import '../Pages/Auth.css';
+import AuthShell from '../components/common/AuthShell';
+import AuthField from '../components/common/AuthField';
+import AuthSubmitButton from '../components/common/AuthSubmitButton';
 
 const ForgotPassword = () => {
   const toast = useToastService(); // Initialize toast service
@@ -46,73 +48,39 @@ const ForgotPassword = () => {
   const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   return (
-    <div className="auth-page-wrapper">
-      <div className="auth-container">
-        <h3 style={{ textAlign: 'center', marginBottom: '16px', color: 'var(--text-dark)' }}>
-          Forgot Password?
-        </h3>
-        <p style={{ display: 'block', textAlign: 'center', marginBottom: '24px', color: 'var(--text-light)' }}>
-          Enter your email and we’ll send you a link to reset your password.
-        </p>
+    <AuthShell
+      title="Forgot Password?"
+      subtitle="Enter your email and we’ll send you a link to reset your password."
+      sideTitle="Recover your access"
+      sideDescription="Reset your password securely and return to your campus workspace."
+    >
+      {!submitted ? (
+        <Form onSubmit={handleSubmit}>
+          <AuthField
+            id="formEmail"
+            label="Email"
+            type="email"
+            placeholder="Enter your email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
 
-        {!submitted ? (
-          <Form onSubmit={handleSubmit}>
-            <Form.Group className="mb-3" controlId="formEmail">
-              <Form.Control
-                type="email"
-                placeholder="Enter your email"
-                size="lg"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                disabled={loading}
-                required
-              />
-            </Form.Group>
-
-            <Button
-              variant="primary"
-              type="submit"
-              disabled={loading || !email}
-              className="w-100"
-              size="lg"
-            >
-              {loading ? (
-                <>
-                  <Spinner animation="border" size="sm" className="me-2" /> Sending...
-                </>
-              ) : (
-                "Send Reset Link"
-              )}
-            </Button>
-          </Form>
-        ) : (
-          <>
-            <Alert
-              variant="success"
-              className="mb-3"
-            >
-              ✅ Check your email: If an account with this email exists, you’ll receive a password reset link shortly.
-            </Alert>
-            <Button
-              style={{ marginTop: '24px' }}
-              variant="secondary"
-              onClick={handleResendEmail}
-              disabled={loading}
-              className="w-100"
-              size="lg"
-            >
-              {loading ? (
-                <>
-                  <Spinner animation="border" size="sm" className="me-2" /> Resending...
-                </>
-              ) : (
-                "Resend Email"
-              )}
-            </Button>
-          </>
-        )}
-      </div>
-    </div>
+          <AuthSubmitButton loading={loading} disabled={!email}>
+            Send Reset Link
+          </AuthSubmitButton>
+        </Form>
+      ) : (
+        <>
+          <Alert variant="success" className="mb-3">
+            ✅ Check your email: If an account with this email exists, you’ll receive a password reset link shortly.
+          </Alert>
+          <AuthSubmitButton loading={loading} className="mt-4" onClick={handleResendEmail}>
+            Resend Email
+          </AuthSubmitButton>
+        </>
+      )}
+    </AuthShell>
   );
 };
 

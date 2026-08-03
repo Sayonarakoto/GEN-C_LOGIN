@@ -20,7 +20,7 @@ const {
   downloadGatePassPDF,
   verifyGatePassByOTP, // NEW: Import verifyGatePassByOTP
   verifyGatePassByQR, // NEW: Import verifyGatePassByQR
-} = require('../controllers/gatepassController');
+} = require('../Genc.BL/controllers/gatepassController');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 // --- Student Routes ---

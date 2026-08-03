@@ -3,7 +3,7 @@ const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { requireHOD } = require('../middleware/hodAuthorization');
 const { enforceDepartmentIsolation } = require('../middleware/departmentIsolation'); // Import the middleware
-const hodSpecialPassController = require('../controllers/hodSpecialPassController');
+const hodSpecialPassController = require('../Genc.BL/controllers/hodSpecialPassController');
 
 /**
  * @route   PUT /api/hod/special-passes/:passId/approve

@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import api from '../api/client';
-import { Eye, EyeSlash } from 'react-bootstrap-icons';
-import { Container, Row, Col } from 'react-bootstrap';
+import { Icons } from '../components/common/Icons';
+import { Form, InputGroup } from 'react-bootstrap';
+import AuthShell from '../components/common/AuthShell';
+import AuthField from '../components/common/AuthField';
+import AuthSubmitButton from '../components/common/AuthSubmitButton';
 import './StudentLogin.css';
 
 const StudentLogin = () => {

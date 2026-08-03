@@ -3,7 +3,7 @@ const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { requireSecurity, requireSecuritySupervisor } = require('../middleware/securityAuthorization');
 const { mfaCheck } = require('../middleware/mfaCheck');
-const specialPassController = require('../controllers/specialPassController');
+const specialPassController = require('../Genc.BL/controllers/specialPassController');
 
 /**
  * @route   POST /api/special-passes/request

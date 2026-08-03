@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { requireAuth, requireRole } = require('../middleware/auth');
-const auditController = require('../controllers/auditController');
+const auditController = require('../Genc.BL/controllers/auditController');
 
 // Middleware to disable caching for this route
 const noCache = (req, res, next) => {

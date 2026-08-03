@@ -20,7 +20,7 @@ const {
     getLibraryMembers,
     getMemberDetails,
     deactivateLibraryCard
-} = require('../controllers/libraryController');
+} = require('../Genc.BL/controllers/libraryController');
 const { requireAuth, requireRole } = require('../middleware/auth');
 
 // Multer Configuration for ID Proof Uploads

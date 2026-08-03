@@ -4,7 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { requireAuth, requireRole } = require('../middleware/auth');
-const librarianController = require('../controllers/librarianController');
+const librarianController = require('../Genc.BL/controllers/librarianController');
 
 // Multer Config
 const storage = multer.diskStorage({

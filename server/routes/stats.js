@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const statsController = require('../controllers/statsController');
+const statsController = require('../Genc.BL/controllers/statsController');
 const { requireAuth } = require('../middleware/auth'); // Assuming this is the correct path
 const requireFacultyOrHOD = require('../middleware/facultyOrHodAuthorization');
 

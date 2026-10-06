@@ -1,4 +1,4 @@
-require('dotenv').config({ path: '../.env' });
+require('dotenv').config({ path: [require('path').join(__dirname, '../.env.test'), require('path').join(__dirname, '../.env')] });
 const mongoose = require('mongoose');
 const Student = require('./models/student');
 

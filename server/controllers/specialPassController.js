@@ -6,6 +6,7 @@ const { logAuditAttempt } = require('../services/auditService'); // Task 5 (Logg
 const { sendNotification, sendPassUsedNotification } = require('../services/notificationService'); // Task 6 (Notification) and general notifications
 const { generateThreeDigitOTP } = require('../utils/otpUtils'); // Import OTP utility
 const { verifyOTPPass } = require('../services/verificationService'); // Import OTP verification service
+const settingsService = require('../services/settingsService');
 
 exports.getStudentSpecialPasses = async (req, res) => {
     const studentId = req.user.id; 
@@ -70,12 +71,15 @@ exports.createSpecialPassRequest = async (req, res) => {
              return res.status(400).json({ success: false, message: 'Invalid date or time slot. Please check your inputs.' });
         }
 
-        // --- Time Range Validation (9:30 AM to 4:00 PM) ---
-        const collegeStartTime = new Date(`${date_required}T09:30:00.000Z`);
-        const collegeEndTime = new Date(`${date_required}T16:00:00.000Z`); // 4:00 PM
+        // --- Time Range Validation (configurable college hours) ---
+        const { collegeHoursStart, collegeHoursEnd } = settingsService.getSettings();
+
+        const collegeStartTime = new Date(`${date_required}T${collegeHoursStart}:00.000Z`);
+        const collegeEndTime = new Date(`${date_required}T${collegeHoursEnd}:00.000Z`);
 
         if (dateValidFrom < collegeStartTime || dateValidTo > collegeEndTime) {
-            return res.status(400).json({ success: false, message: 'Requested pass times must be within college hours (9:30 AM - 4:00 PM).' });
+            const collegeHoursLabel = settingsService.formatRange(collegeHoursStart, collegeHoursEnd);
+            return res.status(400).json({ success: false, message: `Requested pass times must be within college hours (${collegeHoursLabel}).` });
         }
         // --- End Time Range Validation ---
         

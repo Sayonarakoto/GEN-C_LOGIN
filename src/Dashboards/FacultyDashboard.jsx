@@ -23,6 +23,7 @@ import AuditTrail from "../faculty/AuditTrail";
 import useToastService from '../hooks/useToastService';
 import FacultyGatePass from "../faculty/FacultyGatePass";
 import FacultyProfile from "../faculty/FacultyProfile";
+import FacultySettings from "../faculty/FacultySettings";
 import LibraryActivationRequestForm from "../components/common/LibraryActivationRequestForm";
 import { useNotifications } from '../context/NotificationContext';
 import NotificationList from '../components/NotificationList';
@@ -118,9 +119,12 @@ const FacultyDashboard = () => {
     { key: 'libraryActivation', icon: 'id-card', label: 'Activate Library ID' },
     { key: 'auditLogs', icon: 'list-ul', label: 'Audit Logs' },
     { key: 'profile', icon: 'user', label: 'Profile' },
+    { key: 'settings', icon: 'cog', label: 'Settings' },
   ];
 
-  const menuItems = baseMenuItems;
+  const menuItems = baseMenuItems.filter(
+    (item) => item.key !== 'settings' || user?.role === 'HOD'
+  );
 
   const renderContent = () => {
     switch (selectedKey) {
@@ -134,6 +138,8 @@ const FacultyDashboard = () => {
       case 'gatePass': return <FacultyGatePass />;
       case 'libraryActivation': return <LibraryActivationRequestForm />;
       case 'profile': return <FacultyProfile />;
+      case 'settings':
+        return user?.role === 'HOD' ? <FacultySettings /> : <p>You are not authorized to view Settings.</p>;
       default: return <p>Select an option from the menu.</p>;
     }
   };

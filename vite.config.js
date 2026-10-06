@@ -38,6 +38,7 @@ export default defineConfig({
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,jpeg,svg,woff2}'],
         cleanupOutdatedCaches: true,
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -65,15 +66,12 @@ export default defineConfig({
     host: true,
     cors: true,
     historyApiFallback: true,
-    // ✅ FIXED: Add exact ngrok domain + wildcard
-    allowedHosts: [
-      'aeruginous-sharon-accountably.ngrok-free.dev',  // Your exact domain
-      '.ngrok-free.app', 
-      '.ngrok.io',
-      'localhost'
-    ],
     proxy: {
       "/api": {
+        target: "http://localhost:3001",
+        changeOrigin: true,
+      },
+      "/blob": {
         target: "http://localhost:3001",
         changeOrigin: true,
       },

@@ -21,7 +21,7 @@ GEN-C_LOGIN/
 ## 🛠️ Local Development
 
 ### 1. Prerequisites
-* [Node.js](https://nodejs.org/) (v18+ recommended)
+* [Node.js](https://nodejs.org/) (v20.19+ required, v22.12+ recommended)
 * [MongoDB](https://www.mongodb.com/try/download/community)
 
 ### 2. Install Dependencies

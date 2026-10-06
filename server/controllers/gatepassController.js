@@ -11,6 +11,7 @@ const { generateWatermarkedPDF } = require('../services/pdfGenerationService'); 
 const { verifyOTPPass, verifyQRPass } = require('../services/verificationService'); // Import verification services
 const { logAuditAttempt } = require('../services/auditService'); // Import audit service
 const createError = require('../utils/error');
+const settingsService = require('../services/settingsService');
 
 // @desc    Get active gate pass for a student
 // @route   GET /api/gatepass/student/active
@@ -130,27 +131,25 @@ exports.requestGatePass = async (req, res, next) => {
             return next(createError('Invalid return date/time provided.', 400));
         }
 
-        // --- Time Range Validation (9:30 AM to 4:00 PM IST) ---
-        const collegeStartHour = 9;
-        const collegeStartMinute = 30;
-        const collegeEndHour = 16;
-        const collegeEndMinute = 0;
+        // --- Time Range Validation (configurable college hours, IST) ---
+        const { collegeHoursStart, collegeHoursEnd } = settingsService.getSettings();
 
-        const collegeStartTimeInMinutes = collegeStartHour * 60 + collegeStartMinute;
-        const collegeEndTimeInMinutes = collegeEndHour * 60 + collegeEndMinute;
+        const collegeStartTimeInMinutes = settingsService.toMinutes(collegeHoursStart);
+        const collegeEndTimeInMinutes = settingsService.toMinutes(collegeHoursEnd);
+        const collegeHoursLabel = settingsService.formatRange(collegeHoursStart, collegeHoursEnd);
 
         // Function to get IST hour and minute from a Date object
         const exitTimeInMinutes = getISTTimeInMinutes(exitDate);
 
         if (exitTimeInMinutes < collegeStartTimeInMinutes || exitTimeInMinutes > collegeEndTimeInMinutes) {
-            return next(createError('Requested exit time must be within college hours (9:30 AM - 4:00 PM).', 400));
+            return next(createError(`Requested exit time must be within college hours (${collegeHoursLabel}).`, 400));
         }
 
         if (returnDateObj) {
             const returnTimeInMinutes = getISTTimeInMinutes(returnDateObj);
 
             if (returnTimeInMinutes < collegeStartTimeInMinutes || returnTimeInMinutes > collegeEndTimeInMinutes) {
-                return next(createError('Requested return time must be within college hours (9:30 AM - 4:00 PM).', 400));
+                return next(createError(`Requested return time must be within college hours (${collegeHoursLabel}).`, 400));
             }
         }
         // --- End Time Range Validation ---

@@ -5,7 +5,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const logger = require('./utils/logger');
-require("dotenv").config({ path: '../.env' });
+require("dotenv").config({ path: [path.join(__dirname, '../.env.test'), path.join(__dirname, '../.env')] });
 
 const authRoutes = require('./routes/auth');
 const FacultyRoutes = require('./routes/faculty');
@@ -20,9 +20,11 @@ const libraryRoutes = require('./routes/libraryRoutes');
 const latecomerRoutes = require('./routes/latecomers');
 const securityRoutes = require('./routes/Security');
 const statsRoutes = require('./routes/stats');
+const settingsRoutes = require('./routes/settings');
 const { requireAuth } = require('./middleware/auth'); // Import your auth middleware
 const { upload, uploadStudents, getAllStudents } = require('./controllers/excelUploadController'); // Import from new controller
 const { forgotPassword, resetPassword } = require('./controllers/passwordResetController'); // Import from new controller
+const settingsService = require('./services/settingsService');
 
 const app = express();
 
@@ -79,6 +81,7 @@ mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/paperlessCa
   connectTimeoutMS: 5000, // Give up initial connection after 5 seconds
 })
   .then(() => logger.info("✅ MongoDB connected"))
+  .then(() => settingsService.load()) // Load app settings (env defaults + DB override) into memory
   .catch(err => logger.error("❌ DB connection error:", err));
 
 // API Routes - Grouped and placed before static file serving
@@ -97,9 +100,15 @@ app.use('/api/gatepass', gatepassRoutes);
 app.use('/api/latecomers', latecomerRoutes);
 app.use('/api/security', securityRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/settings', settingsRoutes); // Register application settings routes
 app.use('/api/library', libraryRoutes);
 app.use('/api/librarian', require('./routes/librarian')); // Register librarian routes
 app.use('/api/qr-gatepass', require('./routes/qrGatePass'));
+
+// Local-only Blob token endpoint; in production Vercel serves api/blob/profile-picture-upload.js
+if (process.env.NODE_ENV !== 'production') {
+  app.use('/blob', require('./routes/blob'));
+}
 
 // Serve static files from the React app
 // app.use('/GEN-C_LOGIN', express.static(path.join(__dirname, '..', 'dist'))); // Commented out for development

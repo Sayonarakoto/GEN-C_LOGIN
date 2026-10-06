@@ -146,6 +146,9 @@ export default function StudentSpecialPassRequest() {
   const [error, setError] = useState('');
   const [formLoading, setFormLoading] = useState(false);
 
+  // Allowed college hours window (from /api/settings, falls back to defaults)
+  const [timeWindow, setTimeWindow] = useState({ start: '09:30', end: '16:00' });
+
   // Pass List State
   const [passes, setPasses] = useState([]);
   const [listLoading, setListLoading] = useState(true);
@@ -182,6 +185,26 @@ export default function StudentSpecialPassRequest() {
   useEffect(() => {
     fetchPasses();
   }, [fetchPasses]); // Dependency ensures it runs once on mount
+
+  useEffect(() => {
+    let cancelled = false;
+    const fetchSettings = async () => {
+      try {
+        const response = await apiClient.get('/settings');
+        const data = response.data?.data;
+        if (!cancelled && response.data.success && data) {
+          setTimeWindow({
+            start: data.collegeHoursStart || '09:30',
+            end: data.collegeHoursEnd || '16:00',
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch settings, using default time window:', err);
+      }
+    };
+    fetchSettings();
+    return () => { cancelled = true; };
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -282,8 +305,8 @@ export default function StudentSpecialPassRequest() {
               required
               disabled={formLoading}
               inputProps={{
-                min: "09:30", // College start time
-                max: "16:00", // College end time (4:00 PM)
+                min: timeWindow.start, // College start time (from settings)
+                max: timeWindow.end, // College end time (from settings)
               }}
             />
             <TextField
@@ -295,8 +318,8 @@ export default function StudentSpecialPassRequest() {
               required
               disabled={formLoading}
               inputProps={{
-                min: "09:30", // College start time
-                max: "16:00", // College end time (4:00 PM)
+                min: timeWindow.start, // College start time (from settings)
+                max: timeWindow.end, // College end time (from settings)
               }}
             />
             <FormControlLabel

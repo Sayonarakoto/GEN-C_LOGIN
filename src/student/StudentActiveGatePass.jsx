@@ -8,6 +8,7 @@ import { TimePicker } from '@mui/x-date-pickers/TimePicker';
 import { TextField } from '@mui/material';
 import dayjs from 'dayjs';
 import { useToast } from '../hooks/useToast';
+import { resolveProfileImageUrl } from '../utils/resolveProfileImageUrl';
 
 // Helper function to determine the approved by text
 const getApprovedByText = (pass) => {
@@ -45,11 +46,17 @@ const DetailRow = ({ icon, label, value, className = '' }) => (
 );
 
 // --- Gate Pass Request Form Component ---
-const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast }) => {
+const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast, timeWindow = { start: '09:30', end: '16:00' } }) => {
     const [isHalfDay, setIsHalfDay] = useState(false);
     const [exitTime, setExitTime] = useState(null);
     const [returnTime, setReturnTime] = useState(null);
     const [approverRole, setApproverRole] = useState('Faculty'); // New state for role
+
+    // Allowed college hours window (from /api/settings)
+    const [startHour, startMinute] = timeWindow.start.split(':').map(Number);
+    const [endHour, endMinute] = timeWindow.end.split(':').map(Number);
+    const minAllowedTime = dayjs().set('hour', startHour).set('minute', startMinute);
+    const maxAllowedTime = dayjs().set('hour', endHour).set('minute', endMinute);
 
     const handleSubmit = (event) => {
         event.preventDefault();
@@ -150,8 +157,8 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast }) => {
                                     onChange={setExitTime}
                                     slots={{ textField: TextField }}
                                     slotProps={{ textField: { required: true, fullWidth: true } }}
-                                    minTime={dayjs().set('hour', 9).set('minute', 30)} // 9:30 AM
-                                    maxTime={dayjs().set('hour', 16).set('minute', 0)} // 4:00 PM
+                                    minTime={minAllowedTime}
+                                    maxTime={maxAllowedTime}
                                 />
                             </Form.Group>
                         </Col>
@@ -165,8 +172,8 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast }) => {
                                         onChange={setReturnTime}
                                         slots={{ textField: TextField }}
                                         slotProps={{ textField: { fullWidth: true, required: !isHalfDay } }} // Conditionally required
-                                        minTime={dayjs().set('hour', 9).set('minute', 30)} // 9:30 AM
-                                        maxTime={dayjs().set('hour', 16).set('minute', 0)} // 4:00 PM
+                                        minTime={minAllowedTime}
+                                        maxTime={maxAllowedTime}
                                     />
                                 </Form.Group>
                             </Col>
@@ -193,6 +200,7 @@ const StudentGatePass = () => {
     const [faculty, setFaculty] = useState([]);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [downloadingPdf, setDownloadingPdf] = useState(false); // New state
+    const [timeWindow, setTimeWindow] = useState({ start: '09:30', end: '16:00' });
     const { showToast } = useToast();
 
     
@@ -267,13 +275,29 @@ const StudentGatePass = () => {
         }
     }, []);
 
+    const fetchSettings = useCallback(async () => {
+        try {
+            const response = await apiClient.get('/settings');
+            const data = response.data?.data;
+            if (response.data.success && data) {
+                setTimeWindow({
+                    start: data.collegeHoursStart || '09:30',
+                    end: data.collegeHoursEnd || '16:00',
+                });
+            }
+        } catch (err) {
+            console.error('Failed to fetch settings, using default time window:', err);
+        }
+    }, []);
+
 
     useEffect(() => {
         fetchActiveGatePass();
         fetchFaculty();
         fetchHistory();
+        fetchSettings();
         setShowGatePassForm(false); // Reset gate pass form visibility on mount
-    }, [fetchActiveGatePass, fetchFaculty, fetchHistory]);
+    }, [fetchActiveGatePass, fetchFaculty, fetchHistory, fetchSettings]);
 
     useEffect(() => {
         const timer = setInterval(() => setLiveTime(new Date()), 1000);
@@ -352,7 +376,7 @@ const StudentGatePass = () => {
                                 </Button>
                             </div>
                         )}
-                        <GatePassRequestForm onSubmit={handleRequestSubmit} loading={submitLoading} facultyList={faculty} showToast={showToast} />
+                        <GatePassRequestForm onSubmit={handleRequestSubmit} loading={submitLoading} facultyList={faculty} showToast={showToast} timeWindow={timeWindow} />
                     </LocalizationProvider>
                 ) : (
                     // --- Active Gate Pass View ---

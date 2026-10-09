@@ -1,18 +1,31 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useCallback, useRef } from 'react';
 import { jwtDecode } from 'jwt-decode';
+import api from '../api/client';
+import { tokenStore } from '../utils/tokenStore';
 
 const AuthContext = createContext();
+
+// Refresh this long before the access token expires
+const REFRESH_LEAD_MS = 60 * 1000;
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [token, setToken] = useState(null);
   const [loading, setLoading] = useState(true);
+  const refreshTimer = useRef(null);
 
-  // ℹ️ Helper function to extract and standardize user data from token
-  const extractUserData = (token) => {
-    const decoded = jwtDecode(token);
+  const decodeSafe = (t) => {
+    try {
+      return jwtDecode(t);
+    } catch {
+      return null;
+    }
+  };
+
+  // Helper to extract and standardize user data from token
+  const extractUserData = (t) => {
+    const decoded = jwtDecode(t);
     if (!decoded.id || !decoded.role || !decoded.fullName || !decoded.department) {
-      // 🛑 CRITICAL FIX: Ensure 'department' is mandatory for RBAC
       throw new Error('Invalid token payload: missing ID, role, fullName, or department.');
     }
     return {
@@ -24,79 +37,134 @@ export const AuthProvider = ({ children }) => {
       studentId: decoded.studentId,
       email: decoded.email,
       profilePictureUrl: decoded.profilePictureUrl,
-      facultyId: decoded.facultyId || decoded.employeeId, // Use employeeId as fallback for facultyId
-      designation: decoded.designation, // ADD THIS LINE
+      facultyId: decoded.facultyId || decoded.employeeId,
+      designation: decoded.designation,
       departmentId: decoded.departmentId || decoded.department,
       exp: decoded.exp
     };
   };
 
+  const clearRefreshTimer = () => {
+    if (refreshTimer.current) {
+      clearTimeout(refreshTimer.current);
+      refreshTimer.current = null;
+    }
+  };
+
+  // Exchange the refresh token for a new access token (silent session renewal)
+  const refreshSession = useCallback(async () => {
+    const refreshToken = tokenStore.getRefreshToken();
+    if (!refreshToken) return false;
+    try {
+      const { data } = await api.post('/auth/refresh', { refreshToken });
+      if (!data?.token) return false;
+      tokenStore.setToken(data.token);
+      if (data.refreshToken) tokenStore.setRefreshToken(data.refreshToken);
+      const userData = extractUserData(data.token);
+      setUser((prev) => (prev ? { ...userData } : userData));
+      setToken(data.token);
+      scheduleRefresh(data.token);
+      return true;
+    } catch (err) {
+      console.warn('Silent token refresh failed:', err?.response?.status || err?.message);
+      return false;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep the session alive: refresh REFRESH_LEAD_MS before expiry, repeatedly
+  const scheduleRefresh = useCallback((currentToken) => {
+    clearRefreshTimer();
+    const decoded = decodeSafe(currentToken);
+    if (!decoded?.exp) return;
+    const msUntilExpiry = decoded.exp * 1000 - Date.now();
+    const fireIn = Math.max(msUntilExpiry - REFRESH_LEAD_MS, 5000);
+    refreshTimer.current = setTimeout(async () => {
+      const ok = await refreshSession();
+      if (ok) {
+        scheduleRefresh(tokenStore.getToken());
+      } else {
+        // Refresh token missing/expired: leave state as-is; interceptor or next boot handles logout
+        clearRefreshTimer();
+      }
+    }, fireIn);
+  }, [refreshSession]);
+
   const logout = useCallback(() => {
+    clearRefreshTimer();
     setUser(null);
     setToken(null);
-    sessionStorage.removeItem('token');
+    tokenStore.clear();
     window.location.replace('/');
   }, []);
 
+  // Boot: hydrate from storage; if access token expired but refresh token exists, renew silently
   useEffect(() => {
     console.log('AuthContext: STARTING token rehydration.');
-    const storedToken = sessionStorage.getItem('token');
+    const stored = tokenStore.getToken();
+    const storedRefresh = tokenStore.getRefreshToken();
+    const decoded = decodeSafe(stored);
+    const now = Date.now() / 1000;
 
-    if (storedToken) {
-        setToken(storedToken);
-        try {
-            const userData = extractUserData(storedToken);
-            const currentTime = Date.now() / 1000;
-
-            if (userData.exp && userData.exp > currentTime) {
-                // Token is VALID
-                setUser(userData); // ✅ FIX: Use the complete userData object
-                console.log('AuthContext: Token is valid. User set (Role/Dept confirmed).');
-            } else {
-                // Token is EXPIRED
-                sessionStorage.removeItem('token');
-                setToken(null);
-                setUser(null);
-                console.log('AuthContext: Token expired. Cleared session.');
-            }
-        } catch (err) {
-            // Token is MALFORMED/INVALID
-            console.error('AuthContext: Invalid token on decode. Clearing session.', err);
-            sessionStorage.removeItem('token');
-            setToken(null);
-            setUser(null);
+    if (decoded && decoded.exp > now) {
+      setUser(extractUserData(stored));
+      setToken(stored);
+      scheduleRefresh(stored);
+      setLoading(false);
+    } else if (storedRefresh) {
+      // Access token expired (e.g. tab reopened after a break) → silent refresh
+      refreshSession().then((ok) => {
+        if (!ok) {
+          tokenStore.clear();
+          setUser(null);
+          setToken(null);
         }
+        setLoading(false);
+      });
     } else {
-        console.log('AuthContext: No token found. Session cleared.');
+      tokenStore.clear();
+      setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-    console.log('AuthContext: Setting loading to false (FINAL).');
-    setLoading(false);
-  }, []); // Removed logout from dependencies as it's wrapped in useCallback and doesn't need to trigger re-run
+  // Refresh when the user returns to the tab and the session is near expiry
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return;
+      const stored = tokenStore.getToken();
+      const decoded = decodeSafe(stored);
+      if (!decoded?.exp) return;
+      const expiresIn = decoded.exp * 1000 - Date.now();
+      if (expiresIn < 2 * 60 * 1000) {
+        refreshSession();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [refreshSession]);
 
-  const login = (newToken, userDataFromAPI) => { // Accept the user object from the API
-    console.log('AuthContext: login function called.');
+  // Cleanup timer on unmount
+  useEffect(() => () => clearRefreshTimer(), []);
+
+  const login = (newToken, userDataFromAPI, refreshToken) => {
     try {
-      // 1. Save the token and use the token's payload for the official user state
       const userData = extractUserData(newToken);
-
-      // 2. CRITICAL: Use the role from the token for the final user state
-      //    We combine the token data with any extra data the API provided.
       const finalUserData = {
-          ...userData,        // Override role/id/etc. with the definitive token data
-          ...userDataFromAPI, // Use the fresh data from the API response
+        ...userData,
+        ...userDataFromAPI,
       };
 
-      sessionStorage.setItem('token', newToken);
+      tokenStore.setToken(newToken);
+      if (refreshToken) tokenStore.setRefreshToken(refreshToken);
       setToken(newToken);
-      setUser(finalUserData); // Set the full, correct user data
+      setUser(finalUserData);
+      scheduleRefresh(newToken);
 
-      // Log the final role for debugging the subsequent redirect
       console.log('AuthContext: FINAL ROLE SET IN STATE:', finalUserData.role);
-
     } catch (error) {
       console.error('Login failed:', error);
-      sessionStorage.removeItem('token');
+      tokenStore.clear();
       setToken(null);
       setUser(null);
       throw error;
@@ -108,7 +176,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading, updateUser }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, updateUser, refreshSession }}>
       {children}
     </AuthContext.Provider>
   );

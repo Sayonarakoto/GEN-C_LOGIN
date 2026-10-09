@@ -1,47 +1,63 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import api from '../api/client';
-import { Form, Button, Alert, Spinner, InputGroup } from 'react-bootstrap'; // Import Bootstrap components
+import { Form, Button, Alert, Spinner, InputGroup, Badge } from 'react-bootstrap';
 
-import { useParams, useNavigate } from 'react-router-dom'; // Import useParams and useNavigate
-import useToastService from '../hooks/useToastService'; // Import ToastService
-import '../Pages/Auth.css'; // Import Auth.css
+import { useParams, useNavigate } from 'react-router-dom';
+import useToastService from '../hooks/useToastService';
+import '../Pages/Auth.css';
 
-function ResetPassword() { // Renamed from Forgetpass to ResetPassword
-  const { token } = useParams(); // Get token from URL params
-  const navigate = useNavigate(); // For navigation after reset
-  const toast = useToastService(); // Initialize toast service
+function ResetPassword() {
+  const { token } = useParams(); // The OTP travels in the reset link
+  const navigate = useNavigate();
+  const toast = useToastService();
 
-  // State variables
+  const [otpStatus, setOtpStatus] = useState('checking'); // checking | valid | invalid
+  const [linkMessage, setLinkMessage] = useState('');
+  const [copied, setCopied] = useState(false);
+
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false); // Added loading state
+  const [loading, setLoading] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const toggleNewPasswordVisibility = () => {
-    setShowNewPassword(!showNewPassword);
-  };
-
-  const toggleConfirmPasswordVisibility = () => {
-    setShowConfirmPassword(!showConfirmPassword);
-  };
-
-  // Use a useEffect hook to get the email and token from the URL (token is now from useParams)
-  useEffect(() => {
-    // No need to get email from URL here, as it's not used in this component's logic
-    // The token is directly from useParams
+  // Auto-verify the code from the link; the form only appears when it is valid
+  const verifyOtp = useCallback(async () => {
     if (!token) {
-      setError("❌ Invalid or expired password reset link.");
-      toast.error("❌ Invalid or expired password reset link.");
+      setOtpStatus('invalid');
+      setLinkMessage('❌ This reset link is missing its code. Please request a new one.');
+      return;
     }
-  }, [token, toast]); // Depend on token and toast
+    setOtpStatus('checking');
+    try {
+      await api.post('/auth/verify-reset-otp', { otp: token });
+      setOtpStatus('valid');
+      setLinkMessage('');
+    } catch (err) {
+      setOtpStatus('invalid');
+      setLinkMessage(err.response?.data?.message || '❌ This reset code is invalid or has expired.');
+    }
+  }, [token]);
+
+  useEffect(() => {
+    verifyOtp();
+  }, [verifyOtp]);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(token);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Could not copy the code. Please select and copy it manually.');
+    }
+  };
 
   const handleSubmit = async (event) => {
-    event.preventDefault(); // Prevent default form submission
+    event.preventDefault();
 
-    // Basic validation
     if (newPassword.length < 6) {
       setError("Password must be at least 6 characters.");
       toast.error("Password must be at least 6 characters.");
@@ -54,113 +70,124 @@ function ResetPassword() { // Renamed from Forgetpass to ResetPassword
       return;
     }
 
-    // Check if token is present before making the request
-    if (!token) {
-        setError("❌ Invalid or missing token.");
-        toast.error("❌ Invalid or missing token.");
-        return;
-    }
-
-    setLoading(true); // Set loading to true
-    // If validation passes, make the API call
+    setLoading(true);
     try {
-      // Use the correct API endpoint for reset password
-      const response = await api.post(`/reset-password/${encodeURIComponent(token)}`, {
-        newPassword: newPassword
+      const response = await api.post('/auth/reset-password', {
+        otp: token,
+        newPassword,
       });
 
-      // Handle successful response
       setError("");
       setSuccess(response.data.message || "✅ Password reset successful!");
-      toast.success(response.data.message || "Password reset successful!"); // Toast message
-      // form.resetFields(); // This would be handled manually now
-      setTimeout(() => {
-        navigate('/'); // Redirect to home page after a delay
-      }, 3000); // 3-second delay
-
+      toast.success(response.data.message || "Password reset successful!");
+      setTimeout(() => navigate('/'), 3000);
     } catch (err) {
-      // Handle error response
       const errorMessage = err.response?.data?.message || "❌ Error resetting password.";
       setError(errorMessage);
       setSuccess("");
-      toast.error(errorMessage); // Toast message
+      toast.error(errorMessage);
+      // A used/expired code on submit means the link is dead now
+      if (['OTP_INVALID', 'OTP_EXPIRED', 'OTP_ATTEMPTS_EXCEEDED'].includes(err.response?.data?.code)) {
+        setOtpStatus('invalid');
+        setLinkMessage(errorMessage);
+      }
     } finally {
-      setLoading(false); // Set loading to false
+      setLoading(false);
     }
   };
 
   return (
     <div className="auth-page-wrapper">
       <div className="auth-container">
-        <h1 style={{ textAlign: 'center', color: 'var(--text-dark)' }}>Reset Password</h1> {/* Changed title */}
-        <p style={{ textAlign: 'center', display: 'block', marginBottom: '24px', color: 'var(--text-light)' }}>Please enter your new password below.</p>
-        <p style={{ textAlign: 'center', display: 'block', marginBottom: '24px', color: 'var(--text-light)', fontSize: '0.85em' }}>Password must be at least 6 characters long.</p>
+        <h1 style={{ textAlign: 'center', color: 'var(--text-dark)' }}>Reset Password</h1>
 
-        <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3" controlId="formNewPassword">
-            <Form.Label>New Password</Form.Label>
-            <InputGroup>
-              <Form.Control
-                type={showNewPassword ? "text" : "password"}
-                placeholder="Enter new password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-              <InputGroup.Text onClick={toggleNewPasswordVisibility} className="cursor-pointer">
-                <i className={showNewPassword ? "bx bx-hide" : "bx bx-show"}></i>
-              </InputGroup.Text>
-            </InputGroup>
-          </Form.Group>
+        {otpStatus === 'checking' && (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <Spinner animation="border" />
+            <p style={{ marginTop: 16, color: 'var(--text-light)' }}>Checking your code…</p>
+          </div>
+        )}
 
-          <Form.Group className="mb-3" controlId="formConfirmPassword">
-            <Form.Label>Confirm New Password</Form.Label>
-            <InputGroup>
-              <Form.Control
-                type={showConfirmPassword ? "text" : "password"}
-                placeholder="Confirm new password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-              <InputGroup.Text onClick={toggleConfirmPasswordVisibility} className="cursor-pointer">
-                <i className={showConfirmPassword ? "bx bx-hide" : "bx bx-show"}></i>
-              </InputGroup.Text>
-            </InputGroup>
-          </Form.Group>
+        {otpStatus === 'invalid' && (
+          <>
+            <Alert variant="danger" className="mb-3">{linkMessage}</Alert>
+            <Button variant="primary" className="w-100" size="lg" onClick={() => navigate('/forgot-password')}>
+              Request a new code
+            </Button>
+          </>
+        )}
 
-          {error && (
-            <Alert
-              variant="danger"
-              className="mb-3"
-            >
-              {error}
-            </Alert>
-          )}
-          {success && (
-            <Alert
-              variant="success"
-              className="mb-3"
-            >
-              {success}
-            </Alert>
-          )}
+        {otpStatus === 'valid' && (
+          <>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <p style={{ color: 'var(--text-light)', marginBottom: '8px' }}>Your reset code</p>
+              <div className="d-inline-flex align-items-center gap-2">
+                <Badge bg="light" text="dark" style={{ fontSize: '1.5rem', letterSpacing: '8px', padding: '10px 16px', border: '1px solid #ccc' }}>
+                  {token}
+                </Badge>
+                <Button variant="outline-secondary" size="sm" onClick={handleCopy}>
+                  {copied ? 'Copied!' : 'Copy'}
+                </Button>
+              </div>
+            </div>
 
-          <Button
-            variant="primary"
-            type="submit"
-            className="w-100"
-            disabled={loading || !newPassword || !confirmPassword}
-          >
-            {loading ? (
-              <>
-                <Spinner animation="border" size="sm" className="me-2" /> Resetting...
-              </>
-            ) : (
-              'Reset Password'
-            )}
-          </Button>
-        </Form>
+            <p style={{ textAlign: 'center', display: 'block', marginBottom: '24px', color: 'var(--text-light)' }}>
+              Enter your new password below. It must be at least 6 characters long.
+            </p>
+
+            <Form onSubmit={handleSubmit}>
+              <Form.Group className="mb-3" controlId="formNewPassword">
+                <Form.Label>New Password</Form.Label>
+                <InputGroup>
+                  <Form.Control
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                  />
+                  <InputGroup.Text onClick={() => setShowNewPassword(!showNewPassword)} className="input-toggle">
+                    <i className={showNewPassword ? "bx bx-hide" : "bx bx-show"}></i>
+                  </InputGroup.Text>
+                </InputGroup>
+              </Form.Group>
+
+              <Form.Group className="mb-3" controlId="formConfirmPassword">
+                <Form.Label>Confirm New Password</Form.Label>
+                <InputGroup>
+                  <Form.Control
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                  <InputGroup.Text onClick={() => setShowConfirmPassword(!showConfirmPassword)} className="input-toggle">
+                    <i className={showConfirmPassword ? "bx bx-hide" : "bx bx-show"}></i>
+                  </InputGroup.Text>
+                </InputGroup>
+              </Form.Group>
+
+              {error && <Alert variant="danger" className="mb-3">{error}</Alert>}
+              {success && <Alert variant="success" className="mb-3">{success}</Alert>}
+
+              <Button
+                variant="primary"
+                type="submit"
+                className="w-100"
+                disabled={loading || !newPassword || !confirmPassword}
+              >
+                {loading ? (
+                  <>
+                    <Spinner animation="border" size="sm" className="me-2" /> Resetting...
+                  </>
+                ) : (
+                  'Reset Password'
+                )}
+              </Button>
+            </Form>
+          </>
+        )}
       </div>
     </div>
   );

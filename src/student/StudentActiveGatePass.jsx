@@ -46,7 +46,7 @@ const DetailRow = ({ icon, label, value, className = '' }) => (
 );
 
 // --- Gate Pass Request Form Component ---
-const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast, timeWindow = { start: '09:30', end: '16:00' } }) => {
+const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast, timeWindow = { start: '09:30', end: '16:00' }, bypassTimeChecks = false }) => {
     const [isHalfDay, setIsHalfDay] = useState(false);
     const [exitTime, setExitTime] = useState(null);
     const [returnTime, setReturnTime] = useState(null);
@@ -57,6 +57,10 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast, timeWi
     const [endHour, endMinute] = timeWindow.end.split(':').map(Number);
     const minAllowedTime = dayjs().set('hour', startHour).set('minute', startMinute);
     const maxAllowedTime = dayjs().set('hour', endHour).set('minute', endMinute);
+    // Testing mode: no college-hours clamp on the pickers
+    const timePickerProps = bypassTimeChecks
+        ? {}
+        : { minTime: minAllowedTime, maxTime: maxAllowedTime };
 
     const handleSubmit = (event) => {
         event.preventDefault();
@@ -157,8 +161,7 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast, timeWi
                                     onChange={setExitTime}
                                     slots={{ textField: TextField }}
                                     slotProps={{ textField: { required: true, fullWidth: true } }}
-                                    minTime={minAllowedTime}
-                                    maxTime={maxAllowedTime}
+                                    {...timePickerProps}
                                 />
                             </Form.Group>
                         </Col>
@@ -172,8 +175,7 @@ const GatePassRequestForm = ({ onSubmit, loading, facultyList, showToast, timeWi
                                         onChange={setReturnTime}
                                         slots={{ textField: TextField }}
                                         slotProps={{ textField: { fullWidth: true, required: !isHalfDay } }} // Conditionally required
-                                        minTime={minAllowedTime}
-                                        maxTime={maxAllowedTime}
+                                        {...timePickerProps}
                                     />
                                 </Form.Group>
                             </Col>
@@ -201,6 +203,7 @@ const StudentGatePass = () => {
     const [submitLoading, setSubmitLoading] = useState(false);
     const [downloadingPdf, setDownloadingPdf] = useState(false); // New state
     const [timeWindow, setTimeWindow] = useState({ start: '09:30', end: '16:00' });
+    const [bypassTimeChecks, setBypassTimeChecks] = useState(false);
     const { showToast } = useToast();
 
     
@@ -284,6 +287,7 @@ const StudentGatePass = () => {
                     start: data.collegeHoursStart || '09:30',
                     end: data.collegeHoursEnd || '16:00',
                 });
+                setBypassTimeChecks(data.bypassTimeChecks === true);
             }
         } catch (err) {
             console.error('Failed to fetch settings, using default time window:', err);
@@ -376,7 +380,7 @@ const StudentGatePass = () => {
                                 </Button>
                             </div>
                         )}
-                        <GatePassRequestForm onSubmit={handleRequestSubmit} loading={submitLoading} facultyList={faculty} showToast={showToast} timeWindow={timeWindow} />
+                        <GatePassRequestForm onSubmit={handleRequestSubmit} loading={submitLoading} facultyList={faculty} showToast={showToast} timeWindow={timeWindow} bypassTimeChecks={bypassTimeChecks} />
                     </LocalizationProvider>
                 ) : (
                     // --- Active Gate Pass View ---
@@ -403,7 +407,7 @@ const StudentGatePass = () => {
                                         <DetailRow icon={<PersonPin fontSize="small" />} label="Approved By:" value={getApprovedByText(passData)} className="border-bottom-0" />
                                     </div>
                                     <div className="mt-4 p-3 rounded-3 bg-success-subtle text-success-emphasis fw-bold text-center">
-                                        <p className="fs-5 mb-0">Valid Until: {new Date(passData.date_valid_to).toLocaleString()}</p>
+                                        <p className="fs-5 mb-0">Valid Until: {passData.date_valid_to ? new Date(passData.date_valid_to).toLocaleString() : 'Return not required (half day)'}</p>
                                         <p className="small text-muted mt-1 mb-0">Live Timestamp: <span className="fw-medium">{liveTime.toLocaleTimeString()}</span></p>
                                     </div>
                                 </Col>

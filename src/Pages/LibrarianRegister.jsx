@@ -71,8 +71,7 @@ const LibrarianRegister = () => {
     return (
         <div className="auth-page-wrapper">
             <div className="auth-container">
-                <div className="auth-box">
-                    <h2 className="auth-box">Librarian Register</h2>
+                    <h2>Librarian Register</h2>
                     <Form onSubmit={handleSubmit}>
                         <Form.Group className="mb-3" controlId="formFacultyId">
                             <Form.Label>Librarian ID</Form.Label>
@@ -121,7 +120,7 @@ const LibrarianRegister = () => {
                                     onChange={handleChange}
                                     required
                                 />
-                                <InputGroup.Text onClick={togglePasswordVisibility} className="cursor-pointer">
+                                <InputGroup.Text onClick={togglePasswordVisibility} className="input-toggle">
                                     <i className={showPassword ? "bx bx-hide" : "bx bx-show"}></i>
                                 </InputGroup.Text>
                             </InputGroup>
@@ -138,7 +137,7 @@ const LibrarianRegister = () => {
                                     onChange={handleChange}
                                     required
                                 />
-                                <InputGroup.Text onClick={toggleConfirmPasswordVisibility} className="cursor-pointer">
+                                <InputGroup.Text onClick={toggleConfirmPasswordVisibility} className="input-toggle">
                                     <i className={showConfirmPassword ? "bx bx-hide" : "bx bx-show"}></i>
                                 </InputGroup.Text>
                             </InputGroup>
@@ -148,7 +147,6 @@ const LibrarianRegister = () => {
                             {loading ? 'Registering...' : 'Register'}
                         </Button>
                     </Form>
-                </div>
             </div>
         </div>
     );

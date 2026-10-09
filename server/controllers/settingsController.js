@@ -18,14 +18,14 @@ exports.getSettings = async (req, res, next) => {
 // @access  Private (HOD)
 exports.updateSettings = async (req, res, next) => {
     try {
-        const { collegeHoursStart, collegeHoursEnd, lateEntryCutoff } = req.body;
+        const { collegeHoursStart, collegeHoursEnd, lateEntryCutoff, gatePassExtraMinutes, bypassTimeChecks } = req.body;
 
         if (!collegeHoursStart || !collegeHoursEnd || !lateEntryCutoff) {
             return next(createError('collegeHoursStart, collegeHoursEnd and lateEntryCutoff are required.', 400));
         }
 
         const updated = await settingsService.updateSettings(
-            { collegeHoursStart, collegeHoursEnd, lateEntryCutoff },
+            { collegeHoursStart, collegeHoursEnd, lateEntryCutoff, gatePassExtraMinutes, bypassTimeChecks },
             req.user?.id
         );
 
@@ -35,10 +35,8 @@ exports.updateSettings = async (req, res, next) => {
             message: `Settings updated. College hours: ${settingsService.formatRange(updated.collegeHoursStart, updated.collegeHoursEnd)}.`,
         });
     } catch (error) {
-        if (error.statusCode === 400) {
-            return next(createError(error.message, 400));
-        }
         console.error('[Settings Controller] Error updating settings:', error);
+        // Service errors carry statusCode + friendly text; global handler maps the rest
         next(error);
     }
 };

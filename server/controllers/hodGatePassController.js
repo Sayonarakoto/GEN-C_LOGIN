@@ -3,6 +3,7 @@ const GatePass = require('../models/GatePass');
 const Faculty = require('../models/Faculty');
 const AuditLog = require('../models/AuditLog');
 const { generateToken, PASS_TOKEN_SECRET } = require('../config/jwt'); // Assuming this generates the QR token
+const { gatePassQrExpirySeconds } = require('../utils/qrTokenUtils');
 const { generateThreeDigitOTP } = require('../utils/otpUtils');
 const { sendNotification } = require('../services/notificationService');
 const { generateWatermarkedPDF } = require('../services/pdfGenerationService');
@@ -70,18 +71,9 @@ exports.hodApproveGatePass = async (req, res, next) => {
             studentId: pass.student_id._id.toString(), // Include student ID for better verification
             departmentId: pass.department_id.toString(), // Include department ID
         };
-        // Calculate expiresIn based on pass.date_valid_to
-        const now = new Date();
-        const validTo = new Date(pass.date_valid_to);
-        let expiresInDuration = '1h'; // Default to 1 hour if calculation is problematic or pass is short
-        if (validTo > now) {
-            const diffSeconds = Math.floor((validTo.getTime() - now.getTime()) / 1000);
-            if (diffSeconds > 0) {
-                expiresInDuration = `${diffSeconds}s`;
-            }
-        }
-
-        pass.qr_code_id = generateToken(tokenPayload, PASS_TOKEN_SECRET, expiresInDuration); 
+        // QR/OTP are only usable during the check-in window:
+        // date_valid_from + GATE_PASS_EXTRA_MINUTES (see verificationService)
+        pass.qr_code_id = generateToken(tokenPayload, PASS_TOKEN_SECRET, gatePassQrExpirySeconds(pass));
         pass.one_time_pin = generateThreeDigitOTP(); // Changed from verification_otp to one_time_pin to match schema
 
         await pass.save();

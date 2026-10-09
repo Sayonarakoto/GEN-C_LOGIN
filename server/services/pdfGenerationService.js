@@ -184,8 +184,8 @@ async function generateWatermarkedPDF(passData, hodName, hodDepartment = 'N/A') 
         page.drawText(`${otpCode}`, { x: width / 2 - 35, y: footerY, size: 36, font: boldFont, color: rgb(0, 0, 0) });
     }
 
-    // Dynamic QR Code
-    const qrData = JSON.stringify({
+    // Dynamic QR Code - must be the same JWT that /gatepass/verify-qr validates
+    const qrData = passData.qr_code_id || passData.qr_code_jwt || JSON.stringify({
         id: passData._id,
         uid: student.studentId,
         type: passData.pass_type,

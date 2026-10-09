@@ -20,12 +20,13 @@ import {
 import { Search } from '@mui/icons-material';
 import api from '../../api/client';
 import MemberProfileModal from './MemberProfileModal'; // This will be the new modal component
+import useDebouncedState from '../../hooks/useDebouncedState';
 
 const MemberManagement = () => {
     const [members, setMembers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, debouncedSearchTerm, setSearchTerm] = useDebouncedState('');
     const [selectedMember, setSelectedMember] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -60,12 +61,12 @@ const MemberManagement = () => {
     const filteredMembers = useMemo(() => {
         return members.filter(member => {
             if (!member) return false;
-            const term = searchTerm.toLowerCase();
+            const term = debouncedSearchTerm.toLowerCase();
             const name = (member.fullName || '').toLowerCase();
             const id = (member.studentId || member.employeeId || '').toLowerCase();
             return name.includes(term) || id.includes(term);
         });
-    }, [members, searchTerm]);
+    }, [members, debouncedSearchTerm]);
 
     const getProfileSrc = (member) => {
         if (!member) return null;

@@ -1,15 +1,27 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/client";
 import { Form, Button, Spinner, Alert } from "react-bootstrap"; // Import Bootstrap components
 
 import useToastService from '../hooks/useToastService'; // Import ToastService
 import '../Pages/Auth.css'; // Import Auth.css
 
+// 'faculty' covers HODs too - they log in from the Faculty table.
+const ROLE_OPTIONS = [
+  { value: 'student', label: 'Student' },
+  { value: 'faculty', label: 'Faculty / HOD' },
+  { value: 'librarian', label: 'Librarian' },
+  { value: 'admin', label: 'Admin' },
+];
+
 const ForgotPassword = () => {
   const toast = useToastService(); // Initialize toast service
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [email, setEmail] = useState('');
+  const [role, setRole] = useState('student');
+  const [devOtp, setDevOtp] = useState('');
 
   const sendResetLink = async (emailToSend) => {
     if (!isValidEmail(emailToSend)) {
@@ -19,11 +31,14 @@ const ForgotPassword = () => {
 
     setLoading(true);
     try {
-      await api.post('/forgot-password', {
+      const response = await api.post('/auth/forgot-password', {
         email: emailToSend,
+        role,
       });
       setSubmitted(true);
-      toast.success("✅ A new password reset email has been sent!");
+      // Non-production responses include the code so you can test without an inbox
+      if (response.data?.otp) setDevOtp(response.data.otp);
+      toast.success("✅ If that email is registered, a reset code is on its way!");
     } catch (err) {
       console.error(err);
       const errorMessage = err.response?.data?.message || "❌ Something went wrong. Please try again later.";
@@ -52,11 +67,25 @@ const ForgotPassword = () => {
           Forgot Password?
         </h3>
         <p style={{ display: 'block', textAlign: 'center', marginBottom: '24px', color: 'var(--text-light)' }}>
-          Enter your email and we’ll send you a link to reset your password.
+          Choose your account type, enter your email and we'll send you a reset code and a link to reset your password.
         </p>
 
         {!submitted ? (
           <Form onSubmit={handleSubmit}>
+            <Form.Group className="mb-3" controlId="formRole">
+              <Form.Label>I am a</Form.Label>
+              <Form.Select
+                size="lg"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                disabled={loading}
+              >
+                {ROLE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </Form.Select>
+            </Form.Group>
+
             <Form.Group className="mb-3" controlId="formEmail">
               <Form.Control
                 type="email"
@@ -91,8 +120,19 @@ const ForgotPassword = () => {
               variant="success"
               className="mb-3"
             >
-              ✅ Check your email: If an account with this email exists, you’ll receive a password reset link shortly.
+              ✅ Check your email: if an account with this email exists, you'll receive a reset code and link shortly.
             </Alert>
+            {devOtp && (
+              <Alert variant="warning" className="mb-3">
+                <strong>Test mode</strong> - your code is{' '}
+                <span style={{ letterSpacing: '4px', fontWeight: 700 }}>{devOtp}</span>
+                <div className="mt-2">
+                  <Button size="sm" variant="dark" onClick={() => navigate(`/reset-password/${devOtp}`)}>
+                    Open reset page
+                  </Button>
+                </div>
+              </Alert>
+            )}
             <Button
               style={{ marginTop: '24px' }}
               variant="secondary"

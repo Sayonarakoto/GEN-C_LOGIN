@@ -6,6 +6,7 @@ const AuditLog = require('../models/AuditLog'); // New import
 const { generateToken } = require('../config/jwt');
 const { generateThreeDigitOTP } = require('../utils/otpUtils');
 const { getISTTimeInMinutes } = require('../utils/timeUtils');
+const { gatePassQrExpirySeconds } = require('../utils/qrTokenUtils');
 const { sendNotification } = require('../services/notificationService');
 const { generateWatermarkedPDF } = require('../services/pdfGenerationService'); // New import
 const { verifyOTPPass, verifyQRPass } = require('../services/verificationService'); // Import verification services
@@ -132,24 +133,27 @@ exports.requestGatePass = async (req, res, next) => {
         }
 
         // --- Time Range Validation (configurable college hours, IST) ---
-        const { collegeHoursStart, collegeHoursEnd } = settingsService.getSettings();
+        // TESTING ONLY: isTimeBypassed() skips this validation entirely
+        if (!settingsService.isTimeBypassed()) {
+            const { collegeHoursStart, collegeHoursEnd } = settingsService.getSettings();
 
-        const collegeStartTimeInMinutes = settingsService.toMinutes(collegeHoursStart);
-        const collegeEndTimeInMinutes = settingsService.toMinutes(collegeHoursEnd);
-        const collegeHoursLabel = settingsService.formatRange(collegeHoursStart, collegeHoursEnd);
+            const collegeStartTimeInMinutes = settingsService.toMinutes(collegeHoursStart);
+            const collegeEndTimeInMinutes = settingsService.toMinutes(collegeHoursEnd);
+            const collegeHoursLabel = settingsService.formatRange(collegeHoursStart, collegeHoursEnd);
 
-        // Function to get IST hour and minute from a Date object
-        const exitTimeInMinutes = getISTTimeInMinutes(exitDate);
+            // Function to get IST hour and minute from a Date object
+            const exitTimeInMinutes = getISTTimeInMinutes(exitDate);
 
-        if (exitTimeInMinutes < collegeStartTimeInMinutes || exitTimeInMinutes > collegeEndTimeInMinutes) {
-            return next(createError(`Requested exit time must be within college hours (${collegeHoursLabel}).`, 400));
-        }
+            if (exitTimeInMinutes < collegeStartTimeInMinutes || exitTimeInMinutes > collegeEndTimeInMinutes) {
+                return next(createError(`Requested exit time must be within college hours (${collegeHoursLabel}).`, 400));
+            }
 
-        if (returnDateObj) {
-            const returnTimeInMinutes = getISTTimeInMinutes(returnDateObj);
+            if (returnDateObj) {
+                const returnTimeInMinutes = getISTTimeInMinutes(returnDateObj);
 
-            if (returnTimeInMinutes < collegeStartTimeInMinutes || returnTimeInMinutes > collegeEndTimeInMinutes) {
-                return next(createError(`Requested return time must be within college hours (${collegeHoursLabel}).`, 400));
+                if (returnTimeInMinutes < collegeStartTimeInMinutes || returnTimeInMinutes > collegeEndTimeInMinutes) {
+                    return next(createError(`Requested return time must be within college hours (${collegeHoursLabel}).`, 400));
+                }
             }
         }
         // --- End Time Range Validation ---
@@ -279,7 +283,7 @@ exports.facultyApproveGatePass = async (req, res, next) => {
         pass.hod_status = 'APPROVED'; 
         
         // CRITICAL STEP: Generate Credentials!
-        pass.qr_code_id = generateToken({ passId: pass._id }, process.env.PASS_TOKEN_SECRET); 
+        pass.qr_code_id = generateToken({ passId: pass._id }, process.env.PASS_TOKEN_SECRET, gatePassQrExpirySeconds(pass));
         pass.one_time_pin = generateThreeDigitOTP();
 
         // Emit status update and notification to Student (FINAL APPROVAL)
@@ -339,9 +343,7 @@ exports.facultyApproveGatePass = async (req, res, next) => {
     if (error.name === 'CastError') {
       return next(createError('Invalid ID format provided.', 400));
     }
-    if (error.name === 'ValidationError') {
-      return next(createError(error.message, 400));
-    }
+    // ValidationError and anything else: global handler maps it to a friendly message
     next(error);
   }
 };
@@ -444,7 +446,7 @@ exports.hodApproveGatePass = async (req, res, next) => {
             pass_type: 'Gate Pass',
         },
         process.env.PASS_TOKEN_SECRET,
-        '1h' // QR code valid for 1 hour
+        gatePassQrExpirySeconds(pass)
     );
     const one_time_pin = generateThreeDigitOTP();
 

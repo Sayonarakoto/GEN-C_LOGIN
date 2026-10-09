@@ -16,7 +16,11 @@ router.post('/profile-picture-upload', async (req, res) => {
     return res.json(jsonResponse);
   } catch (error) {
     console.error('Blob upload error:', error);
-    return res.status(400).json({ error: error.message });
+    return res.status(400).json({
+      success: false,
+      message: "The upload couldn't be completed. Please try again.",
+      code: 'UPLOAD_FAILED',
+    });
   }
 });
 

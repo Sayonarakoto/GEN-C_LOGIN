@@ -17,8 +17,6 @@ const securitySchema = new mongoose.Schema({
     minlength: 6,
     maxlength: 6,
   },
-  resetPasswordToken: String,
-  resetPasswordExpire: Date,
 });
 
 // Pre-save hook to hash the 6-digit passkey

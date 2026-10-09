@@ -2,6 +2,44 @@ const SpecialPass = require('../models/SpecialPass');
 const GatePass = require('../models/GatePass'); // Import GatePass Model
 const Student = require('../models/student'); // 🔑 NEW: Import Student Model
 const jwt = require('jsonwebtoken');
+const mongoose = require('mongoose');
+const settingsService = require('./settingsService');
+
+/**
+ * Gate passes stop being verifiable once the check-in window has closed:
+ * now > date_valid_from + gatePassExtraMinutes.
+ * @param {object} pass - GatePass document
+ * @returns {string|null} Human readable reason, or null when still inside the window
+ */
+function gatePassCheckinWindowExpired(pass) {
+    if (!pass || !pass.date_valid_from) return null;
+
+    const extraMinutes = Number.isInteger(settingsService.getSettings().gatePassExtraMinutes)
+        ? settingsService.getSettings().gatePassExtraMinutes
+        : 10;
+
+    const validUntilMs = new Date(pass.date_valid_from).getTime() + extraMinutes * 60000;
+    if (Date.now() > validUntilMs) {
+        const checkInLabel = new Date(pass.date_valid_from).toLocaleString();
+        return `Pass expired: check-in window closed. QR/OTP were valid until ${checkInLabel} plus ${extraMinutes} minutes.`;
+    }
+    return null;
+}
+
+/**
+ * Older PDFs encoded the QR as plain JSON instead of a JWT.
+ * @param {string} token - Scanned QR content
+ * @returns {object|null} Decoded payload or null when the value is not usable
+ */
+function decodeLegacyQrPayload(token) {
+    if (typeof token !== 'string' || !token.trim().startsWith('{')) return null;
+    try {
+        const parsed = JSON.parse(token);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+        return null;
+    }
+}
 
 /**
  * Verifies a pass (SpecialPass or GatePass) using the Student's Human-Readable ID and OTP.
@@ -43,7 +81,7 @@ exports.verifyOTPPass = async (inputStudentIdString, otp, passType) => {
             statusValues = 'APPROVED'; // Assuming 'APPROVED' is the final status for GatePass
             passTypeName = 'Gate';
         } else {
-            return { isValid: false, reason: 'Invalid pass type provided.' };
+            return { isValid: false, reason: 'This pass type cannot be verified here.' };
         }
 
         // 2. Search for the Pass using the Student's ObjectId and the OTP
@@ -70,6 +108,13 @@ exports.verifyOTPPass = async (inputStudentIdString, otp, passType) => {
             return { isValid: false, reason: 'Pass expired.' };
         }
 
+        if (passType === 'gate') {
+            const windowExpired = gatePassCheckinWindowExpired(pass);
+            if (windowExpired) {
+                return { isValid: false, reason: windowExpired, code: 'EXPIRED' };
+            }
+        }
+
         // Conditional check for one-time use, only applicable to SpecialPass
         if (passType === 'special' && pass.is_one_time_use && pass.status === 'Used') {
             console.log(`[verifyOTPPass] Special Pass already used: ${pass._id}`); // DEBUG
@@ -81,7 +126,7 @@ exports.verifyOTPPass = async (inputStudentIdString, otp, passType) => {
 
     } catch (error) {
         console.error('[verifyOTPPass] Error verifying OTP pass:', error);
-        return { isValid: false, reason: 'Internal server error.' };
+        return { isValid: false, reason: 'Something went wrong while checking this pass. Please try again.' };
     }
 };
 
@@ -93,14 +138,25 @@ exports.verifyOTPPass = async (inputStudentIdString, otp, passType) => {
  */
 exports.verifyQRPass = async (qr_token, passType) => {
     try {
-        let decoded;
+        let decoded = null;
         try {
             decoded = jwt.verify(qr_token, process.env.PASS_TOKEN_SECRET);
         } catch (error) {
-            return { isValid: false, reason: 'Invalid QR Token.' };
+            if (error.name === 'TokenExpiredError') {
+                return { isValid: false, reason: 'Pass expired: QR code has expired.', code: 'EXPIRED' };
+            }
+            // Printed PDFs used to encode plain JSON instead of a JWT - still accept them
+            decoded = decodeLegacyQrPayload(qr_token);
+            if (!decoded) {
+                return { isValid: false, reason: 'Invalid QR code.', code: 'INVALID' };
+            }
         }
 
-        const { passId } = decoded;
+        // Gate passes use `passId`, special passes use `pass_id`, legacy PDFs use `id`
+        const passId = decoded.passId || decoded.pass_id || decoded.id;
+        if (!passId || !mongoose.Types.ObjectId.isValid(String(passId))) {
+            return { isValid: false, reason: 'Invalid QR code.', code: 'INVALID' };
+        }
 
         let passModel;
         let statusField;
@@ -118,7 +174,7 @@ exports.verifyQRPass = async (qr_token, passType) => {
             statusValues = 'APPROVED';
             passTypeName = 'Gate';
         } else {
-            return { isValid: false, reason: 'Invalid pass type provided.' };
+            return { isValid: false, reason: 'This pass type cannot be verified here.' };
         }
 
         const pass = await passModel.findById(passId);
@@ -127,16 +183,24 @@ exports.verifyQRPass = async (qr_token, passType) => {
             return { isValid: false, reason: `${passTypeName} Pass not found.` };
         }
 
-        if (pass[statusField] !== 'APPROVED' && pass[statusField] !== 'Override - Active') {
-            return { isValid: false, reason: `Pass is not approved.` };
+        const allowedStatuses = passType === 'gate' ? ['APPROVED'] : ['Approved', 'Override - Active'];
+        if (!allowedStatuses.includes(pass[statusField])) {
+            return { isValid: false, reason: `Pass is not approved.`, code: 'NOT_APPROVED' };
         }
 
         const now = new Date();
         if (pass.date_valid_from && now < pass.date_valid_from) {
-            return { isValid: false, reason: 'Pass is not yet valid.' };
+            return { isValid: false, reason: 'Pass is not yet valid.', code: 'NOT_YET_VALID' };
         }
         if (pass.date_valid_to && pass.date_valid_to < now) {
-            return { isValid: false, reason: 'Pass expired.' };
+            return { isValid: false, reason: 'Pass expired.', code: 'EXPIRED' };
+        }
+
+        if (passType === 'gate') {
+            const windowExpired = gatePassCheckinWindowExpired(pass);
+            if (windowExpired) {
+                return { isValid: false, reason: windowExpired, code: 'EXPIRED' };
+            }
         }
 
         if (passType === 'special' && pass.is_one_time_use && pass.status === 'Used') {
@@ -147,6 +211,6 @@ exports.verifyQRPass = async (qr_token, passType) => {
 
     } catch (error) {
         console.error('[verifyQRPass] Error verifying QR pass:', error);
-        return { isValid: false, reason: 'Internal server error.' };
+        return { isValid: false, reason: 'Something went wrong while checking this pass. Please try again.' };
     }
 };

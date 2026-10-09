@@ -61,9 +61,11 @@ router.post("/librarian-login", authController.librarianLogin);
 // ---------------- Token Handling ----------------
 router.post("/refresh", authController.refreshToken);
 
-// ---------------- Password Reset ----------------
-router.post("/forgot-password", passwordResetLimiter, authController.forgotPassword);
-router.post("/reset-password/:token", passwordResetLimiter, authController.resetPassword);
+// ---------------- Password Reset (OTP) ----------------
+const passwordResetController = require('../controllers/passwordResetController');
+router.post("/forgot-password", passwordResetLimiter, passwordResetController.forgotPassword);
+router.post("/verify-reset-otp", passwordResetLimiter, passwordResetController.verifyResetOtp);
+router.post("/reset-password", passwordResetLimiter, passwordResetController.resetPassword);
 
 // ---------------- Unified Login ----------------
 router.post("/login", authController.unifiedLogin);

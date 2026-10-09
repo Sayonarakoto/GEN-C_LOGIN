@@ -27,6 +27,7 @@ import { LocalizationProvider, DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
 import apiClient from '../api/client';
 import { useAuth } from '../hooks/useAuth';
+import useDebouncedState from '../hooks/useDebouncedState';
 
 const AuditTrail = () => {
   const { user } = useAuth();
@@ -37,7 +38,7 @@ const AuditTrail = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [filters, setFilters] = useState({ startDate: null, endDate: null });
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, debouncedSearchQuery, setSearchQuery] = useDebouncedState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [studentsPerPage] = useState(5);
   const [totalStudents, setTotalStudents] = useState(0);
@@ -49,7 +50,7 @@ const AuditTrail = () => {
       const response = await apiClient.get('/faculty/students', {
         params: {
           department: user.department,
-          search: searchQuery,
+          search: debouncedSearchQuery,
           page: currentPage,
           limit: studentsPerPage,
         },
@@ -62,7 +63,7 @@ const AuditTrail = () => {
     } finally {
       setLoading(false);
     }
-  }, [user?.department, searchQuery, currentPage, studentsPerPage]);
+  }, [user?.department, debouncedSearchQuery, currentPage, studentsPerPage]);
 
   useEffect(() => {
     fetchStudents();
@@ -305,7 +306,7 @@ const AuditTrail = () => {
                         <TableCell>{pass.faculty_status}</TableCell>
                         <TableCell>{pass.hod_status}</TableCell>
                         <TableCell>{new Date(pass.date_valid_from).toLocaleString()}</TableCell>
-                        <TableCell>{new Date(pass.date_valid_to).toLocaleString()}</TableCell>
+                        <TableCell>{pass.date_valid_to ? new Date(pass.date_valid_to).toLocaleString() : 'N/A (half day)'}</TableCell>
                       </TableRow>
                     )) : (
                       <TableRow>

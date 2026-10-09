@@ -72,14 +72,17 @@ exports.createSpecialPassRequest = async (req, res) => {
         }
 
         // --- Time Range Validation (configurable college hours) ---
-        const { collegeHoursStart, collegeHoursEnd } = settingsService.getSettings();
+        // TESTING ONLY: isTimeBypassed() skips this validation entirely
+        if (!settingsService.isTimeBypassed()) {
+            const { collegeHoursStart, collegeHoursEnd } = settingsService.getSettings();
 
-        const collegeStartTime = new Date(`${date_required}T${collegeHoursStart}:00.000Z`);
-        const collegeEndTime = new Date(`${date_required}T${collegeHoursEnd}:00.000Z`);
+            const collegeStartTime = new Date(`${date_required}T${collegeHoursStart}:00.000Z`);
+            const collegeEndTime = new Date(`${date_required}T${collegeHoursEnd}:00.000Z`);
 
-        if (dateValidFrom < collegeStartTime || dateValidTo > collegeEndTime) {
-            const collegeHoursLabel = settingsService.formatRange(collegeHoursStart, collegeHoursEnd);
-            return res.status(400).json({ success: false, message: `Requested pass times must be within college hours (${collegeHoursLabel}).` });
+            if (dateValidFrom < collegeStartTime || dateValidTo > collegeEndTime) {
+                const collegeHoursLabel = settingsService.formatRange(collegeHoursStart, collegeHoursEnd);
+                return res.status(400).json({ success: false, message: `Requested pass times must be within college hours (${collegeHoursLabel}).` });
+            }
         }
         // --- End Time Range Validation ---
         

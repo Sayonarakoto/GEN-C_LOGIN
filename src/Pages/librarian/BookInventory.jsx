@@ -7,12 +7,13 @@ import {
 import { Search, Add, Delete } from '@mui/icons-material';
 import api from '../../api/client';
 import useToastService from '../../hooks/useToastService';
+import useDebouncedState from '../../hooks/useDebouncedState';
 
 const BookInventory = () => {
     const toast = useToastService();
     const [books, setBooks] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, debouncedSearchTerm, setSearchTerm] = useDebouncedState('');
     const [sortBy, setSortBy] = useState('createdAt');
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -34,7 +35,7 @@ const BookInventory = () => {
                     params: {
                         page: page + 1, // API expects 1-based index
                         limit: rowsPerPage,
-                        search: searchTerm,
+                        search: debouncedSearchTerm,
                         sortBy: sortBy
                     }
                 });
@@ -49,12 +50,8 @@ const BookInventory = () => {
             }
         };
 
-        const delayDebounceFn = setTimeout(() => {
-            fetchBooks();
-        }, 500);
-
-        return () => clearTimeout(delayDebounceFn);
-    }, [page, rowsPerPage, searchTerm, sortBy]);
+        fetchBooks();
+    }, [page, rowsPerPage, debouncedSearchTerm, sortBy]);
 
     const handleAddBook = async () => {
         try {

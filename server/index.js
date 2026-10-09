@@ -23,7 +23,6 @@ const statsRoutes = require('./routes/stats');
 const settingsRoutes = require('./routes/settings');
 const { requireAuth } = require('./middleware/auth'); // Import your auth middleware
 const { upload, uploadStudents, getAllStudents } = require('./controllers/excelUploadController'); // Import from new controller
-const { forgotPassword, resetPassword } = require('./controllers/passwordResetController'); // Import from new controller
 const settingsService = require('./services/settingsService');
 
 const app = express();
@@ -87,8 +86,6 @@ mongoose.connect(process.env.MONGO_URI || "mongodb://localhost:27017/paperlessCa
 // API Routes - Grouped and placed before static file serving
 app.post('/api/upload', requireAuth, upload.single('file'), uploadStudents);
 app.get('/api/students', requireAuth, getAllStudents);
-app.post('/api/forgot-password', forgotPassword);
-app.post('/api/reset-password/:token', resetPassword);
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', FacultyRoutes);
 app.use('/api/students', studentRoutes); // Register student routes - Changed from /api/student
@@ -125,32 +122,10 @@ if (process.env.NODE_ENV !== 'production') {
 //   res.sendFile(path.join(__dirname, '..', 'dist', 'index.html'));
 // });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Something went wrong!';
-
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({
-      success: false,
-      message: 'File too large. Max file size is 10MB.',
-    });
-  }
-  
-  return res.status(statusCode).json({
-    success: false,
-    message: message,
-  });
-});
-
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    message: `Cannot ${req.method} ${req.path}`
-  });
-});
+// Error handling middleware - maps any thrown error to a safe, user-friendly payload
+const { errorHandler, notFoundHandler } = require('./middleware/errorHandler');
+app.use(errorHandler);
+app.use(notFoundHandler);
 const PORT = process.env.PORT || 3001;
 
 server.listen(PORT, () => {

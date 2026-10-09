@@ -18,11 +18,12 @@ import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { socket } from '../../socket'; // Use the configured socket instance
 import api from '../../api/client'; // Import api client
+import useDebouncedState from '../../hooks/useDebouncedState';
 
 const LiveBorrowingTable = () => {
     const [borrowings, setBorrowings] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [searchText, setSearchText] = useState('');
+    const [searchText, debouncedSearchText, setSearchText] = useDebouncedState('');
     const [notification, setNotification] = useState(null);
 
     const fetchBorrowings = useCallback(async () => {
@@ -64,9 +65,9 @@ const LiveBorrowingTable = () => {
     
     const filteredBorrowings = borrowings.filter(
         (item) =>
-            item.studentId?.fullName.toLowerCase().includes(searchText.toLowerCase()) ||
-            item.studentId?.studentId.toLowerCase().includes(searchText.toLowerCase()) ||
-            item.bookTitle.toLowerCase().includes(searchText.toLowerCase())
+            item.studentId?.fullName.toLowerCase().includes(debouncedSearchText.toLowerCase()) ||
+            item.studentId?.studentId.toLowerCase().includes(debouncedSearchText.toLowerCase()) ||
+            item.bookTitle.toLowerCase().includes(debouncedSearchText.toLowerCase())
     );
 
     return (

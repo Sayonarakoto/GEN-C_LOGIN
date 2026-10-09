@@ -16,6 +16,8 @@ exports.generateToken = (payload, secret = JWT_SECRET, expiresIn = JWT_EXPIRES_I
   return jwt.sign(payload, secret, { expiresIn });
 };
 
+exports.PASS_TOKEN_SECRET = PASS_TOKEN_SECRET;
+
 exports.verifyToken = (token) => {
   if (!token || typeof token !== 'string') {
     throw new Error('Token missing or invalid');

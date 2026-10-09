@@ -1,21 +1,25 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { Toast, ToastContainer } from 'react-bootstrap';
-
+import { Snackbar, Alert } from '@mui/material';
 import { ToastContext } from '../context/ToastContext';
+
+const SEVERITY = {
+  success: 'success',
+  danger: 'error',
+  info: 'info',
+  warning: 'warning',
+};
 
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
-  const toastIdCounter = useRef(0); // Use useRef for the counter
+  const toastIdCounter = useRef(0);
 
   const showToast = useCallback((message, variant = 'success', delay = 3000) => {
-    toastIdCounter.current += 1; // Increment the ref
-    const newId = toastIdCounter.current;
+    toastIdCounter.current += 1;
     const newToast = {
-      id: newId,
+      id: toastIdCounter.current,
       message,
       variant,
       delay,
-      show: true,
     };
     setToasts((prevToasts) => [...prevToasts, newToast]);
   }, []);
@@ -27,25 +31,38 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={{ showToast, removeToast }}>
       {children}
-      <ToastContainer position="top-end" className="p-3" style={{ zIndex: 1050 }}>
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          zIndex: 1400,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: 8,
+          maxWidth: 'calc(100vw - 32px)',
+        }}
+      >
         {toasts.map((toast) => (
-          <Toast
+          <Snackbar
             key={toast.id}
-            show={toast.show}
+            open
+            autoHideDuration={toast.delay}
             onClose={() => removeToast(toast.id)}
-            delay={toast.delay}
-            autohide
-            bg={toast.variant}
+            sx={{ position: 'static' }}
           >
-            <Toast.Body className={toast.variant === 'dark' ? 'text-white' : ''}>
-              <strong className="me-auto">Notification</strong>
-            </Toast.Body>
-            <Toast.Body className={toast.variant === 'dark' && 'text-white'}>
+            <Alert
+              onClose={() => removeToast(toast.id)}
+              severity={SEVERITY[toast.variant] || 'info'}
+              variant="filled"
+              sx={{ width: '100%' }}
+            >
               {toast.message}
-            </Toast.Body>
-          </Toast>
+            </Alert>
+          </Snackbar>
         ))}
-      </ToastContainer>
+      </div>
     </ToastContext.Provider>
   );
 };

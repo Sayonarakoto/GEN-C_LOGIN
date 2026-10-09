@@ -17,8 +17,6 @@ const FacultySchema = new mongoose.Schema({
     set: (value) => value.toUpperCase()
   },
   profilePhoto: { type: String }, // Store image filename or URL if uploading file separately
-  resetPasswordToken: String,
-  resetPasswordExpire: Date,
   mfaEnabled: { type: Boolean, default: false },
   mfaSecret: { type: String },
 }, { timestamps: true });

@@ -10,12 +10,12 @@ router.get('/', requireAuth, settingsController.getSettings);
 
 // @route   PUT /api/settings
 // @desc    Update application time settings
-// @access  Private (HOD)
-router.put('/', requireAuth, requireRole('HOD'), settingsController.updateSettings);
+// @access  Private (admin)
+router.put('/', requireAuth, requireRole('admin'), settingsController.updateSettings);
 
 // @route   POST /api/settings/reset
 // @desc    Reset settings to env-var defaults
-// @access  Private (HOD)
-router.post('/reset', requireAuth, requireRole('HOD'), settingsController.resetSettings);
+// @access  Private (admin)
+router.post('/reset', requireAuth, requireRole('admin'), settingsController.resetSettings);
 
 module.exports = router;

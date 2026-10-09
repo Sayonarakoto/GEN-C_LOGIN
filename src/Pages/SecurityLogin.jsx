@@ -1,100 +1,30 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from '../hooks/useAuth';
-import client from '../api/client';
-import useToastService from '../hooks/useToastService';
-import '../Pages/Auth.css'; // Import Auth.css
-import { Form, Button, InputGroup } from 'react-bootstrap';
-import Logo from '../components/common/Logo';
+import LoginPage from '../components/auth/LoginPage';
+import { ROLE_HOME } from '../utils/rolePaths';
 
+const shieldIcon = (
+  <svg width="32" height="32" viewBox="0 0 24 24" fill="#0f172a" xmlns="http://www.w3.org/2000/svg">
+    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+  </svg>
+);
 
-const SecurityLogin = () => {
-  const navigate = useNavigate();
-  const { login } = useAuth();
-  const toast = useToastService();
-  const [loading, setLoading] = useState(false);
-  const [passkey, setPasskey] = useState('');
-  const [showPasskey, setShowPasskey] = useState(false);
-
-  const togglePasskeyVisibility = () => {
-    setShowPasskey(!showPasskey);
-  };
-
-  const onFinish = async (event) => {
-    event.preventDefault();
-    setLoading(true);
-    toast.info('Logging in...');
-    try {
-      const response = await client.post('/auth/login', {
-        role: 'security',
-        passkey: passkey,
-      }, {
-        timeout: 10000,
-        headers: { 'X-Skip-Interceptor': true }
-      });
-      
-      const { token, user } = response.data;
-      
-      if (!token) {
-        throw new Error('No token received from server');
-      }
-      
-      login(token, user);
-      toast.success(response.data.message || 'Login successful!');
-      navigate('/security-dashboard');
-    } catch (error) {
-      console.error("Login error:", error);
-      const userMessage = error.response?.status === 401
-        ? "Invalid passkey. Please try again."
-        : "Login failed. Please try again later.";
-      toast.error(userMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="auth-page-wrapper">
-      <div className="auth-container">
-        <div className="auth-box">
-          <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-            <Logo />
-            <h2 style={{ marginTop: '1rem' }}>Security Portal</h2>
-            <p>Please enter the security passkey to proceed.</p>
-          </div>
-
-          <Form onSubmit={onFinish}>
-            <Form.Group className="mb-3" controlId="formPasskey">
-              <Form.Label>Security Passkey</Form.Label>
-              <InputGroup>
-                <Form.Control
-                  type={showPasskey ? "text" : "password"}
-                  placeholder="Enter security passkey"
-                  value={passkey}
-                  onChange={(e) => setPasskey(e.target.value)}
-                  required
-                  size="lg"
-                />
-                <InputGroup.Text onClick={togglePasskeyVisibility} style={{ cursor: 'pointer' }}>
-                  <i className={showPasskey ? "bx bx-hide" : "bx bx-show"}></i>
-                </InputGroup.Text>
-              </InputGroup>
-            </Form.Group>
-
-            <Button
-              variant="primary"
-              type="submit"
-              size="lg"
-              className="w-100 mt-3"
-              disabled={loading}
-            >
-              {loading ? 'Logging in...' : 'Login'}
-            </Button>
-          </Form>
-        </div>
-      </div>
-    </div>
-  );
+const securityConfig = {
+  role: 'security',
+  compact: true,
+  title: 'Security Portal',
+  subtitle: 'Please enter the security passkey to proceed.',
+  icon: shieldIcon,
+  fields: [
+    { name: 'passkey', label: 'Security Passkey', type: 'password', placeholder: 'Enter security passkey' },
+  ],
+  submitLabel: 'Login',
+  loadingText: 'Logging in...',
+  redirectTo: ROLE_HOME.security,
+  redirectDelay: 0,
+  showForgotLink: false,
+  timeout: 10000,
+  invalidMessage: 'Invalid passkey. Please try again.',
 };
+
+const SecurityLogin = () => <LoginPage config={securityConfig} />;
 
 export default SecurityLogin;

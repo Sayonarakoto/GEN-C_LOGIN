@@ -242,6 +242,6 @@ exports.addStudent = async (req, res) => {
     if (error.code === 11000 && error.keyPattern && error.keyPattern.email) {
         return res.status(400).json({ success: false, message: 'Email already in use. Please use a different email.' });
     }
-    res.status(500).json({ message: "Server error", error: error.message });
+    res.status(500).json({ success: false, message: 'Something went wrong. Please try again later.', code: 'SERVER_ERROR' });
   }
 };

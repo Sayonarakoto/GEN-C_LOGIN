@@ -28,6 +28,18 @@ const settingsSchema = new mongoose.Schema(
             match: [TIME_REGEX, 'Time must be in HH:MM (24-hour) format'],
             default: '09:30',
         },
+        gatePassExtraMinutes: {
+            type: Number,
+            required: true,
+            min: [0, 'Extra minutes cannot be negative'],
+            max: [180, 'Extra minutes cannot exceed 180'],
+            default: 10,
+        },
+        // TESTING ONLY: when true, college-hours request validation is skipped
+        bypassTimeChecks: {
+            type: Boolean,
+            default: false,
+        },
         updatedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Faculty',

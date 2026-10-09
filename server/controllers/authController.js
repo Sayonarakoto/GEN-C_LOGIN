@@ -1,4 +1,5 @@
 const { generateToken } = require('../config/jwt');
+const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const Faculty = require('../models/Faculty');
 const Student = require('../models/student');
@@ -6,6 +7,13 @@ const Security = require('../models/security');
 const User = require('../models/User');
 const createError = require('../utils/error');
 const logger = require('../utils/logger');
+
+// Issue a long-lived refresh token carrying the same identity claims as the access token
+const signRefreshToken = (claims) => jwt.sign(
+  { ...claims, scope: 'refresh' },
+  process.env.JWT_REFRESH_SECRET,
+  { expiresIn: process.env.REFRESH_TOKEN_EXPIRES || '7d' }
+);
 
 // ----------------- REGISTER -----------------
 exports.register = async (req, res, next) => {
@@ -211,47 +219,60 @@ exports.securityLogin = async (req, res, next) => {
 // Token Refresh
 exports.refreshToken = async (req, res) => {
   try {
-    // Implementation for token refresh
-    // ... add your token refresh logic here
-    res.status(501).json({ message: 'Token refresh not implemented' });
+    const { refreshToken } = req.body;
+    if (!refreshToken || typeof refreshToken !== 'string') {
+      return res.status(400).json({ success: false, message: 'Refresh token is required' });
+    }
+
+    let payload;
+    try {
+      payload = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+    } catch (err) {
+      logger.info('Refresh failed: invalid or expired refresh token');
+      return res.status(401).json({ success: false, message: 'Invalid or expired refresh token' });
+    }
+
+    if (payload.scope !== 'refresh' || !payload.id || !payload.role) {
+      return res.status(401).json({ success: false, message: 'Invalid token scope' });
+    }
+
+    // Verify the account still exists
+    const role = String(payload.role).toLowerCase();
+    let exists = false;
+    if (role === 'student') {
+      exists = !!(await Student.findById(payload.id).select('_id'));
+    } else if (role === 'faculty' || role === 'hod') {
+      exists = !!(await Faculty.findById(payload.id).select('_id'));
+    } else if (role === 'security') {
+      exists = !!(await Security.findById(payload.id).select('_id'));
+    } else if (role === 'admin' || role === 'librarian') {
+      exists = !!(await User.findById(payload.id).select('_id'));
+    }
+    if (!exists) {
+      logger.info('Refresh failed: account no longer exists');
+      return res.status(401).json({ success: false, message: 'Account no longer exists' });
+    }
+
+    // Re-issue access token (rotate the refresh token too)
+    const { scope, iat, exp, ...claims } = payload;
+    let token;
+    if (role === 'admin' || role === 'librarian') {
+      const user = await User.findById(payload.id);
+      token = user.getSignedJwtToken();
+    } else {
+      token = generateToken(claims);
+    }
+    const newRefreshToken = signRefreshToken(claims);
+
+    return res.json({ success: true, token, refreshToken: newRefreshToken });
   } catch (error) {
     logger.error('Token refresh error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during token refresh'
-    });
+    res.status(500).json({ success: false, message: 'Server error during token refresh' });
   }
 };
 
-// Password Reset Request
-exports.forgotPassword = async (req, res) => {
-  try {
-    // Implementation for password reset request
-    // ... add your forgot password logic here
-    res.status(501).json({ message: 'Forgot password not implemented' });
-  } catch (error) {
-    logger.error('Forgot password error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during password reset request'
-    });
-  }
-};
-
-// Password Reset
-exports.resetPassword = async (req, res) => {
-  try {
-    // Implementation for password reset
-    // ... add your password reset logic here
-    res.status(501).json({ message: 'Password reset not implemented' });
-  } catch (error) {
-    logger.error('Password reset error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Server error during password reset'
-    });
-  }
-};
+// Password reset (OTP) lives in controllers/passwordResetController.js and is
+// mounted at /api/auth/forgot-password | /verify-reset-otp | /reset-password.
 
 exports.unifiedLogin = async (req, res) => {
   try {
@@ -291,7 +312,7 @@ exports.unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       console.log('Student login successful for studentId:', studentId);
-      const token = generateToken({
+      const claims = {
         id: student._id,
         role: 'student',
         fullName: student.fullName,
@@ -300,11 +321,14 @@ exports.unifiedLogin = async (req, res) => {
         studentId: student.studentId,
         email: student.email,
         profilePictureUrl: student.profilePictureUrl
-      });
+      };
+      const token = generateToken(claims);
+      const refreshToken = signRefreshToken(claims);
       const studentData = student.toObject();
       delete studentData.password;
+      delete studentData.tempPassword;
 
-      return res.json({ token, user: studentData });
+      return res.json({ token, refreshToken, user: studentData });
     }
 
     if (role === 'faculty') {
@@ -319,7 +343,7 @@ exports.unifiedLogin = async (req, res) => {
         return res.status(401).json({ message: "Invalid credentials" });
       }
       const role = faculty.designation.toUpperCase() === 'HOD' ? 'HOD' : 'faculty';
-      const token = generateToken({
+      const claims = {
         id: faculty._id,
         role: role,
         fullName: faculty.fullName,
@@ -328,9 +352,11 @@ exports.unifiedLogin = async (req, res) => {
         employeeId: faculty.employeeId,
         designation: faculty.designation,
         profilePictureUrl: faculty.profilePhoto || '',
-      });
+      };
+      const token = generateToken(claims);
+      const refreshToken = signRefreshToken(claims);
       const f = faculty.toObject(); delete f.password;
-      return res.json({ token, user: { id: faculty._id, role: role, ...f }});
+      return res.json({ token, refreshToken, user: { id: faculty._id, role: role, ...f }});
     }
 
     if (role === 'security') {
@@ -340,8 +366,50 @@ exports.unifiedLogin = async (req, res) => {
       if (!security) return res.status(401).json({ message: "Security user not found" });
       const ok = await bcrypt.compare(passkey, security.passkey);
       if (!ok) return res.status(401).json({ message: "Invalid passkey" });
-      const token = generateToken({ id: security._id, role: 'security', fullName: 'Security', department: 'Security' });
-      return res.json({ token, user: { id: security._id, role: 'security', fullName: 'Security', department: 'Security' }});
+      const claims = { id: security._id, role: 'security', fullName: 'Security', department: 'Security' };
+      const token = generateToken(claims);
+      const refreshToken = signRefreshToken(claims);
+      return res.json({ token, refreshToken, user: { id: security._id, role: 'security', fullName: 'Security', department: 'Security' }});
+    }
+
+    if (role === 'admin') {
+      const { identifier, facultyId, adminId, password } = req.body;
+      const id = identifier || adminId || facultyId;
+      if (!id || !password) {
+        return res.status(400).json({ message: "Admin ID and password are required" });
+      }
+      const user = await User.findOne({ role: 'admin', $or: [{ facultyId: id }, { email: id }] }).select('+password');
+      if (!user) {
+        logger.info('Admin login failed: no admin user for identifier');
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      const ok = await user.matchPassword(password);
+      if (!ok) {
+        logger.info('Admin login failed: bad password');
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+      const token = user.getSignedJwtToken();
+      const refreshToken = signRefreshToken({
+        id: user._id,
+        role: user.role,
+        fullName: user.fullName,
+        department: user.department,
+        facultyId: user.facultyId,
+        email: user.email
+      });
+      return res.json({
+        token,
+        refreshToken,
+        user: {
+          id: user._id,
+          role: user.role,
+          fullName: user.fullName,
+          department: user.department,
+          facultyId: user.facultyId,
+          email: user.email,
+          profilePictureUrl: user.profilePictureUrl || ''
+        }
+      });
     }
 
     return res.status(400).json({ message: "Unsupported role" });
@@ -373,8 +441,22 @@ exports.librarianRegister = async (req, res, next) => {
             message: 'Librarian registered successfully'
         });
     } catch (error) {
-        // Handle validation errors or other issues
-        res.status(400).json({ success: false, message: error.message });
+        if (error.code === 11000) {
+            return res.status(409).json({
+                success: false,
+                message: 'That email address is already registered. Please use a different one.',
+                code: 'DUPLICATE',
+            });
+        }
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                success: false,
+                message: 'Please check the details you entered.',
+                code: 'VALIDATION_ERROR',
+            });
+        }
+        logger.error('Librarian registration error:', error);
+        return next(error);
     }
 };
 
@@ -411,9 +493,18 @@ exports.librarianLogin = async (req, res, next) => {
         }
         
         // Return user and token
+        const refreshClaims = {
+            id: user._id,
+            role: user.role,
+            fullName: user.fullName,
+            department: user.department,
+            facultyId: user.facultyId,
+            email: user.email
+        };
         res.status(200).json({
             success: true,
             token,
+            refreshToken: signRefreshToken(refreshClaims),
             user: {
                 id: user._id,
                 role: user.role,

@@ -109,10 +109,10 @@ const HistoryTable = ({ history, loading, error }) => {
 
   const getFacultyViewStatus = (pass) => {
     const now = new Date();
-    const validTo = new Date(pass.date_valid_to);
 
     if (pass.hod_status === 'APPROVED') {
-      if (validTo < now) {
+      // Half-day passes have no return time (date_valid_to is null) and never expire here.
+      if (pass.date_valid_to && new Date(pass.date_valid_to) < now) {
         return 'FINAL APPROVED (EXPIRED)';
       }
       return 'FINAL APPROVED';

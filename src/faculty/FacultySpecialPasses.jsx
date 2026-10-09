@@ -32,6 +32,7 @@ import {
 import apiClient from '../api/client';
 import { useAuth } from '../hooks/useAuth'; // Import useAuth
 import StatsFetcher from '../components/StatsFetcher';
+import useDebouncedState from '../hooks/useDebouncedState';
 
 // Component to show the list of pending requests
 const PendingRequests = () => {
@@ -175,7 +176,7 @@ const InitiatePass = () => {
     const [students, setStudents] = useState([]);
     const [studentTableLoading, setStudentTableLoading] = useState(true);
     const [studentTableError, setStudentTableError] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
+    const [searchQuery, debouncedSearchQuery, setSearchQuery] = useDebouncedState('');
     const [currentPage, setCurrentPage] = useState(1);
     const [studentsPerPage] = useState(5);
     const [totalStudents, setTotalStudents] = useState(0);
@@ -216,7 +217,7 @@ const InitiatePass = () => {
             const response = await apiClient.get('/faculty/students', {
                 params: {
                     department: hodDepartment,
-                    search: searchQuery,
+                    search: debouncedSearchQuery,
                     page: currentPage,
                     limit: studentsPerPage,
                 },
@@ -229,7 +230,7 @@ const InitiatePass = () => {
         } finally {
             setStudentTableLoading(false);
         }
-    }, [hodDepartment, searchQuery, currentPage, studentsPerPage]);
+    }, [hodDepartment, debouncedSearchQuery, currentPage, studentsPerPage]);
 
     useEffect(() => {
         fetchStudents();

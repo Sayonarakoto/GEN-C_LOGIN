@@ -28,6 +28,7 @@ import { Close, Visibility, CheckCircle, Cancel, AccessTime, Search, FilterList,
 import api from '../../api/client';
 import { socket } from '../../socket';
 import { resolveProfileImageUrl } from '../../utils/resolveProfileImageUrl';
+import useDebouncedState from '../../hooks/useDebouncedState';
     
 const PendingPasses = () => {
     const [passes, setPasses] = useState([]);
@@ -36,7 +37,7 @@ const PendingPasses = () => {
     const [notification, setNotification] = useState(null);
     const [selectedImage, setSelectedImage] = useState(null);
     const [imageModalOpen, setImageModalOpen] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
+    const [searchTerm, debouncedSearchTerm, setSearchTerm] = useDebouncedState('');
     const [filterRole, setFilterRole] = useState('All');
     const [filterDept, setFilterDept] = useState('All');
     const [filterYear, setFilterYear] = useState('All');
@@ -127,7 +128,7 @@ const PendingPasses = () => {
         const requester = pass.requester || {};
         const name = (requester.fullName || '').toLowerCase();
         const id = (requester.studentId || requester.employeeId || '').toLowerCase();
-        const term = searchTerm.toLowerCase();
+        const term = debouncedSearchTerm.toLowerCase();
 
         // Search Match
         const matchesSearch = name.includes(term) || id.includes(term);

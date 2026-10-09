@@ -13,7 +13,7 @@ import {
     Grid, Paper, TextField, Button, Typography, Box,
     Tabs, Tab, CircularProgress
 } from '@mui/material';
-import { PersonOutline, School, Timeline } from '@mui/icons-material';
+import { PersonOutline, School } from '@mui/icons-material';
 import { upload } from '@vercel/blob/client';
 import { resolveProfileImageUrl } from '../utils/resolveProfileImageUrl';
 
@@ -87,10 +87,6 @@ const FacultyProfile = () => {
     const [loadingMembers, setLoadingMembers] = useState(false);
     const [membersError, setMembersError] = useState(null);
 
-    const [auditLogs, setAuditLogs] = useState([]);
-    const [loadingLogs, setLoadingLogs] = useState(false);
-    const [logsError, setLogsError] = useState(null);
-
     useEffect(() => {
         if (user) {
             setFormData({
@@ -127,28 +123,6 @@ const FacultyProfile = () => {
                 }
             };
             fetchDepartmentMembers();
-        }
-    }, [currentTab, user?.department]);
-
-    useEffect(() => {
-        if (currentTab === 2 && user?.department) {
-            const fetchAuditLogs = async () => {
-                setLoadingLogs(true);
-                setLogsError(null);
-                try {
-                    const response = await apiClient.get('/audit/department-logs');
-                    if (response.data.success) {
-                        setAuditLogs(response.data.data);
-                    } else {
-                        setLogsError(response.data.message || 'Failed to fetch audit logs.');
-                    }
-                } catch (err) {
-                    setLogsError(err.response?.data?.message || 'Failed to fetch audit logs.');
-                } finally {
-                    setLoadingLogs(false);
-                }
-            };
-            fetchAuditLogs();
         }
     }, [currentTab, user?.department]);
 
@@ -212,13 +186,6 @@ const FacultyProfile = () => {
         setCurrentTab(newValue);
     };
 
-    const formatLogDetails = (log) => {
-        if (!log.event_details) return '';
-        return Object.entries(log.event_details)
-            .map(([key, value]) => `${key}: ${typeof value === 'object' ? JSON.stringify(value) : value}`)
-            .join(', ');
-    };
-
     return (
         <Box sx={{ mt: 5, p: 3 }}>
             {alert && <AlertMessage message={alert.message} type={alert.type} />}
@@ -258,7 +225,6 @@ const FacultyProfile = () => {
                     <Tabs value={currentTab} onChange={handleTabChange} sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
                         <Tab label="Account Settings" icon={<PersonOutline />} iconPosition="start" />
                         <Tab label="My Department" icon={<School />} iconPosition="start" />
-                        <Tab label="Activity Log" icon={<Timeline />} iconPosition="start" />
                     </Tabs>
 
                     {currentTab === 0 && (
@@ -301,25 +267,6 @@ const FacultyProfile = () => {
                                                     <Typography variant="subtitle1" fontWeight="bold">{member.fullName}</Typography>
                                                     <Typography variant="body2" color="text.secondary">{member.designation}</Typography>
                                                 </Box>
-                                            </Paper>
-                                        </Grid>
-                                    ))}
-                                </Grid>
-                            )}
-                        </Box>
-                    )}
-
-                    {currentTab === 2 && (
-                        <Box sx={{ mt: 2 }}>
-                            <Typography variant="h6" gutterBottom>Recent Activity Log</Typography>
-                            {loadingLogs ? <CircularProgress /> : logsError ? <Typography color="error">{logsError}</Typography> : (
-                                <Grid container spacing={2} sx={{ mt: 1 }}>
-                                    {auditLogs.map((log) => (
-                                        <Grid item xs={12} key={log._id}>
-                                            <Paper elevation={1} sx={{ p: 2 }}>
-                                                <Typography variant="caption" color="text.secondary">{new Date(log.timestamp).toLocaleString()}</Typography>
-                                                <Typography variant="subtitle2" fontWeight="bold">{log.event_type}</Typography>
-                                                <Typography variant="body2">{formatLogDetails(log)}</Typography>
                                             </Paper>
                                         </Grid>
                                     ))}

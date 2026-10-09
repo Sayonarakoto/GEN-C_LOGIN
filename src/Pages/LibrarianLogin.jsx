@@ -24,8 +24,8 @@ const LibrarianLogin = () => {
         password,
       });
 
-      const { token, user } = response.data;
-      login(token, user);
+      const { token, user, refreshToken } = response.data;
+      login(token, user, refreshToken);
       navigate('/librarian/dashboard');
 
     } catch (error) {

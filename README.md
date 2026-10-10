@@ -5,6 +5,7 @@ A full-stack system for faculty, students, and security built with:
 * **Frontend:** React + Vite + Bootstrap
 * **Backend:** Node.js + Express.js + MongoDB
 
+[![Architecture diagram of sayonarakoto/gen-c_login](https://gitdiagram.com/sayonarakoto/gen-c_login/diagram.png)](https://gitdiagram.com/sayonarakoto/gen-c_login?utm_source=readme&utm_medium=picture)
 ---
 
 ## 📂 Project Structure

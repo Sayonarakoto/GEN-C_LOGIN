@@ -159,7 +159,7 @@ Open the Vite URL shown in the terminal (normally `http://localhost:5173`).
 
 ## Release notes
 
-Push a version tag such as `v0.1.0` to trigger the GitHub Actions workflow, which creates a draft GitHub release with automatically generated notes. To retry a release for an existing tag, run **Draft release notes** from the Actions tab and enter the tag. Release notes are grouped using merged pull request labels configured in `.github/release.yml`:
+Push a version tag such as `v0.1.0` to trigger the GitHub Actions workflow, which creates a draft GitHub release with automatically generated notes and a commit-history section since the previous version tag. For the first release, the section includes all non-merge commits reachable from the tag. To update an existing draft, run **Draft release notes** from the Actions tab and enter the tag. Release notes are grouped using merged pull request labels configured in `.github/release.yml`:
 
 - `enhancement` → Features
 - `bug` → Bug Fixes

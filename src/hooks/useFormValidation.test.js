@@ -8,9 +8,6 @@ import assert from 'node:assert/strict';
 import {
   validateField,
   validateForm,
-  validateRequired,
-  validateEmail,
-  validateMinLength,
 } from '../utils/validationRules.js';
 
 describe('Form Validation Workflow', () => {

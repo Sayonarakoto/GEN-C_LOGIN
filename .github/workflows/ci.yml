@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - Master-Prod
+  push:
+    branches:
+      - Master-Prod
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            server/package-lock.json
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: server
+
+      - name: Check backend JavaScript syntax
+        run: find . -path './node_modules' -prune -o -type f -name '*.js' -print0 | xargs -0 -n1 node --check
+        working-directory: server
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Run backend tests
+        run: npm test -- --passWithNoTests
+        working-directory: server

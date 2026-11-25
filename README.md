@@ -166,3 +166,16 @@ Push a version tag such as `v0.1.0` to trigger the GitHub Actions workflow, whic
 - `documentation` → Documentation
 
 Unmatched pull requests are grouped under Other Changes. Review the draft under **GitHub → Releases** before publishing it.
+
+## CI/CD
+
+The **CI** GitHub Actions workflow runs for pull requests targeting `Master-Prod` and for pushes to that branch. It installs the frontend and backend dependencies, checks backend JavaScript syntax, builds the frontend, and runs the backend Jest command. There are currently no backend test files, so the Jest step allows an empty test suite.
+
+Vercel and Render are connected to GitHub and deploy automatically when changes reach their configured deployment branches. To make sure only passing changes are deployed:
+
+1. In GitHub, protect `Master-Prod` with a branch rule or ruleset.
+2. Require pull requests and require the **CI / Build and test** status check before merging.
+3. Configure both Vercel and Render to deploy from `Master-Prod`.
+4. Merge changes only after CI passes.
+
+Direct pushes to `Master-Prod` can start the provider deployments before the CI workflow finishes. Avoid direct pushes if you need CI to gate production deployments. The current ESLint command reports existing issues and is not included as a blocking CI check.

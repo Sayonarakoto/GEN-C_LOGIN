@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to create a draft release for
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -15,5 +21,5 @@ jobs:
       - name: Create draft release
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG: ${{ github.ref_name }}
-        run: gh release create "$TAG" --verify-tag --generate-notes --draft --fail-on-no-commits
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --draft --fail-on-no-commits

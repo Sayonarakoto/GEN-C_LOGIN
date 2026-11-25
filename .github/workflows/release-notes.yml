@@ -1,0 +1,84 @@
+name: Draft release notes
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing version tag to create a draft release for
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare commit history
+        env:
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if ! git rev-parse --verify "refs/tags/${TAG}^{commit}" >/dev/null 2>&1; then
+            echo "::error::Tag $TAG was not found in the repository."
+            exit 1
+          fi
+
+          TAG_COMMIT=$(git rev-parse "refs/tags/${TAG}^{commit}")
+          PREVIOUS_TAG=$(git tag --list 'v[0-9]*' --merged "$TAG_COMMIT" --sort=-version:refname | grep -F -x -v -e "$TAG" | head -n 1 || true)
+
+          if [ -n "$PREVIOUS_TAG" ]; then
+            COMMIT_RANGE="${PREVIOUS_TAG}..${TAG}"
+            RANGE_LABEL="since ${PREVIOUS_TAG}"
+          else
+            COMMIT_RANGE="$TAG"
+            RANGE_LABEL="from the beginning of repository history (first release)"
+          fi
+
+          COMMITS=$(git log --no-merges --format='- %s (`%h`)' "$COMMIT_RANGE")
+          if [ -z "$COMMITS" ]; then
+            COMMITS="- No non-merge commits in this range."
+          fi
+
+          {
+            printf '<!-- generated-commit-history -->\n'
+            printf '## Commit history (%s)\n\n' "$RANGE_LABEL"
+            printf '%s\n' "$COMMITS"
+          } > release-commits.md
+
+      - name: Create or update draft release notes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            IS_DRAFT=$(gh release view "$TAG" --repo "$REPO" --json isDraft --jq '.isDraft')
+            if [ "$IS_DRAFT" != "true" ]; then
+              echo "::error::Release $TAG is already published; refusing to modify it."
+              exit 1
+            fi
+
+            gh release view "$TAG" --repo "$REPO" --json body --jq '.body' > existing-release-notes.md
+            awk '/^<!-- generated-commit-history -->$/ { exit } { print }' existing-release-notes.md > release-notes.md
+            printf '\n\n' >> release-notes.md
+            cat release-commits.md >> release-notes.md
+            gh release edit "$TAG" --repo "$REPO" --notes-file release-notes.md
+          else
+            COMMIT_NOTES=$(cat release-commits.md)
+            gh release create "$TAG" \
+              --repo "$REPO" \
+              --verify-tag \
+              --generate-notes \
+              --notes "$COMMIT_NOTES" \
+              --draft \
+              --fail-on-no-commits
+          fi

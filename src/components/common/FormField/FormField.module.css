@@ -1,0 +1,134 @@
+/* FormField CSS Module */
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.25rem;
+  width: 100%;
+  position: relative;
+}
+
+.labelWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.375rem;
+}
+
+.label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-primary, #212529);
+  transition: color 0.2s ease;
+}
+
+.requiredAsterisk {
+  color: var(--error-color, #dc3545);
+  margin-left: 0.25rem;
+  font-weight: bold;
+}
+
+.inputContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input {
+  width: 100%;
+  padding: 0.625rem 0.875rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--text-primary, #212529);
+  background-color: var(--bg-secondary, #f8f9fa);
+  border: 1px solid var(--border-color, #dee2e6);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  font-family: inherit;
+}
+
+.input:focus {
+  border-color: var(--primary-color, #0d6efd);
+  box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+  background-color: var(--bg-primary, #ffffff);
+}
+
+.textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.hasPrefix {
+  padding-left: 2.5rem;
+}
+
+.hasSuffix {
+  padding-right: 2.5rem;
+}
+
+.prefixIcon,
+.suffixIcon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary, #6c757d);
+  pointer-events: none;
+  font-size: 1rem;
+}
+
+.prefixIcon {
+  left: 0.75rem;
+}
+
+.suffixIcon {
+  right: 0.75rem;
+}
+
+/* Error States */
+.invalidInput {
+  border-color: var(--error-color, #dc3545) !important;
+  background-color: rgba(220, 53, 69, 0.03);
+}
+
+.invalidInput:focus {
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.18) !important;
+}
+
+.errorText {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--error-color, #dc3545);
+  font-size: 0.8125rem;
+  margin-top: 0.375rem;
+  font-weight: 500;
+  animation: fadeIn 0.2s ease;
+}
+
+.helperText {
+  color: var(--text-secondary, #6c757d);
+  font-size: 0.8125rem;
+  margin-top: 0.375rem;
+}
+
+.disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

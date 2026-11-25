@@ -1,3 +1,8 @@
+/**
+ * @file validationRules.test.js
+ * @description Unit tests for validation rule utility functions.
+ */
+
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import {
@@ -10,7 +15,7 @@ import {
   validateNumeric,
   validateField,
   validateForm,
-} from './validationRules.js';
+} from '../utils/validationRules.js';
 
 describe('validationRules', () => {
   describe('isEmpty', () => {

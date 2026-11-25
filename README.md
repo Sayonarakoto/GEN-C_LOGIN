@@ -2,6 +2,8 @@
 
 GEN-C Login is a full-stack campus portal for student and staff workflows. It provides role-based dashboards and tools for gate passes, late-entry requests, library services, security checks, and administration.
 
+[![Architecture diagram of sayonarakoto/gen-c_login](https://gitdiagram.com/sayonarakoto/gen-c_login/diagram.png)](https://gitdiagram.com/sayonarakoto/gen-c_login?utm_source=readme&utm_medium=picture)
+
 ## Features
 
 - Separate access and dashboards for students, faculty/HODs, security staff, librarians, and administrators.

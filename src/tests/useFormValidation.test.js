@@ -64,25 +64,25 @@ describe('Form Validation Workflow', () => {
       date: '2026-11-26',
       facultyId: 'fac-123',
       reason: 'Heavy traffic congestion due to rain on highway',
-      escalate: true,
+      escalate: false,
     };
 
     const errors = validateForm(validValues, lateEntrySchema);
-    assert.deepEqual(errors, {});
+    assert.equal(Object.keys(errors).length, 0);
   });
 
   it('supports custom validator functions in field rules', () => {
-    const schemaWithCustom = {
-      username: {
-        required: true,
-        custom: (val) => (val.toLowerCase() === 'root' ? 'Username "root" is reserved' : null),
+    const customSchema = {
+      code: {
+        required: 'Code required',
+        custom: (val) => (val.startsWith('GEN-') ? null : 'Code must begin with GEN-'),
       },
     };
 
-    const err = validateField('root', schemaWithCustom.username);
-    assert.equal(err, 'Username "root" is reserved');
+    const fail = validateForm({ code: 'ABC-123' }, customSchema);
+    assert.equal(fail.code, 'Code must begin with GEN-');
 
-    const validErr = validateField('student42', schemaWithCustom.username);
-    assert.equal(validErr, null);
+    const pass = validateForm({ code: 'GEN-2026' }, customSchema);
+    assert.equal(pass.code, undefined);
   });
 });
